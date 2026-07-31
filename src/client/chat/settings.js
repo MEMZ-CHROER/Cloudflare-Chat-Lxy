@@ -71,15 +71,42 @@ function resetUiColor() {
   }
 }
 
+// ---- 媒体 URL 白名单校验（防 CSS 注入 / IP 泄露到第三方）----
+export function isSafeMediaUrl(url) {
+  if (!url) return false;
+  let s = String(url).trim();
+  // 仅允许 https/http（拒绝 javascript:/data:text/html 等，且不含 CSS 逃逸字符）
+  if (/^https?:\/\//i.test(s)) {
+    return !/["'()\\;]/.test(s);
+  }
+  // 允许 data:image（排除 svg+xml）/data:video/data:audio
+  if (/^data:image\/(?!svg\+xml)/i.test(s)) return true;
+  if (/^data:video\//i.test(s)) return true;
+  if (/^data:audio\//i.test(s)) return true;
+  return false;
+}
+
 // ---- 自定义壁纸 ----
 export function applyWallpaper(url) {
   if (!url) { restoreRandomWallpaper(); return; }
-  document.body.style.setProperty("--site-bg-image", `url("${url}")`);
+  // 🔒 安全修复：URL 白名单校验
+  if (!isSafeMediaUrl(url)) {
+    showError("壁纸 URL 不合法，仅支持 https/http 或 data:image");
+    return;
+  }
+  // 同时设置 html 和 body，确保 body::before 伪元素能取到
+  const bgVal = `url("${url}")`;
+  document.documentElement.style.setProperty("--site-bg-image", bgVal);
+  document.body.style.setProperty("--site-bg-image", bgVal);
   // 取消视频壁纸（互斥）
   if (document.body.classList.contains("video-bg")) cancelVideoWallpaper();
   const cancelBtn = document.getElementById("wallpaper-cancel-btn");
   if (cancelBtn) cancelBtn.style.display = "";
-  localStorage.setItem(WALLPAPER_KEY, url);
+  try {
+    localStorage.setItem(WALLPAPER_KEY, url);
+  } catch (e) {
+    showError("保存失败：存储空间不足（本地图片太大），请使用图片 URL");
+  }
 }
 
 function restoreRandomWallpaper() {
@@ -88,6 +115,7 @@ function restoreRandomWallpaper() {
   if (cancelBtn) cancelBtn.style.display = "none";
   const urlInput = document.getElementById("wallpaper-url-input");
   if (urlInput) urlInput.value = "";
+  document.documentElement.style.removeProperty("--site-bg-image");
   document.body.style.removeProperty("--site-bg-image");
   localStorage.removeItem("ff-bg-url");
   localStorage.removeItem("ff-bg-ts");
@@ -97,6 +125,11 @@ function restoreRandomWallpaper() {
 // ---- 视频壁纸 ----
 export function applyVideoWallpaper(url) {
   if (!url) { cancelVideoWallpaper(); return; }
+  // 🔒 安全修复：URL 白名单校验
+  if (!isSafeMediaUrl(url)) {
+    showError("视频 URL 不合法，仅支持 https/http 或 data:video");
+    return;
+  }
   const video = document.getElementById("video-wallpaper");
   if (!video) return;
   video.src = url;
@@ -105,12 +138,18 @@ export function applyVideoWallpaper(url) {
   // 互斥：取消自定义图片壁纸
   if (localStorage.getItem(WALLPAPER_KEY)) {
     localStorage.removeItem(WALLPAPER_KEY);
+    document.documentElement.style.removeProperty("--site-bg-image");
+    document.body.style.removeProperty("--site-bg-image");
     const wpCancel = document.getElementById("wallpaper-cancel-btn");
     if (wpCancel) wpCancel.style.display = "none";
   }
   const cancelBtn = document.getElementById("video-cancel-btn");
   if (cancelBtn) cancelBtn.style.display = "";
-  localStorage.setItem(VIDEO_KEY, url);
+  try {
+    localStorage.setItem(VIDEO_KEY, url);
+  } catch (e) {
+    showError("保存失败：存储空间不足（本地视频太大），请使用视频 URL");
+  }
   video.play().catch(() => {});
 }
 
@@ -178,15 +217,17 @@ export function initSettings() {
 
   // 恢复自定义壁纸
   const savedWp = localStorage.getItem(WALLPAPER_KEY);
-  if (savedWp) {
-    document.body.style.setProperty("--site-bg-image", `url("${savedWp}")`);
+  if (savedWp && isSafeMediaUrl(savedWp)) {
+    const bgVal = `url("${savedWp}")`;
+    document.documentElement.style.setProperty("--site-bg-image", bgVal);
+    document.body.style.setProperty("--site-bg-image", bgVal);
     const cancelBtn = document.getElementById("wallpaper-cancel-btn");
     if (cancelBtn) cancelBtn.style.display = "";
   }
 
   // 恢复视频壁纸
   const savedVideo = localStorage.getItem(VIDEO_KEY);
-  if (savedVideo) {
+  if (savedVideo && isSafeMediaUrl(savedVideo)) {
     const video = document.getElementById("video-wallpaper");
     if (video) {
       video.src = savedVideo;
