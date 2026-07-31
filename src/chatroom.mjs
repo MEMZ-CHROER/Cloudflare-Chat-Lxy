@@ -660,6 +660,17 @@ export class ChatRoom {
       }
 
       if (data.type === "kick") {
+        // 🔒 安全修复：踢人限频（普通用户30秒内只能踢1次，管理员不限），防反复骚扰他人
+        let isKickAdmin = session.tag === "red" || session.tag === "cyan";
+        if (!isKickAdmin) {
+          if (!this.lastKick) this.lastKick = new Map();
+          let last = this.lastKick.get(session.name) || 0;
+          if (Date.now() - last < 30000) {
+            webSocket.send(JSON.stringify({error: "踢人操作太频繁，请稍后再试"}));
+            return;
+          }
+          this.lastKick.set(session.name, Date.now());
+        }
         if (this.blacklist.has(session.name)) {
           webSocket.send(JSON.stringify({error: "你已被加入黑名单，无法踢人"}));
           return;
@@ -1088,18 +1099,9 @@ export class ChatRoom {
       }
 
       if (this.containsProfanity(data.message)) {
-        webSocket.send(JSON.stringify({error: "检测到辱骂内容，已自动封禁"}));
-        try {
-          let registryId = this.env.registry.idFromName("global");
-          let stub = this.env.registry.get(registryId);
-          await stub.fetch("https://dummy-url/ban?name=" + encodeURIComponent(session.name));
-          let ip = session.ip || "";
-          if (ip) {
-            await stub.fetch("https://dummy-url/ip-ban?ip=" + encodeURIComponent(ip));
-          }
-        } catch (e) {}
-        webSocket.close(1000, "banned");
-        this.broadcast({kicked: session.name});
+        // 🔒 安全修复：敏感词只拦截该条消息，不再自动封禁用户名+IP
+        // 因用户名可冒名，自动封禁会被恶意利用来封禁任何人的昵称，封禁应由管理员手动执行
+        webSocket.send(JSON.stringify({error: "消息包含违规内容，已拦截。请注意言辞，严重违规将被管理员封禁。"}));
         return;
       }
 
