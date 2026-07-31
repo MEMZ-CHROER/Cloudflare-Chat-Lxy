@@ -17,7 +17,7 @@ export async function handleAdmin(reg, request, url) {
     }
 
     case "/admin-key/reset": {
-      let defaultKey = url.searchParams.get("default") || "mod";
+      let defaultKey = url.searchParams.get("default") || "";
       reg.adminKey = defaultKey;
       await reg.saveAdminKey();
       return new Response("普通管理员密钥已重置为默认值", { status: 200 });

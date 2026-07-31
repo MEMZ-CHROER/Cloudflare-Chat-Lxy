@@ -34,8 +34,9 @@ export async function handleAdmin(path, request, env) {
   const requestKey = url.searchParams.get("key");
 
   async function getAdminPermission(k, e) {
-    if (k === (e.ADMIN_SECRET_KEY || "del")) return "super";
-    if (k === (e.ADMIN_KEY || "mod")) return "admin";
+    // 🔒 安全修复：未配置管理密钥时直接拒绝，绝不用默认弱密钥("del"/"mod")兜底
+    if (k === e.ADMIN_SECRET_KEY) return "super";
+    if (k === e.ADMIN_KEY) return "admin";
     try {
       let rid = e.registry.idFromName("global");
       let stub = e.registry.get(rid);

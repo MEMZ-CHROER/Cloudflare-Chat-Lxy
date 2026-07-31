@@ -34,7 +34,7 @@ export class RoomRegistry {
     this.knownUsers = new Set();
     this.userIps = new Map();
     this.globalBlacklist = new Set();
-    this.adminKey = env.ADMIN_KEY || "mod";
+    this.adminKey = env.ADMIN_KEY || null;
     this.userPoints = new Map();
     this.registeredUsers = new Map();
     this.shopItems = new Map();

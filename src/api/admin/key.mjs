@@ -21,7 +21,7 @@ export async function handleAdminKey(path, request, env, url) {
       let response = await registryStub.fetch(new URL("https://dummy-url/admin-key/set?key=" + encodeURIComponent(newKey)));
       return new Response(await response.text(), { status: response.status });
     } else if (akAction === "reset") {
-      let response = await registryStub.fetch(new URL("https://dummy-url/admin-key/reset?default=" + encodeURIComponent(env.ADMIN_KEY || "mod")));
+      let response = await registryStub.fetch(new URL("https://dummy-url/admin-key/reset?default=" + encodeURIComponent(env.ADMIN_KEY || "")));
       return new Response(await response.text(), { status: response.status });
     }
 

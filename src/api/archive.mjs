@@ -17,8 +17,8 @@ export async function handleArchive(apiPath, request, env) {
     if (!key) return new Response(JSON.stringify({error: "需要管理密钥"}), {status: 401, headers: {"Content-Type": "application/json"}});
 
     let permission = null;
-    if (key === (env.ADMIN_SECRET_KEY || "del")) permission = "super";
-    if (!permission && key === (env.ADMIN_KEY || "mod")) permission = "admin";
+    if (key === env.ADMIN_SECRET_KEY) permission = "super";
+    if (!permission && key === env.ADMIN_KEY) permission = "admin";
     if (!permission) {
       try {
         let registryId = env.registry.idFromName("global");
@@ -66,8 +66,8 @@ export async function handleArchive(apiPath, request, env) {
     // 删除需要管理员密钥
     let key = request.headers.get("X-Admin-Key") || new URL(request.url).searchParams.get("key") || "";
     let permission = null;
-    if (key === (env.ADMIN_SECRET_KEY || "del")) permission = "super";
-    if (!permission && key === (env.ADMIN_KEY || "mod")) permission = "admin";
+    if (key === env.ADMIN_SECRET_KEY) permission = "super";
+    if (!permission && key === env.ADMIN_KEY) permission = "admin";
     if (!permission) {
       return new Response(JSON.stringify({error: "需要管理密钥"}), {status: 403, headers: {"Content-Type": "application/json"}});
     }
