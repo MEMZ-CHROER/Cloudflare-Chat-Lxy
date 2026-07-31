@@ -2,6 +2,11 @@
 
 export async function handleManage(room, session, data, webSocket) {
   if (data.type === "pin") {
+    // 🔒 安全修复：置顶是管理员功能，普通用户禁止
+    if (session.tag !== "red" && session.tag !== "cyan") {
+      webSocket.send(JSON.stringify({error: "仅管理员可置顶消息"}));
+      return true;
+    }
     if (room._loadPinned) await room._loadPinned;
     if (room.pinnedMessage && data.unpin) {
       room.pinnedMessage = null;
@@ -44,6 +49,11 @@ export async function handleManage(room, session, data, webSocket) {
       webSocket.send(JSON.stringify({error: "消息过长"}));
       return true;
     }
+    // 🔒 安全修复：编辑后的内容同样过敏感词检查，防绕过敏感词发布违规内容
+    if (room.containsProfanity(editMessage)) {
+      webSocket.send(JSON.stringify({error: "编辑内容包含违规词汇，已拦截"}));
+      return true;
+    }
     orig.message = editMessage;
     room.messages.set(editId, orig);
     let storageKey = new Date(orig.timestamp).toISOString();
@@ -60,6 +70,11 @@ export async function handleManage(room, session, data, webSocket) {
   }
 
   if (data.type === "highlight") {
+    // 🔒 安全修复：增删精华是管理员功能，普通用户禁止
+    if (session.tag !== "red" && session.tag !== "cyan") {
+      webSocket.send(JSON.stringify({error: "仅管理员可操作精华消息"}));
+      return true;
+    }
     let hKey = data.msgTimestamp;
     let hText = data.text || "";
     if (!hKey) { webSocket.send(JSON.stringify({error: "缺少参数"})); return true; }
@@ -76,6 +91,14 @@ export async function handleManage(room, session, data, webSocket) {
   }
 
   if (data.type === "effect") {
+    // 🔒 安全修复：全屏特效限频（每用户10秒1次），防刷屏骚扰
+    if (!room.lastEffect) room.lastEffect = new Map();
+    let last = room.lastEffect.get(session.name) || 0;
+    if (Date.now() - last < 10000) {
+      webSocket.send(JSON.stringify({error: "特效触发太频繁"}));
+      return true;
+    }
+    room.lastEffect.set(session.name, Date.now());
     room.broadcast(JSON.stringify({type: "effect", effect: data.effect}));
     return true;
   }
