@@ -46,6 +46,14 @@ export async function handleGame(apiPath, request, env) {
       }
 
       if (gameAction === "bet") {
+        // 🔒 安全修复：下注前先查余额，余额不足直接拒绝
+        // （防止 points/add 余额钳制为0导致的零成本下注 + 凭空赢积分铸币）
+        let balUrl = "https://dummy-url/points/get?name=" + encodeURIComponent(name);
+        let balResp = await stub.fetch(new URL(balUrl));
+        let balData = await balResp.json();
+        if (BigInt(balData.points || 0) < BigInt(wager)) {
+          return new Response(JSON.stringify({error: "积分不足，无法下注"}), {status: 400, headers: {"Content-Type": "application/json"}});
+        }
         // 下注：扣除赌注
         let deductUrl = "https://dummy-url/points/add?name=" + encodeURIComponent(name) + "&amount=" + (-wager);
         let r = await stub.fetch(new URL(deductUrl));
@@ -55,10 +63,6 @@ export async function handleGame(apiPath, request, env) {
         }
         // 记录未结算下注，供 win 结算校验（防凭空 win / 重放）
         await stub.fetch(new URL("https://dummy-url/game/bet?name=" + encodeURIComponent(name) + "&wager=" + wager));
-        // 查询余额
-        let balUrl = "https://dummy-url/points/get?name=" + encodeURIComponent(name);
-        let balResp = await stub.fetch(new URL(balUrl));
-        let balData = await balResp.json();
         return new Response(JSON.stringify({ok: true, action: "bet", deducted: wager, balance: balData.points}), {
           headers: {"Content-Type": "application/json"}
         });

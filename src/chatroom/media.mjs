@@ -2,6 +2,11 @@
 export async function handleMedia(room, session, data, webSocket) {
   if (data.type === "image") {
     let imageData = "" + data.data;
+    // 🔒 安全修复：图片消息拒绝 svg+xml/javascript 等可注入类型
+    if (/^(javascript|vbscript):/i.test(imageData) || /^data:image\/svg\+xml/i.test(imageData)) {
+      webSocket.send(JSON.stringify({error: "图片内容类型不合法"}));
+      return true;
+    }
     let imgMax = (session.vip && session.vip.features ? session.vip.features.uploadImgMB : 1) * 1024 * 1024;
     if (imageData.length > imgMax) {
       webSocket.send(JSON.stringify({error: "图片过大（VIP最高 " + (imgMax / 1024 / 1024) + "MB）"}));
@@ -47,6 +52,12 @@ export async function handleMedia(room, session, data, webSocket) {
     let fileName = "" + (data.fileName || "unknown");
     let fileType = "" + (data.fileType || "application/octet-stream");
     let fileSize = parseInt(data.fileSize) || 0;
+    // 🔒 安全修复：拒绝可执行协议注入（javascript:/vbscript:/data:text/html/data:image/svg+xml），
+    // 防止文件消息被用作存储型XSS（客户端 a.href=data 直接赋值）
+    if (/^(javascript|vbscript):/i.test(fileData) || /^data:text\/html/i.test(fileData) || /^data:image\/svg\+xml/i.test(fileData)) {
+      webSocket.send(JSON.stringify({error: "文件内容类型不合法"}));
+      return true;
+    }
     let fileMax = (session.vip && session.vip.features ? session.vip.features.uploadFileMB : 20) * 1024 * 1024;
     if (fileData.length > fileMax) {
       webSocket.send(JSON.stringify({error: "文件过大（VIP最高 " + (fileMax / 1024 / 1024) + "MB）"}));
