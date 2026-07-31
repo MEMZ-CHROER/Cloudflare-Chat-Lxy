@@ -37,6 +37,8 @@ import CHAT_NOTE from "./client/chat/note.js";
 import CHAT_KEYWORDS from "./client/chat/keywords.js";
 import CHAT_GAMES from "./client/chat/games.js";
 import CHAT_FILESPANEL from "./client/chat/filespanel.js";
+import CHAT_SETTINGS from "./client/chat/settings.js";
+import CHAT_MUSIC from "./client/chat/music.js";
 import CHAT_GAME_CORE from "./client/chat/game-core.js";
 import CHAT_GAME_SIMPLE from "./client/chat/game-simple.js";
 import CHAT_GAME_CARDS from "./client/chat/game-cards.js";
@@ -45,6 +47,9 @@ import CHAT_GAME_ACTION from "./client/chat/game-action.js";
 import CHAT_GAME_ARCADE from "./client/chat/game-arcade.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
+import ALL_STYLES from "./client/styles/all-styles.css";
+import ACRYLIC_THEME from "./client/styles/acrylic-theme.css";
+import THEME_SWITCH_JS from "./client/theme-switch.js";
 import ADMIN_MAIN from "./client/admin/main.js";
 import ADMIN_STATE from "./client/admin/state.js";
 import ADMIN_UTILS from "./client/admin/utils.js";
@@ -95,6 +100,8 @@ const CHAT_MODULES = {
   "chat/keywords.js": CHAT_KEYWORDS,
   "chat/filespanel.js": CHAT_FILESPANEL,
   "chat/games.js": CHAT_GAMES,
+  "chat/settings.js": CHAT_SETTINGS,
+  "chat/music.js": CHAT_MUSIC,
   "chat/game-core.js": CHAT_GAME_CORE,
   "chat/game-simple.js": CHAT_GAME_SIMPLE,
   "chat/game-cards.js": CHAT_GAME_CARDS,
@@ -213,6 +220,15 @@ export default {
         }
         if (modPath === "chat/game-style.css") {
           return new Response(CHAT_GAME_STYLE, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+        }
+        if (modPath === "styles/all-styles.css") {
+          return new Response(ALL_STYLES, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+        }
+        if (modPath === "styles/acrylic-theme.css") {
+          return new Response(ACRYLIC_THEME, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+        }
+        if (modPath === "theme-switch.js") {
+          return new Response(THEME_SWITCH_JS, {headers: {"Content-Type": "application/javascript;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
         }
       }
 
