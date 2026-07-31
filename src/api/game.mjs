@@ -53,6 +53,8 @@ export async function handleGame(apiPath, request, env) {
           let text = await r.text();
           return new Response(JSON.stringify({error: text}), {status: 400});
         }
+        // 记录未结算下注，供 win 结算校验（防凭空 win / 重放）
+        await stub.fetch(new URL("https://dummy-url/game/bet?name=" + encodeURIComponent(name) + "&wager=" + wager));
         // 查询余额
         let balUrl = "https://dummy-url/points/get?name=" + encodeURIComponent(name);
         let balResp = await stub.fetch(new URL(balUrl));
@@ -63,6 +65,12 @@ export async function handleGame(apiPath, request, env) {
       }
 
       if (gameAction === "win") {
+        // 先校验：必须有未结算下注、win 在合理范围、频率与每日上限
+        let winCheck = await stub.fetch(new URL("https://dummy-url/game/win?name=" + encodeURIComponent(name) + "&win=" + win));
+        let winResult = await winCheck.json();
+        if (!winResult.ok) {
+          return new Response(JSON.stringify({error: winResult.error || "结算校验失败"}), {status: 400});
+        }
         // 获胜：奖励积分
         if (win > 0) {
           let awardUrl = "https://dummy-url/points/add?name=" + encodeURIComponent(name) + "&amount=" + win;

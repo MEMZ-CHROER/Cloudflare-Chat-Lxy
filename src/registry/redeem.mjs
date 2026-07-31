@@ -48,6 +48,11 @@ export async function handleRedeem(reg, request, url) {
       let user = (body.user || "").trim();
       if (!code) return new Response(JSON.stringify({error: "请输入兑换码"}), {status: 400});
       if (!user) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      // 🔒 安全修复：registry 层校验 token，确保 user 与 token 匹配
+      let regUser = reg.registeredUsers.get(user);
+      if (!regUser || regUser.token !== (body.token || "")) {
+        return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
 
       let info = reg.redeemCodes.get(code);
       if (!info) return new Response(JSON.stringify({error: "兑换码不存在"}), {status: 400});

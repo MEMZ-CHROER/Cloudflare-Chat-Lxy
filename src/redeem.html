@@ -166,7 +166,7 @@ async function doRedeem() {
     let r = await fetch("/api/redeem", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({code, user: userName})
+      body: JSON.stringify({code, user: userName, token: localStorage.getItem("chat_token") || ""})
     });
     let data = await r.json();
     if (data.ok) {

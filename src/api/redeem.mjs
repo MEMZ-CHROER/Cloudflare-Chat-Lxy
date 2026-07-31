@@ -7,6 +7,13 @@ export async function handleRedeemApi(path, request, env) {
 
     if (request.method === "POST") {
       let body = await request.json();
+      // 🔒 安全修复：兑换必须验证 token，杜绝冒名兑换/刷积分
+      let token = body.token || "";
+      let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(body.user || "") + "&token=" + encodeURIComponent(token)));
+      let authData = await authCheck.json();
+      if (!authData.authenticated) {
+        return new Response(JSON.stringify({error: "请先登录后再兑换"}), {status: 403, headers: {"Content-Type": "application/json"}});
+      }
       let r = await stub.fetch("https://dummy-url/redeem/redeem", {
         method: "POST",
         body: JSON.stringify(body),

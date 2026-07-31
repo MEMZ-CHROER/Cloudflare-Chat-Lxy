@@ -333,7 +333,7 @@ async function handleApi(apiPath, request, env) {
         // 验证 token，防止冒名签到
         let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
         let authData = await authCheck.json();
-        if (authData.registered && !authData.authenticated) {
+        if (!authData.authenticated) {
           return new Response(JSON.stringify({error: "请先登录"}), {status: 403, headers: {"Content-Type": "application/json"}});
         }
         let r = await stub.fetch("https://dummy-url/points/checkin?name=" + encodeURIComponent(name));
@@ -433,7 +433,7 @@ async function handleApi(apiPath, request, env) {
         // 验证 token
         let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
         let authData = await authCheck.json();
-        if (authData.registered && !authData.authenticated) {
+        if (!authData.authenticated) {
           return new Response(JSON.stringify({error: "请先登录"}), {status: 403, headers: {"Content-Type": "application/json"}});
         }
         let r = await stub.fetch("https://dummy-url/user-avatar?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
@@ -445,7 +445,7 @@ async function handleApi(apiPath, request, env) {
         // 验证 token
         let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
         let authData = await authCheck.json();
-        if (authData.registered && !authData.authenticated) {
+        if (!authData.authenticated) {
           return new Response(JSON.stringify({error: "请先登录"}), {status: 403, headers: {"Content-Type": "application/json"}});
         }
         let r = await stub.fetch("https://dummy-url/user-bio?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});

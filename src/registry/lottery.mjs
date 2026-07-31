@@ -22,6 +22,11 @@ export async function handleLottery(reg, request, url) {
       let name = body.name;
       let poolId = body.pool || "default";
       if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      // 🔒 安全修复：registry 层校验 token，确保 name 与 token 匹配
+      let regUser = reg.registeredUsers.get(name);
+      if (!regUser || regUser.token !== (body.token || "")) {
+        return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
       let pool = reg.lotteryPools.get(poolId);
       if (!pool) return new Response(JSON.stringify({error: "奖池不存在"}), {status: 404});
       if (!pool.enabled) return new Response(JSON.stringify({error: "奖池已关闭"}), {status: 400});

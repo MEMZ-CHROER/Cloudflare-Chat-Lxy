@@ -151,6 +151,7 @@ export function handleMenuAction(action) {
 
 import { saveBlockedUsers } from './state.js';
 import { TAG_COLORS } from './vip.js';
+import { getAuthToken } from './auth.js';
 import { escapeHtml } from './renderers.js';
 
 export async function showProfile(name) {
@@ -235,7 +236,7 @@ async function showProfileEditor(name, data) {
     reader.onload = async (ev) => {
       let dataUri = ev.target.result;
       try {
-        let r = await fetch("/api/user/avatar?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify({avatar: dataUri}), headers: {"Content-Type": "application/json"}});
+        let r = await fetch("/api/user/avatar?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify({avatar: dataUri, token: getAuthToken()}), headers: {"Content-Type": "application/json"}});
         if (r.ok) { alert("头像已更新"); showProfile(name); }
         else alert("更新失败");
       } catch (e) { alert("更新失败: " + e.message); }
@@ -246,7 +247,7 @@ async function showProfileEditor(name, data) {
   document.getElementById("profile-save-btn").addEventListener("click", async () => {
     let bio = document.getElementById("bio-input").value.trim().slice(0, 200);
     try {
-      let r = await fetch("/api/user/bio?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify({bio}), headers: {"Content-Type": "application/json"}});
+      let r = await fetch("/api/user/bio?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify({bio, token: getAuthToken()}), headers: {"Content-Type": "application/json"}});
       if (r.ok) { alert("资料已更新"); showProfile(name); }
       else alert("更新失败");
     } catch (e) { alert("更新失败: " + e.message); }

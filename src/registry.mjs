@@ -49,6 +49,10 @@ export class RoomRegistry {
     this.redeemCodes = new Map();
     this.kickProtected = new Set();
     this.redPackets = new Map();
+    // 游戏防刷状态（内存字段，不持久化）
+    this.gameBets = new Map();       // name -> {wager, ts} 未结算下注
+    this.gameLastWin = new Map();    // name -> ts 上次结算时间
+    this.gameDailyWin = new Map();   // name -> {date, total} 每日净赢
     this._loadPromise = Promise.race([
       this.load(),
       new Promise(resolve => setTimeout(resolve, 10000))
@@ -124,7 +128,7 @@ export class RoomRegistry {
       handler = handleTags;
     else if (path.startsWith("/user-") || path === "/known-users" || path === "/user-init" || path === "/user-bio" || path === "/user-avatar" || path === "/user-profile")
       handler = handleUsers;
-    else if (path.startsWith("/points/"))
+    else if (path.startsWith("/points/") || path.startsWith("/game/"))
       handler = handlePoints;
     else if (path.startsWith("/shop/") || path.startsWith("/admin/shop/"))
       handler = handleShop;

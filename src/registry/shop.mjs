@@ -44,6 +44,11 @@ export async function handleShop(reg, request, url) {
       let name = body.name;
       let itemId = body.itemId;
       if (!name || !itemId) return new Response(JSON.stringify({error: "请提供用户名和商品ID"}), {status: 400});
+      // 🔒 S4 纵深防御：registry 层校验 token，确保 name 与 token 匹配
+      let regUser = reg.registeredUsers.get(name);
+      if (!regUser || regUser.token !== (body.token || "")) {
+        return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
       let item = reg.shopItems.get(itemId);
       if (!item) return new Response(JSON.stringify({error: "商品不存在"}), {status: 404});
       if (item.enabled === false) return new Response(JSON.stringify({error: "商品已下架"}), {status: 400});
@@ -67,6 +72,11 @@ export async function handleShop(reg, request, url) {
       let name = body.name;
       let itemId = body.itemId;
       if (!name || !itemId) return new Response(JSON.stringify({error: "请提供用户名和商品ID"}), {status: 400});
+      // 🔒 S4 纵深防御：registry 层校验 token，确保 name 与 token 匹配
+      let regUser = reg.registeredUsers.get(name);
+      if (!regUser || regUser.token !== (body.token || "")) {
+        return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
       let inv = reg.userInventory.get(name);
       if (!inv || !inv.has(itemId)) return new Response(JSON.stringify({error: "未拥有此商品"}), {status: 400});
       let item = reg.shopItems.get(itemId);
@@ -86,6 +96,11 @@ export async function handleShop(reg, request, url) {
       let body = await request.json();
       let name = body.name;
       if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      // 🔒 S4 纵深防御：registry 层校验 token
+      let regUser = reg.registeredUsers.get(name);
+      if (!regUser || regUser.token !== (body.token || "")) {
+        return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
       let inv = reg.userInventory.get(name);
       if (inv) {
         for (let [id, info] of inv) { if (info.equipped) info.equipped = false; }

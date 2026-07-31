@@ -1,7 +1,7 @@
 // 任务弹窗
 import { state } from './state.js';
 import { escapeHtml, updatePointsDisplay } from './renderers.js';
-import { getAuthName, isAuthenticated } from './auth.js';
+import { getAuthName, getAuthToken, isAuthenticated } from './auth.js';
 
 export function openTasks() {
   document.getElementById("task-overlay").classList.add("show");
@@ -58,7 +58,7 @@ async function loadTasks() {
 
 export async function claimTask(taskId) {
   try {
-    let r = await fetch("/api/tasks/claim", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), taskId})});
+    let r = await fetch("/api/tasks/claim", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), taskId, token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("已领取任务！完成任务后可获得奖励。"); loadTasks(); }
@@ -67,7 +67,7 @@ export async function claimTask(taskId) {
 
 export async function completeTask(taskId) {
   try {
-    let r = await fetch("/api/tasks/complete", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), taskId})});
+    let r = await fetch("/api/tasks/complete", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), taskId, token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("任务完成！获得 " + data.reward + " 积分！当前积分: " + data.total); updatePointsDisplay(); loadTasks(); }

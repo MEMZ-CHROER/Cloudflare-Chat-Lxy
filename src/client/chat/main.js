@@ -1,5 +1,6 @@
 // 入口模块 — 只导入首屏必需模块，重模块延迟加载
 import { state } from './state.js';
+import { escapeHtml } from './renderers.js';
 import { startNameChooser } from './auth.js';
 import { startRoomList } from './rooms.js';
 import { cancelReply, hideLightbox, galleryPrev, galleryNext, exportChatLog } from './ui.js';
@@ -94,8 +95,8 @@ window._showScheduledList = function(list) {
     row.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:4px;margin-bottom:3px;background:var(--bg);";
     let timeStr = new Date(s.time).toLocaleString();
     let msgShort = s.message || "";
-    row.innerHTML = '<div style="flex:1;overflow:hidden;"><div style="font-size:12px;font-weight:600;">' + s.name + '</div><div style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + msgShort + '</div><div style="font-size:10px;color:#888;">' + timeStr + '</div></div>' +
-      '<span style="cursor:pointer;color:#e74c3c;font-size:16px;flex-shrink:0;" data-sched-id="' + s.id + '">&times;</span>';
+    row.innerHTML = '<div style="flex:1;overflow:hidden;"><div style="font-size:12px;font-weight:600;">' + escapeHtml(s.name) + '</div><div style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(msgShort) + '</div><div style="font-size:10px;color:#888;">' + timeStr + '</div></div>' +
+      '<span style="cursor:pointer;color:#e74c3c;font-size:16px;flex-shrink:0;" data-sched-id="' + escapeHtml(s.id) + '">&times;</span>';
     row.querySelector("[data-sched-id]").addEventListener("click", (e) => {
       e.stopPropagation();
       if (state.currentWebSocket) {

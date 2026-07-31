@@ -24,6 +24,11 @@ export async function handleTasks(reg, request, url) {
       let name = body.name;
       let taskId = body.taskId;
       if (!name || !taskId) return new Response(JSON.stringify({error: "请提供用户名和任务ID"}), {status: 400});
+      // 🔒 S4 纵深防御：registry 层校验 token，确保 name 与 token 匹配
+      let regUser = reg.registeredUsers.get(name);
+      if (!regUser || regUser.token !== (body.token || "")) {
+        return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
       let task = reg.tasks.get(taskId);
       if (!task) return new Response(JSON.stringify({error: "任务不存在"}), {status: 404});
       if (task.enabled === false) return new Response(JSON.stringify({error: "任务已下架"}), {status: 400});
@@ -46,6 +51,11 @@ export async function handleTasks(reg, request, url) {
       let name = body.name;
       let taskId = body.taskId;
       if (!name || !taskId) return new Response(JSON.stringify({error: "请提供用户名和任务ID"}), {status: 400});
+      // 🔒 S4 纵深防御：registry 层校验 token，确保 name 与 token 匹配
+      let regUser = reg.registeredUsers.get(name);
+      if (!regUser || regUser.token !== (body.token || "")) {
+        return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
       let task = reg.tasks.get(taskId);
       if (!task) return new Response(JSON.stringify({error: "任务不存在"}), {status: 404});
       if (task.enabled === false) return new Response(JSON.stringify({error: "任务已下架"}), {status: 400});

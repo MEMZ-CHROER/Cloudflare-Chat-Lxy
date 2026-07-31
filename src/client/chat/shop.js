@@ -1,7 +1,7 @@
 // 商城弹窗
 import { state } from './state.js';
 import { escapeHtml, updatePointsDisplay } from './renderers.js';
-import { getAuthName, isAuthenticated } from './auth.js';
+import { getAuthName, getAuthToken, isAuthenticated } from './auth.js';
 import { TAG_COLORS } from './vip.js';
 
 export function openShop(tab) {
@@ -76,7 +76,7 @@ async function loadInventory() {
 
 export async function buyItem(itemId) {
   try {
-    let r = await fetch("/api/shop/buy", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), itemId})});
+    let r = await fetch("/api/shop/buy", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), itemId, token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("购买成功！"); updatePointsDisplay(); loadShopItems(); }
@@ -85,7 +85,7 @@ export async function buyItem(itemId) {
 
 export async function equipItem(itemId) {
   try {
-    let r = await fetch("/api/shop/equip", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), itemId})});
+    let r = await fetch("/api/shop/equip", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), itemId, token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("装备成功！"); updatePointsDisplay(); loadInventory(); }
@@ -94,7 +94,7 @@ export async function equipItem(itemId) {
 
 export async function unequipItem() {
   try {
-    let r = await fetch("/api/shop/unequip", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName()})});
+    let r = await fetch("/api/shop/unequip", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("已卸下装备"); updatePointsDisplay(); loadInventory(); }

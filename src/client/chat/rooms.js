@@ -1,5 +1,6 @@
 // 房间列表模块
 import { state } from './state.js';
+import { escapeHtml } from './renderers.js';
 import { updateAccountBar } from './auth.js';
 import { startChat } from './core.js';
 
@@ -148,7 +149,7 @@ export async function loadRoomList() {
       let count = typeof info === "object" ? info.count : info;
       let hasPwd = typeof info === "object" && info.hasPassword;
       let pinIcon = isPinned ? ' <span class="pin-indicator">📌</span>' : '';
-      div.innerHTML = '<span class="room-name">#' + name + (hasPwd ? ' <span style="font-size:12px;">🔒</span>' : '') + pinIcon + '</span><span class="room-count">' + count + ' 在线</span>';
+      div.innerHTML = '<span class="room-name">#' + escapeHtml(name) + (hasPwd ? ' <span style="font-size:12px;">🔒</span>' : '') + pinIcon + '</span><span class="room-count">' + count + ' 在线</span>';
 
       // Pin toggle button
       let pinBtn = document.createElement("span");

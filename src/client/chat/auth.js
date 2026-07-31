@@ -1,5 +1,6 @@
 // 认证模块 - 登录/注册 UI + 辅助函数
 import { state } from './state.js';
+import { escapeHtml } from './renderers.js';
 import { startRoomList } from './rooms.js';
 
 export function startNameChooser() {
@@ -159,9 +160,9 @@ export function updateAccountBar() {
   let token = localStorage.getItem("chat_token");
   let user = state.username || localStorage.getItem("chat_user") || "";
   if (token && user) {
-    bar.innerHTML = '🔒 <strong>' + user + '</strong> (已注册) · <a href="#" id="logout-link" style="color:#e74c3c;text-decoration:none">退出登录</a>';
+    bar.innerHTML = '🔒 <strong>' + escapeHtml(user) + '</strong> (已注册) · <a href="#" id="logout-link" style="color:#e74c3c;text-decoration:none">退出登录</a>';
   } else if (user) {
-    bar.innerHTML = '👤 <strong>' + user + '</strong> (游客) · <a href="#" id="logout-link" style="color:#4a6cf7;text-decoration:none">登录/注册</a>';
+    bar.innerHTML = '👤 <strong>' + escapeHtml(user) + '</strong> (游客) · <a href="#" id="logout-link" style="color:#4a6cf7;text-decoration:none">登录/注册</a>';
   } else {
     bar.style.display = "none";
     return;

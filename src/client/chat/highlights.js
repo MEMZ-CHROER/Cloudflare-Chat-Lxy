@@ -1,5 +1,6 @@
 // 精华消息面板
 import { state } from './state.js';
+import { escapeHtml } from './renderers.js';
 
 export function showHighlightsPanel() {
   let existing = document.getElementById("hl-panel");
@@ -29,7 +30,7 @@ export function showHighlightsPanel() {
       row.style.cssText = "padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:var(--bg);transition:background 0.1s;";
       row.addEventListener("mouseenter", () => row.style.background = "var(--hover-bg, #e8e8e8)");
       row.addEventListener("mouseleave", () => row.style.background = "var(--bg)");
-      row.innerHTML = '<div style="font-weight:600;font-size:12px;">' + h.name + '</div><div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + h.text + '</div>';
+      row.innerHTML = '<div style="font-weight:600;font-size:12px;">' + escapeHtml(h.name) + '</div><div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(h.text) + '</div>';
       row.addEventListener("click", () => {
         let el = state.chatlog.querySelector('[data-timestamp="' + h.timestamp + '"]');
         if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("msg-ref-highlight"); setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000); }

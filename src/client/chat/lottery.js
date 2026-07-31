@@ -45,7 +45,7 @@ export async function doDraw(poolId) {
   if (poolsDiv) poolsDiv.style.display = "none";
   if (resultDiv) { resultDiv.style.display = "block"; resultDiv.innerHTML = '<div style="padding:20px;font-size:18px">🎰 抽奖中...</div>'; }
   try {
-    let r = await fetch("/api/lottery/draw", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: state.username, pool: poolId})});
+    let r = await fetch("/api/lottery/draw", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: state.username, pool: poolId, token: localStorage.getItem("chat_token") || ""})});
     let data = await r.json();
     if (data.ok && data.prize) {
       let tagMsg = data.prize.tag ? "<br><span style=\"font-size:14px;color:#888\">🏷️ 标签已自动装备!</span>" : "";

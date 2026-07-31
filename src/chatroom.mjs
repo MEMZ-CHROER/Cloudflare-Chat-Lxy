@@ -580,6 +580,13 @@ export class ChatRoom {
           return;
         }
 
+        // 🔒 用户名过滤：排除 HTML 特殊字符，防止存储型 XSS（允许中文/emoji）
+        if (/[<>&"'\\]/.test(rawName)) {
+          webSocket.send(JSON.stringify({error: "名称包含非法字符"}));
+          webSocket.close(1009, "名称包含非法字符");
+          return;
+        }
+
         session.name = rawName;
         webSocket.serializeAttachment({ ...webSocket.deserializeAttachment(), name: session.name });
 

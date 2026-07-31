@@ -271,7 +271,7 @@ export function join() {
         let modeText = data.mode === "fixed" ? "固定金额" : "拼手气";
         bubble.innerHTML = '<span style="font-size:28px">🧧</span>' +
           '<div style="font-size:14px;font-weight:700;margin:4px 0">红包</div>' +
-          '<div style="font-size:12px;color:#888">' + data.creator + ' 发了 ' + modeText + ' 红包</div>' +
+          '<div style="font-size:12px;color:#888">' + escapeHtml(data.creator) + ' 发了 ' + modeText + ' 红包</div>' +
           '<div style="font-size:13px;color:#e74c3c;font-weight:700;margin:4px 0">💰 ' + data.total + ' 积分 · ' + data.count + ' 份</div>' +
           '<button class="rp-grab-btn" data-rp-id="' + data.id + '" style="padding:6px 20px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">开</button>';
         bubble.querySelector(".rp-grab-btn").addEventListener("click", function() {

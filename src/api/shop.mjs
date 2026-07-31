@@ -20,6 +20,13 @@ export async function handleShop(path, request, env) {
     if (shopAction === "buy" || shopAction === "equip" || shopAction === "unequip") {
       if (request.method !== "POST") return new Response("方法不允许", {status: 405});
       let body = await request.json();
+      // 🔒 S4 修复：所有写操作必须验证 token，杜绝越权操作任意用户名
+      let token = body.token || "";
+      let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(body.name || "") + "&token=" + encodeURIComponent(token)));
+      let authData = await authCheck.json();
+      if (!authData.authenticated) {
+        return new Response(JSON.stringify({error: "请先登录后再操作商城"}), {status: 403, headers: {"Content-Type": "application/json"}});
+      }
       let r = await stub.fetch("https://dummy-url/shop/" + shopAction, {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
       let result = await r.text();
       if ((shopAction === "equip" || shopAction === "unequip") && r.status === 200) {

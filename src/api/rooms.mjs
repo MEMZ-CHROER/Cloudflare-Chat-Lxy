@@ -30,13 +30,16 @@ export async function handleRooms(path, request, env) {
       }
 
       let name = path[1];
+      // 🔒 房间名白名单：只允许字母数字下划线连字符，或64位hex的DO ID，防止恶意房间名被存储触发XSS
+      let isValidName = (name.length <= 32 && /^[a-zA-Z0-9_\-]+$/.test(name)) || /^[0-9a-f]{64}$/.test(name);
+      if (!isValidName) {
+        return new Response("房间名称包含非法字符", {status: 400});
+      }
       let id;
       if (name.match(/^[0-9a-f]{64}$/)) {
         id = env.rooms.idFromString(name);
-      } else if (name.length <= 32) {
-        id = env.rooms.idFromName(name);
       } else {
-        return new Response("名称过长", {status: 404});
+        id = env.rooms.idFromName(name);
       }
 
       let roomObject = env.rooms.get(id);

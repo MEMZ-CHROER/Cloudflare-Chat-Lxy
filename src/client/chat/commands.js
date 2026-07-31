@@ -106,7 +106,7 @@ export async function handleCommand(text) {
       let poolName = arg || "default";
       if (!state.username) { showError("请先登录才能抽奖"); break; }
       try {
-        let r = await fetch("/api/lottery/draw", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: state.username, pool: poolName})});
+        let r = await fetch("/api/lottery/draw", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: state.username, pool: poolName, token: localStorage.getItem("chat_token") || ""})});
         let data = await r.json();
         if (data.ok && data.prize) {
           addChatMessage(null, "* 🎉 恭喜 " + state.username + " 抽中了: " + data.prize.name + "!");

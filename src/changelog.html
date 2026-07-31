@@ -94,6 +94,21 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.21</span>
+    <span class="version-date">2026-07-31</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-fix">安全</span>修复游戏刷分 — 服务端校验下注记录，限制单局倍率/频率/每日净赢上限</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-fix">安全</span>修复商城/任务/抽奖/兑换越权 — 所有积分写操作强制登录校验，杜绝操作任意账号</span></div>
+    <div class="feature-item"><span class="icon">🧼</span><span class="text"><span class="tag tag-fix">安全</span>修复存储型 XSS — 用户名/消息/房间名/红包/精华/定时消息渲染统一转义</span></div>
+    <div class="feature-item"><span class="icon">🚪</span><span class="text"><span class="tag tag-fix">安全</span>修复未登录可修改他人头像/简介 — 严格 token 校验</span></div>
+    <div class="feature-item"><span class="icon">✂️</span><span class="text"><span class="tag tag-fix">安全</span>用户名/房间名字符白名单 — 拒绝 HTML 特殊字符，从源头防注入</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.20</span>
     <span class="version-date">2026-07-30</span>
     <span class="version-arrow open">▶</span>

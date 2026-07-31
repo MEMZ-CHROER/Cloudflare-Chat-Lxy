@@ -41,6 +41,7 @@ export async function handleUsers(reg, request, url) {
       let password = body.password;
       if (!name || !password) return new Response(JSON.stringify({error: "请提供用户名和密码"}), {status: 400});
       if (name.length > 32) return new Response(JSON.stringify({error: "用户名过长"}), {status: 400});
+      if (/[<>&"'\\]/.test(name)) return new Response(JSON.stringify({error: "用户名包含非法字符"}), {status: 400});
       /* 允许任意长度密码 */
       if (reg.registeredUsers.has(name)) return new Response(JSON.stringify({error: "用户名已被注册"}), {status: 409});
       let hash = await sha256(password);
@@ -74,6 +75,9 @@ export async function handleUsers(reg, request, url) {
       if (!user) return new Response(JSON.stringify({avatar: ""}));
       if (request.method === "POST") {
         let body = await request.json();
+        // 🔒 H3 修复：修改头像必须验证 token，只能改自己的
+        let token = body.token || "";
+        if (!user || user.token !== token) return new Response(JSON.stringify({error: "请先登录后再修改头像"}), {status: 403});
         let avatar = body.avatar || "";
         if (avatar && avatar.length > 200000) return new Response(JSON.stringify({error: "头像文件过大"}), {status: 400});
         user.avatar = avatar;
@@ -90,6 +94,9 @@ export async function handleUsers(reg, request, url) {
       if (!user) return new Response(JSON.stringify({bio: ""}));
       if (request.method === "POST") {
         let body = await request.json();
+        // 🔒 H3 修复：修改简介必须验证 token，只能改自己的
+        let token = body.token || "";
+        if (!user || user.token !== token) return new Response(JSON.stringify({error: "请先登录后再修改简介"}), {status: 403});
         let bio = (body.bio || "").slice(0, 200);
         user.bio = bio;
         await reg.saveRegisteredUsers();

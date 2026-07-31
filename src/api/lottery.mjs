@@ -12,6 +12,13 @@ export async function handleLottery(path, request, env) {
     if (lotAction === "draw") {
       if (request.method !== "POST") return new Response("方法不允许", {status: 405});
       let body = await request.json();
+      // 🔒 安全修复：抽奖必须验证 token，杜绝越权扣他人积分/改他人库存
+      let token = body.token || "";
+      let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(body.name || "") + "&token=" + encodeURIComponent(token)));
+      let authData = await authCheck.json();
+      if (!authData.authenticated) {
+        return new Response(JSON.stringify({error: "请先登录后再抽奖"}), {status: 403, headers: {"Content-Type": "application/json"}});
+      }
       let r = await stub.fetch("https://dummy-url/lottery/draw", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
       return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
     }

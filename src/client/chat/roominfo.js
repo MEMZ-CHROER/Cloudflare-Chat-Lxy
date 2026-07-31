@@ -1,5 +1,6 @@
 // 房间信息面板
 import { state } from './state.js';
+import { escapeHtml } from './renderers.js';
 
 export function toggleRoomInfo() {
   let existing = document.getElementById("room-info-modal");

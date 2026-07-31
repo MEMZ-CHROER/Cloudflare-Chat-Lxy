@@ -135,6 +135,52 @@ export async function handlePoints(reg, request, url) {
       });
     }
 
+    case "/game/bet": {
+      let name = url.searchParams.get("name");
+      let wager = parseInt(url.searchParams.get("wager")) || 0;
+      if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      if (!reg.gameBets) reg.gameBets = new Map();
+      reg.gameBets.set(name, {wager, ts: Date.now()});
+      return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
+    }
+
+    case "/game/win": {
+      let name = url.searchParams.get("name");
+      let win = parseInt(url.searchParams.get("win")) || 0;
+      if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      if (!reg.gameBets) reg.gameBets = new Map();
+      if (!reg.gameLastWin) reg.gameLastWin = new Map();
+      if (!reg.gameDailyWin) reg.gameDailyWin = new Map();
+      let bet = reg.gameBets.get(name);
+      let now = Date.now();
+      // 1) 必须有未结算下注，且 5 分钟内有效（防凭空 win / 重放）
+      if (!bet || now - bet.ts > 300000) {
+        return new Response(JSON.stringify({error: "请先下注后再结算"}), {status: 400});
+      }
+      // 2) win 不得超过下注的 25 倍，且单局上限 10000（防杠杆刷分）
+      if (win > bet.wager * 25 || win > 10000) {
+        return new Response(JSON.stringify({error: "该局赢取金额超出允许范围"}), {status: 400});
+      }
+      // 3) 每 30 秒限一次结算（防高频刷分）
+      let lastWin = reg.gameLastWin.get(name) || 0;
+      if (now - lastWin < 30000) {
+        return new Response(JSON.stringify({error: "操作过于频繁，请稍后再试"}), {status: 400});
+      }
+      // 4) 每日净赢上限 10000（win - wager 累计）
+      let today = new Date().toISOString().slice(0, 10);
+      let daily = reg.gameDailyWin.get(name);
+      if (!daily || daily.date !== today) daily = {date: today, total: 0};
+      let net = win - bet.wager;
+      if (daily.total + net > 10000) {
+        return new Response(JSON.stringify({error: "今日游戏赢取已达上限"}), {status: 400});
+      }
+      daily.total += net;
+      reg.gameDailyWin.set(name, daily);
+      reg.gameLastWin.set(name, now);
+      reg.gameBets.delete(name);
+      return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
+    }
+
     default:
       return null;
   }

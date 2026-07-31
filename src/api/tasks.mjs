@@ -23,16 +23,18 @@ export async function handleTasks(path, request, env) {
       let r = await stub.fetch(new URL("https://dummy-url/tasks/claims?name=" + encodeURIComponent(name)));
       return new Response(await r.text(), { status: 200, headers: {"Content-Type": "application/json"} });
     }
-    if (taskAction === "claim") {
+    if (taskAction === "claim" || taskAction === "complete") {
       if (request.method !== "POST") return new Response("方法不允许", {status: 405});
       let body = await request.json();
-      let r = await stub.fetch("https://dummy-url/task/claim", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
-      return new Response(await r.text(), { status: r.status, headers: {"Content-Type": "application/json"} });
-    }
-    if (taskAction === "complete") {
-      if (request.method !== "POST") return new Response("方法不允许", {status: 405});
-      let body = await request.json();
-      let r = await stub.fetch("https://dummy-url/task/complete", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
+      // 🔒 S4 修复：所有写操作必须验证 token，杜绝越权操作任意用户名
+      let token = body.token || "";
+      let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(body.name || "") + "&token=" + encodeURIComponent(token)));
+      let authData = await authCheck.json();
+      if (!authData.authenticated) {
+        return new Response(JSON.stringify({error: "请先登录后再操作任务"}), {status: 403, headers: {"Content-Type": "application/json"}});
+      }
+      let target = taskAction === "claim" ? "/task/claim" : "/task/complete";
+      let r = await stub.fetch("https://dummy-url" + target, {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
       return new Response(await r.text(), { status: r.status, headers: {"Content-Type": "application/json"} });
     }
     return new Response("未找到该操作", { status: 404 });
