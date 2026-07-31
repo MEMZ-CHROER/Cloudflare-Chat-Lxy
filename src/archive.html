@@ -109,7 +109,7 @@ async function loadVersions() {
           '<div class="v-date">' + dateStr + ' · ' + sizeStr + '</div>' +
         '</div>' +
         '<div class="v-actions">' +
-          '<a href="/api/archive/download/' + encodeURIComponent(v.name) + '" download>⬇ 下载</a>' +
+          '<a href="/api/archive/download/' + encodeURIComponent(v.name) + '" download="' + v.name + '.zip">⬇ 下载</a>' +
         '</div>' +
       '</div>';
     }).join("");

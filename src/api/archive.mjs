@@ -51,14 +51,7 @@ export async function handleArchive(apiPath, request, env) {
   }
 
   if (subPath[0] === "download") {
-    // 下载需要管理员密钥
-    let key = request.headers.get("X-Admin-Key") || new URL(request.url).searchParams.get("key") || "";
-    let permission = null;
-    if (key === (env.ADMIN_SECRET_KEY || "del")) permission = "super";
-    if (!permission && key === (env.ADMIN_KEY || "mod")) permission = "admin";
-    if (!permission) {
-      return new Response(JSON.stringify({error: "需要管理密钥"}), {status: 403, headers: {"Content-Type": "application/json"}});
-    }
+    // 下载公开：存档列表页是公开的，历史版本 zip 也应可公开下载（无需管理密钥）
     let name = subPath[1] || new URL(request.url).searchParams.get("name");
     if (!name) return new Response(JSON.stringify({error: "请提供版本名称"}), {status: 400, headers: {"Content-Type": "application/json"}});
     let doResp = await stub.fetch("https://dummy-url/download?name=" + encodeURIComponent(name));
