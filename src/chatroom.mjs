@@ -1322,6 +1322,20 @@ export class ChatRoom {
             webSocket.send(JSON.stringify({error: "请输入你想问的问题，例如：/ai 你好"}));
             return;
           }
+          // 新功能：AI 读取对话上下文 — 取房间最近 10 条普通文本消息作为上下文，让 AI 能结合聊天内容回答
+          let ctxMsgs = [];
+          let ctxArr = [...this.messages.values()];
+          for (let i = ctxArr.length - 1; i >= 0 && ctxMsgs.length < 10; i--) {
+            let m = ctxArr[i];
+            if (!m || typeof m.message !== "string") continue;
+            if (m.type === "file" || m.type === "image" || m.type === "zifu") continue;
+            if (m.name === "AI" || m.name === "Bot" || m.name === "系统") continue;
+            if (m.message.startsWith("/")) continue; // 跳过命令消息
+            ctxMsgs.unshift({role: "user", content: (m.name || "用户") + ": " + m.message.slice(0, 200)});
+          }
+          let aiMsgs = [{role: "system", content: this.env.AI_SYSTEM_PROMPT || "你是一个友好的助手，回答尽量简洁"}];
+          if (ctxMsgs.length) aiMsgs = aiMsgs.concat(ctxMsgs);
+          aiMsgs.push({role: "user", content: userPrompt});
           let resp = await fetch(this.env.AI_BASE_URL + "/chat/completions", {
             method: "POST",
             headers: {
@@ -1330,10 +1344,7 @@ export class ChatRoom {
             },
             body: JSON.stringify({
               model: this.env.AI_MODEL || "deepseek-chat",
-              messages: [
-                {role: "system", content: this.env.AI_SYSTEM_PROMPT || "你是一个友好的助手"},
-                {role: "user", content: userPrompt}
-              ],
+              messages: aiMsgs,
               max_tokens: 2000
             })
           });

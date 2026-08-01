@@ -2,8 +2,16 @@
 import { state } from './state.js';
 import { escapeHtml } from './renderers.js';
 import { startRoomList } from './rooms.js';
+import { t, getLang, setLang, applyI18n } from './i18n.js';
 
 export function startNameChooser() {
+  // ====== 多语言初始化 + 语言切换 ======
+  applyI18n();
+  let langSel = document.querySelector("#lang-select");
+  if (langSel) {
+    langSel.value = getLang();
+    langSel.addEventListener("change", () => setLang(langSel.value));
+  }
   // ====== 自动登录：检查本地 token 是否有效 ======
   let savedUser = localStorage.getItem("chat_user");
   let savedToken = localStorage.getItem("chat_token");
@@ -57,9 +65,9 @@ export function startNameChooser() {
     let btn = document.querySelector("#login-btn");
     errEl.textContent = "";
     errEl.style.display = "none";
-    if (!name || !password) { errEl.textContent = "请填写用户名和密码"; errEl.style.display = "block"; return; }
+    if (!name || !password) { errEl.textContent = t("pleaseFill"); errEl.style.display = "block"; return; }
     btn.disabled = true;
-    btn.textContent = "登录中...";
+    btn.textContent = t("loginIng");
     try {
       let r = await fetch("/api/login", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name, password})});
       let data = await r.json();
@@ -69,15 +77,15 @@ export function startNameChooser() {
         localStorage.setItem("chat_user", data.name);
         startRoomList();
       } else {
-        errEl.textContent = data.error || "登录失败";
+        errEl.textContent = data.error || t("loginFailed");
         errEl.style.display = "block";
       }
     } catch (e) {
-      errEl.textContent = "网络错误: " + e.message;
+      errEl.textContent = t("networkError") + ": " + e.message;
       errEl.style.display = "block";
     }
     btn.disabled = false;
-    btn.textContent = "登录";
+    btn.textContent = t("login");
   });
 
   document.querySelector("#register-btn").addEventListener("click", async (e) => {
@@ -88,10 +96,10 @@ export function startNameChooser() {
     let btn = document.querySelector("#register-btn");
     errEl.textContent = "";
     errEl.style.display = "none";
-    if (!name || !password) { errEl.textContent = "请填写用户名和密码"; errEl.style.display = "block"; return; }
-    if (password.length < 6) { errEl.textContent = "密码至少6个字符"; errEl.style.display = "block"; return; }
+    if (!name || !password) { errEl.textContent = t("pleaseFill"); errEl.style.display = "block"; return; }
+    if (password.length < 6) { errEl.textContent = t("registerMinLen"); errEl.style.display = "block"; return; }
     btn.disabled = true;
-    btn.textContent = "注册中...";
+    btn.textContent = t("registerIng");
     try {
       let r = await fetch("/api/register", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name, password})});
       let data = await r.json();
@@ -111,11 +119,11 @@ export function startNameChooser() {
         errEl.style.display = "block";
       }
     } catch (e) {
-      errEl.textContent = "网络错误: " + e.message;
+      errEl.textContent = t("networkError") + ": " + e.message;
       errEl.style.display = "block";
     }
     btn.disabled = false;
-    btn.textContent = "注册";
+    btn.textContent = t("register");
   });
 
   document.querySelector("#skip-auth").addEventListener("click", (e) => {

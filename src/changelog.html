@@ -94,11 +94,24 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
-    <span class="version-tag">v1.21</span>
-    <span class="version-date">2026-07-31</span>
+    <span class="version-tag">v1.21.5</span>
+    <span class="version-date">2026-08-01</span>
     <span class="version-arrow open">▶</span>
   </div>
   <div class="version-body open">
+    <div class="feature-item"><span class="icon">🌍</span><span class="text"><span class="tag tag-feature">新增</span>多语言 i18n — 界面中/英切换，登录页选择语言（覆盖登录界面/设置面板/常用文案）</span></div>
+    <div class="feature-item"><span class="icon">🤖</span><span class="text"><span class="tag tag-feature">新增</span>AI 读取对话上下文 — /ai 会结合房间最近10条消息回答，更贴合聊天语境</span></div>
+    <div class="feature-item"><span class="icon">🚀</span><span class="text"><span class="tag tag-feature">新增</span>应急回滚 — 超管聊天框输入 /rollback &lt;版本号&gt; &lt;超管密钥&gt; 一键回滚部署到存档稳定版</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.21</span>
+    <span class="version-date">2026-07-31</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
     <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-fix">安全</span>修复游戏刷分 — 服务端校验下注记录，限制单局倍率/频率/每日净赢上限</span></div>
     <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-fix">安全</span>修复商城/任务/抽奖/兑换越权 — 所有积分写操作强制登录校验，杜绝操作任意账号</span></div>
     <div class="feature-item"><span class="icon">🧼</span><span class="text"><span class="tag tag-fix">安全</span>修复存储型 XSS — 用户名/消息/房间名/红包/精华/定时消息渲染统一转义</span></div>
@@ -150,9 +163,9 @@ body {
   <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.20</span>
     <span class="version-date">2026-07-30</span>
-    <span class="version-arrow open">▶</span>
+    <span class="version-arrow">▶</span>
   </div>
-  <div class="version-body open">
+  <div class="version-body">
     <div class="feature-item"><span class="icon">📜</span><span class="text"><span class="tag tag-feature">新增</span>操作日志系统 — 管理后台可审计所有管理员操作</span></div>
     <div class="feature-item"><span class="icon">🧧</span><span class="text"><span class="tag tag-feature">新增</span>积分红包 — 拼手气/固定金额红包，聊天室内抢红包</span></div>
     <div class="feature-item"><span class="icon">📦</span><span class="text"><span class="tag tag-feature">新增</span>FileBucket 桶存储 — 文件数据从主 DO 分离，7 天自动过期</span></div>
