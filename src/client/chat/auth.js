@@ -11,6 +11,8 @@ export function startNameChooser() {
     langSel.value = getLang();
     langSel.addEventListener("change", () => setLang(langSel.value));
   }
+  // 语言切换后刷新动态渲染的账户栏
+  window.addEventListener("langchange", () => { try { updateAccountBar(); } catch (e) {} });
   // ====== 自动登录：检查本地 token 是否有效 ======
   let savedUser = localStorage.getItem("chat_user");
   let savedToken = localStorage.getItem("chat_token");
@@ -167,9 +169,9 @@ export function updateAccountBar() {
   let token = localStorage.getItem("chat_token");
   let user = state.username || localStorage.getItem("chat_user") || "";
   if (token && user) {
-    bar.innerHTML = '🔒 <strong>' + escapeHtml(user) + '</strong> (已注册) · <a href="#" id="logout-link" style="color:#e74c3c;text-decoration:none">退出登录</a>';
+    bar.innerHTML = '🔒 <strong>' + escapeHtml(user) + '</strong> (' + t("registered") + ') · <a href="#" id="logout-link" style="color:#e74c3c;text-decoration:none">' + t("logout") + '</a>';
   } else if (user) {
-    bar.innerHTML = '👤 <strong>' + escapeHtml(user) + '</strong> (游客) · <a href="#" id="logout-link" style="color:#4a6cf7;text-decoration:none">登录/注册</a>';
+    bar.innerHTML = '👤 <strong>' + escapeHtml(user) + '</strong> (' + t("guest") + ') · <a href="#" id="logout-link" style="color:#4a6cf7;text-decoration:none">' + t("loginRegister") + '</a>';
   } else {
     bar.style.display = "none";
     return;

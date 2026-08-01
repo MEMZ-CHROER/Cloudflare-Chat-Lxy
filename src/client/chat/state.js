@@ -119,6 +119,10 @@ const i18nDict = {
     at: "@ 提及", dm: "私信", kick: "踢出", ban: "封禁", banip: "封禁IP", batchKick: "批量踢出",
     image: "图片", file: "文件", moreTools: "更多工具", search: "搜索", more: "更多",
     reconnectBanner: "连接已断开，正在尝试重新连接...",
+    joinChat: "加入聊天", chooseRoom: "选择一个房间开始聊天", roomNamePlaceholder: "输入房间名称",
+    enter: "进入", or: "或者", createPrivate: "创建私人房间",
+    shop: "商城", lottery: "抽奖", tasks: "任务", games: "游戏", existingRooms: "已有房间",
+    registered: "已注册", logout: "退出登录", guest: "游客", loginRegister: "登录/注册",
   },
   en: {
     login: "Login", register: "Register", skipLogin: "Skip, enter as guest", send: "Send", settings: "Settings",
@@ -137,6 +141,10 @@ const i18nDict = {
     at: "@ Mention", dm: "DM", kick: "Kick", ban: "Ban", banip: "Ban IP", batchKick: "Batch kick",
     image: "Image", file: "File", moreTools: "More tools", search: "Search", more: "More",
     reconnectBanner: "Disconnected, reconnecting...",
+    joinChat: "Join chat", chooseRoom: "Pick a room to start chatting", roomNamePlaceholder: "Enter room name",
+    enter: "Enter", or: "or", createPrivate: "Create private room",
+    shop: "Shop", lottery: "Lottery", tasks: "Tasks", games: "Games", existingRooms: "Existing rooms",
+    registered: "Registered", logout: "Logout", guest: "Guest", loginRegister: "Login/Register",
   }
 };
 export function getLang() {
@@ -147,6 +155,7 @@ export function setLang(l) {
   localStorage.setItem(LANG_KEY, l);
   applyI18n();
   document.documentElement.setAttribute("lang", l);
+  window.dispatchEvent(new Event("langchange"));
 }
 export function t(key) {
   const lang = getLang();
