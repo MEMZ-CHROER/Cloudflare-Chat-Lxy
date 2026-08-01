@@ -1,5 +1,5 @@
 // 用户备注(本地) - 给其他用户设置本地别名
-import { state } from './state.js';
+import { state, t } from './state.js';
 import { addChatMessage } from './renderers.js';
 import { showSuccess } from './state.js';
 
@@ -21,10 +21,10 @@ export function setNote(name, alias) {
   let notes = loadAll();
   if (alias && alias.trim()) {
     notes[name] = alias.trim();
-    showSuccess("已将「" + name + "」的备注设为: " + alias.trim());
+    showSuccess("已将「" + name + t("」的备注设为: ") + alias.trim());
   } else {
     delete notes[name];
-    showSuccess("已清除「" + name + "」的备注");
+    showSuccess(t("已清除「") + name + t("」的备注"));
   }
   saveAll(notes);
 }

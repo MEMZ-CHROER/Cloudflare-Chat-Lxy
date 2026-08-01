@@ -1,5 +1,5 @@
 // 房间信息面板
-import { state } from './state.js';
+import { state, t } from './state.js';
 import { escapeHtml } from './renderers.js';
 
 export function toggleRoomInfo() {
@@ -31,6 +31,6 @@ export function toggleRoomInfo() {
     '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">房间:</span> <strong>#' + state.roomname + '</strong></div>' +
     '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">在线用户:</span> <strong>' + onlineCount + '</strong></div>' +
     '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">用户名:</span> <strong>' + state.username + '</strong></div>' +
-    '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">WebSocket:</span> <strong>' + (state.currentWebSocket ? "✅ 已连接" : "❌ 未连接") + '</strong></div>' +
+    '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">WebSocket:</span> <strong>' + (state.currentWebSocket ? "✅ 已连接" : t("❌ 未连接")) + '</strong></div>' +
     '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">消息时间戳:</span> <strong>' + (state.lastSeenTimestamp ? new Date(state.lastSeenTimestamp).toLocaleTimeString() : "-") + '</strong></div>';
 }

@@ -1,5 +1,5 @@
 // 任务弹窗
-import { state } from './state.js';
+import { state, t } from './state.js';
 import { escapeHtml, updatePointsDisplay } from './renderers.js';
 import { getAuthName, getAuthToken, isAuthenticated } from './auth.js';
 
@@ -16,7 +16,7 @@ function updateTaskPoints() {
   if (!name) return;
   fetch("/api/points/all").then(r => r.json()).then(data => {
     let pts = data[name];
-    if (pts !== undefined) document.getElementById("task-points-display").textContent = pts + " 积分";
+    if (pts !== undefined) document.getElementById("task-points-display").textContent = pts + t(" 积分");
   }).catch(() => {});
 }
 
@@ -70,7 +70,7 @@ export async function completeTask(taskId) {
     let r = await fetch("/api/tasks/complete", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), taskId, token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
-    else { alert("任务完成！获得 " + data.reward + " 积分！当前积分: " + data.total); updatePointsDisplay(); loadTasks(); }
+    else { alert("任务完成！获得 " + data.reward + t(" 积分！当前积分: ") + data.total); updatePointsDisplay(); loadTasks(); }
   } catch (e) { alert("提交失败: " + e.message); }
 }
 

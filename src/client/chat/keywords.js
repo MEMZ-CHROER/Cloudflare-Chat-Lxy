@@ -1,5 +1,5 @@
 // 关键词提醒 - 自定义关键词，出现时高亮+通知
-import { state } from './state.js';
+import { state, t } from './state.js';
 import { flashTitle, playMentionSound } from './ui.js';
 
 const STORAGE_KEY = "chat_keywords";
@@ -31,7 +31,7 @@ export function checkKeywords(text, name) {
   let lower = text.toLowerCase();
   for (let w of words) {
     if (lower.includes(w.toLowerCase())) {
-      flashTitle("🔔 " + name + " 提到了 " + w);
+      flashTitle("🔔 " + name + t(" 提到了 ") + w);
       playMentionSound();
       return true;
     }
@@ -56,7 +56,7 @@ export function showKeywordManager() {
   if (list.length === 0) {
     let empty = document.createElement("div");
     empty.style.cssText = "font-size:12px;color:var(--text-secondary);padding:8px 0;";
-    empty.textContent = "暂无关键词，添加后聊天中出现时将通知你";
+    empty.textContent = t("暂无关键词，添加后聊天中出现时将通知你");
     panel.appendChild(empty);
   } else {
     list.forEach(w => {
@@ -76,10 +76,10 @@ export function showKeywordManager() {
   addRow.style.cssText = "display:flex;gap:4px;margin-top:8px;";
   let inp = document.createElement("input");
   inp.type = "text";
-  inp.placeholder = "添加关键词...";
+  inp.placeholder = t("添加关键词...");
   inp.style.cssText = "flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);outline:none;";
   let addBtn = document.createElement("button");
-  addBtn.textContent = "添加";
+  addBtn.textContent = t("添加");
   addBtn.style.cssText = "padding:4px 10px;background:var(--primary);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;";
   addBtn.addEventListener("click", () => {
     let v = inp.value.trim();

@@ -1,5 +1,5 @@
 // 设置面板 — 背景透明度 / 磨砂程度 / 界面色调 / 自定义壁纸 / 视频壁纸
-import { showError, showInfo, setLang, getLang, applyI18n } from './state.js';
+import { showError, showInfo, setLang, getLang, applyI18n, t } from './state.js';
 
 const BG_TINT_KEY = "bgTint";
 const BG_BLUR_KEY = "bgBlur";
@@ -44,7 +44,7 @@ function rgbToHex(r, g, b) {
 export function applyUiColor(hex) {
   if (!hex) { resetUiColor(); return; }
   const rgb = hexToRgb(hex);
-  if (!rgb) { showError("无效的颜色值"); return; }
+  if (!rgb) { showError(t("无效的颜色值")); return; }
   document.body.style.setProperty("--frosted-r", String(rgb.r));
   document.body.style.setProperty("--frosted-g", String(rgb.g));
   document.body.style.setProperty("--frosted-b", String(rgb.b));
@@ -91,7 +91,7 @@ export function applyWallpaper(url) {
   if (!url) { restoreRandomWallpaper(); return; }
   // 🔒 安全修复：URL 白名单校验
   if (!isSafeMediaUrl(url)) {
-    showError("壁纸 URL 不合法，仅支持 https/http 或 data:image");
+    showError(t("壁纸 URL 不合法，仅支持 https/http 或 data:image"));
     return;
   }
   // 同时设置 html 和 body，确保 body::before 伪元素能取到
@@ -105,7 +105,7 @@ export function applyWallpaper(url) {
   try {
     localStorage.setItem(WALLPAPER_KEY, url);
   } catch (e) {
-    showError("保存失败：存储空间不足（本地图片太大），请使用图片 URL");
+    showError(t("保存失败：存储空间不足（本地图片太大），请使用图片 URL"));
   }
 }
 
@@ -127,7 +127,7 @@ export function applyVideoWallpaper(url) {
   if (!url) { cancelVideoWallpaper(); return; }
   // 🔒 安全修复：URL 白名单校验
   if (!isSafeMediaUrl(url)) {
-    showError("视频 URL 不合法，仅支持 https/http 或 data:video");
+    showError(t("视频 URL 不合法，仅支持 https/http 或 data:video"));
     return;
   }
   const video = document.getElementById("video-wallpaper");
@@ -148,7 +148,7 @@ export function applyVideoWallpaper(url) {
   try {
     localStorage.setItem(VIDEO_KEY, url);
   } catch (e) {
-    showError("保存失败：存储空间不足（本地视频太大），请使用视频 URL");
+    showError(t("保存失败：存储空间不足（本地视频太大），请使用视频 URL"));
   }
   video.play().catch(() => {});
 }
@@ -269,7 +269,7 @@ export function initSettings() {
   if (colorResetBtn) {
     colorResetBtn.addEventListener("click", () => {
       resetUiColor();
-      showInfo("已恢复默认色调");
+      showInfo(t("已恢复默认色调"));
     });
   }
 
@@ -278,9 +278,9 @@ export function initSettings() {
   if (wpUrlBtn) {
     wpUrlBtn.addEventListener("click", () => {
       const url = document.getElementById("wallpaper-url-input").value.trim();
-      if (!url) { showError("请输入图片 URL"); return; }
+      if (!url) { showError(t("请输入图片 URL")); return; }
       applyWallpaper(url);
-      showInfo("壁纸已应用");
+      showInfo(t("壁纸已应用"));
     });
   }
 
@@ -295,7 +295,7 @@ export function initSettings() {
       const reader = new FileReader();
       reader.onload = () => {
         applyWallpaper(reader.result);
-        showInfo("本地图片壁纸已应用");
+        showInfo(t("本地图片壁纸已应用"));
       };
       reader.readAsDataURL(file);
     });
@@ -312,9 +312,9 @@ export function initSettings() {
   if (vidUrlBtn) {
     vidUrlBtn.addEventListener("click", () => {
       const url = document.getElementById("video-url-input").value.trim();
-      if (!url) { showError("请输入视频 URL"); return; }
+      if (!url) { showError(t("请输入视频 URL")); return; }
       applyVideoWallpaper(url);
-      showInfo("视频壁纸已应用");
+      showInfo(t("视频壁纸已应用"));
     });
   }
 
@@ -329,7 +329,7 @@ export function initSettings() {
       const reader = new FileReader();
       reader.onload = () => {
         applyVideoWallpaper(reader.result);
-        showInfo("本地视频壁纸已应用");
+        showInfo(t("本地视频壁纸已应用"));
       };
       reader.readAsDataURL(file);
     });
@@ -340,7 +340,7 @@ export function initSettings() {
   if (vidCancelBtn) {
     vidCancelBtn.addEventListener("click", () => {
       cancelVideoWallpaper();
-      showInfo("已取消视频壁纸");
+      showInfo(t("已取消视频壁纸"));
     });
   }
 

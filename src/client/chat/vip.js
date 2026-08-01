@@ -1,3 +1,4 @@
+import { t } from './state.js';
 // VIP/TAG 系统
 export const TAG_COLORS = {
   red: "#e74c3c", blue: "#3498db", green: "#2ecc71",
@@ -43,6 +44,6 @@ export function createVipBadge(vip) {
   badge.textContent = vip.label;
   var c = getVipColor(vip);
   if (c) badge.style.background = c;
-  badge.title = vip.label + " 用户";
+  badge.title = vip.label + t(" 用户");
   return badge;
 }

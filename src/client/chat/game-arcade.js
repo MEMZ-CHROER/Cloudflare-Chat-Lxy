@@ -1,6 +1,6 @@
 // 🏓 动作街机组 — 打砖块 / 接水果 / 飞越障碍 / 保龄球
 import { gs, gameApi, updateBalance, registerGame, playGameSound } from './game-core.js';
-import { state, showError } from './state.js';
+import { state, showError, t } from './state.js';
 
 // ========== 🏓 打砖块 ==========
 
@@ -37,7 +37,7 @@ function brInitBricks() {
 
 async function brStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.breakout.betPlaced) return;
   let r1 = await gameApi("bet", {game: "breakout", wager: 150});
   if (r1.error) { showError(r1.error); return; }
@@ -48,7 +48,7 @@ async function brStart() {
   b.bricks = brInitBricks(); b.ballX = 240; b.ballY = 350; b.ballDx = 3; b.ballDy = -3; b.paddleX = 200;
   document.getElementById("br-start").style.display = "none";
   brDrawBricks();
-  document.getElementById("br-msg").textContent = "移动鼠标/手指控制挡板！";
+  document.getElementById("br-msg").textContent = t("移动鼠标/手指控制挡板！");
   brLoop();
 }
 
@@ -120,7 +120,7 @@ function brEnd() {
   if (gs.breakout.anim) { cancelAnimationFrame(gs.breakout.anim); gs.breakout.anim = null; }
   let s = gs.breakout.score, prize = s * 20;
   if (prize > 0) { gameApi("win", {game: "breakout", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-  document.getElementById("br-msg").innerHTML = "<span class='" + (s >= 50 ? "game-win" : "game-lose") + "'>🏓 得分 " + s + "，获得 " + prize + " 积分</span>"
+  document.getElementById("br-msg").innerHTML = "<span class='" + (s >= 50 ? "game-win" : "game-lose") + t("'>🏓 得分 ") + s + t("，获得 ") + prize + " 积分</span>"
     + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'breakout\')">🔄 再来一局</button></div>';
   document.querySelectorAll(".br-brick, #br-ball").forEach(el => el.remove());
 }
@@ -149,7 +149,7 @@ function frMouseMove(e) {
 
 async function frStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.fruit.betPlaced) return;
   let r1 = await gameApi("bet", {game: "fruit", wager: 100});
   if (r1.error) { showError(r1.error); return; }
@@ -157,7 +157,7 @@ async function frStart() {
 
   let f = gs.fruit; f.betPlaced = true; f.score = 0; f.lives = 5; f.timeLeft = 30; f.gameOver = false;
   document.getElementById("fr-start").style.display = "none";
-  document.getElementById("fr-msg").textContent = "移动鼠标接水果！";
+  document.getElementById("fr-msg").textContent = t("移动鼠标接水果！");
   frSpawn();
   f.timer = setInterval(() => {
     f.timeLeft--; document.getElementById("fr-time").textContent = f.timeLeft;
@@ -166,7 +166,7 @@ async function frStart() {
       document.querySelectorAll(".fr-fruit").forEach(el => el.remove());
       let prize = f.score * 10;
       if (prize > 0) { gameApi("win", {game: "fruit", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-      document.getElementById("fr-msg").innerHTML = "<span class='" + (f.score >= 20 ? "game-win" : "game-lose") + "'>⏰ 时间到！接到 " + f.score + " 个水果，获得 " + prize + " 积分</span>"
+      document.getElementById("fr-msg").innerHTML = "<span class='" + (f.score >= 20 ? "game-win" : "game-lose") + t("'>⏰ 时间到！接到 ") + f.score + t(" 个水果，获得 ") + prize + " 积分</span>"
         + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'fruit\')">🔄 再来一局</button></div>';
     }
   }, 1000);
@@ -219,7 +219,7 @@ function renderFlappy(el) {
 
 async function flStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.flappy.betPlaced) return;
   let r1 = await gameApi("bet", {game: "flappy", wager: 100});
   if (r1.error) { showError(r1.error); return; }
@@ -227,7 +227,7 @@ async function flStart() {
 
   let f = gs.flappy; f.betPlaced = true; f.y = 200; f.vy = 0; f.score = 0; f.gameOver = false; f.pipes = [];
   document.getElementById("fl-start").style.display = "none";
-  document.getElementById("fl-msg").textContent = "点击让小鸟飞！";
+  document.getElementById("fl-msg").textContent = t("点击让小鸟飞！");
   document.addEventListener("keydown", flKey);
   flLoop();
 }
@@ -287,7 +287,7 @@ function flEnd() {
   document.removeEventListener("keydown", flKey);
   let s = gs.flappy.score, prize = s * 5;
   if (prize > 0) { gameApi("win", {game: "flappy", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-  document.getElementById("fl-msg").innerHTML = "<span class='" + (s >= 10 ? "game-win" : "game-lose") + "'>✈️ 飞过了 " + s + " 个障碍，获得 " + prize + " 积分</span>"
+  document.getElementById("fl-msg").innerHTML = "<span class='" + (s >= 10 ? "game-win" : "game-lose") + t("'>✈️ 飞过了 ") + s + t(" 个障碍，获得 ") + prize + " 积分</span>"
     + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'flappy\')">🔄 再来一局</button></div>';
 }
 
@@ -345,7 +345,7 @@ function bwPowerLoop() {
 
 async function bwStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.bowling.betPlaced) return;
   let r1 = await gameApi("bet", {game: "bowling", wager: 100});
   if (r1.error) { showError(r1.error); return; }
@@ -356,7 +356,7 @@ async function bwStart() {
   document.getElementById("bw-start").style.display = "none";
   document.getElementById("bw-stage").onclick = bwThrow;
   bwRenderPins(); bwPowerLoop();
-  document.getElementById("bw-msg").textContent = "点击蓄力条释放滚球！";
+  document.getElementById("bw-msg").textContent = t("点击蓄力条释放滚球！");
 }
 
 function bwThrow() {
@@ -365,7 +365,7 @@ function bwThrow() {
   if (b.timer) clearTimeout(b.timer);
   let power = b.power;
   document.getElementById("bw-throw").textContent = b.throwNum;
-  document.getElementById("bw-msg").textContent = "🎳 球滚出... 力度 " + power + "%";
+  document.getElementById("bw-msg").textContent = t("🎳 球滚出... 力度 ") + power + "%";
 
   // 计算击倒（随机 + 力度加成）
   let knocked = 0;
@@ -380,7 +380,7 @@ function bwThrow() {
   if (knocked === 10) {
     document.getElementById("bw-msg").innerHTML = "<span class='game-win'>🎳 全中！(STRIKE!) +" + knocked + " 瓶</span>";
   } else {
-    document.getElementById("bw-msg").innerHTML = "击倒 " + knocked + " 瓶";
+    document.getElementById("bw-msg").innerHTML = t("击倒 ") + knocked + t(" 瓶");
   }
 
   if (b.throwNum >= 2 || knocked === 10) {
@@ -388,7 +388,7 @@ function bwThrow() {
       b.gameOver = true;
       let prize = b.score * 30;
       if (prize > 0) { gameApi("win", {game: "bowling", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-      document.getElementById("bw-msg").innerHTML = "<span class='" + (b.score >= 8 ? "game-win" : "game-lose") + "'>🎳 共击倒 " + b.score + " 瓶，获得 " + prize + " 积分</span>"
+      document.getElementById("bw-msg").innerHTML = "<span class='" + (b.score >= 8 ? "game-win" : "game-lose") + t("'>🎳 共击倒 ") + b.score + t(" 瓶，获得 ") + prize + " 积分</span>"
         + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'bowling\')">🔄 再来一局</button></div>';
     }, 1000);
   } else {
@@ -420,7 +420,7 @@ function renderJump(el) {
 async function jpStart() {
   if (gs.jump.betPlaced) return;
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   let r1 = await gameApi("bet", {game: "jump", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
@@ -484,12 +484,12 @@ function jpUp() {
       if (player) { player.style.transition = "none"; player.style.left = j.platformX + "px"; }
       j.playerX = j.platformX;
       jpRender();
-      document.getElementById("jp-msg").textContent = bonus ? "🎯 完美落地！+10" : "✅ +10 分";
+      document.getElementById("jp-msg").textContent = bonus ? "🎯 完美落地！+10" : t("✅ +10 分");
     } else {
       j.gameOver = true; playGameSound('lose');
       let prize = j.score;
       if (prize > 0) { gameApi("win", {game: "jump", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-      document.getElementById("jp-msg").innerHTML = "<span class='game-lose'>💧 掉下去了！得分 " + j.score + "，获得 " + prize + " 积分</span>"
+      document.getElementById("jp-msg").innerHTML = "<span class='game-lose'>💧 掉下去了！得分 " + j.score + t("，获得 ") + prize + " 积分</span>"
         + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'jump\')">🔄 再来一局</button></div>';
     }
   }, 350);
@@ -531,14 +531,14 @@ function renderPuzzle(el) {
 
 async function pzStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.puzzle.betPlaced) return;
   let r1 = await gameApi("bet", {game: "puzzle", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   gs.puzzle.betPlaced = true; gs.puzzle.moves = 0; gs.puzzle.gameOver = false;
   document.getElementById("pz-start").style.display = "none";
-  document.getElementById("pz-msg").textContent = "点击数字移到空格位置！";
+  document.getElementById("pz-msg").textContent = t("点击数字移到空格位置！");
 }
 
 function pzClick(pos) {
@@ -561,7 +561,7 @@ function pzClick(pos) {
     p.gameOver = true; playGameSound('levelup');
     let prize = Math.max(50, Math.floor((150 - p.moves) * 3));
     if (prize > 0) { gameApi("win", {game: "puzzle", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-    document.getElementById("pz-msg").innerHTML = "<span class='game-win'>🎉 完成！用了 " + p.moves + " 步，获得 " + prize + " 积分</span>"
+    document.getElementById("pz-msg").innerHTML = "<span class='game-win'>🎉 完成！用了 " + p.moves + t(" 步，获得 ") + prize + " 积分</span>"
       + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'puzzle\')">🔄 再来一局</button></div>';
   }
 }
@@ -585,7 +585,7 @@ function renderRings(el) {
 
 async function rgStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.rings.betPlaced) return;
   let r1 = await gameApi("bet", {game: "rings", wager: 100});
   if (r1.error) { showError(r1.error); return; }
@@ -593,7 +593,7 @@ async function rgStart() {
   let r = gs.rings; r.betPlaced = true; r.rings = 3; r.score = 0; r.gameOver = false; r.swingX = 0; r.swingDir = 1;
   document.getElementById("rg-start").style.display = "none";
   document.getElementById("rg-stage").onclick = rgThrow;
-  document.getElementById("rg-msg").textContent = "点击释放套圈！";
+  document.getElementById("rg-msg").textContent = t("点击释放套圈！");
   rgSwing();
 }
 
@@ -620,15 +620,15 @@ function rgThrow() {
   }
   if (hit) { r.score += 20; playGameSound('win');
     document.getElementById("rg-score").textContent = r.score;
-    document.getElementById("rg-msg").textContent = "🎯 套中了！+20";
+    document.getElementById("rg-msg").textContent = t("🎯 套中了！+20");
   } else {
     playGameSound('click');
-    document.getElementById("rg-msg").textContent = "❌ 没套中";
+    document.getElementById("rg-msg").textContent = t("❌ 没套中");
   }
   if (r.rings <= 0) {
     r.gameOver = true; let prize = r.score;
     if (prize > 0) { gameApi("win", {game: "rings", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-    document.getElementById("rg-msg").innerHTML = "<span class='" + (r.score >= 40 ? "game-win" : "game-lose") + "'>🎪 套中 " + (r.score/20) + " 个，获得 " + prize + " 积分</span>"
+    document.getElementById("rg-msg").innerHTML = "<span class='" + (r.score >= 40 ? "game-win" : "game-lose") + t("'>🎪 套中 ") + (r.score/20) + t(" 个，获得 ") + prize + " 积分</span>"
       + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'rings\')">🔄 再来一局</button></div>';
   } else { setTimeout(rgSwing, 300); }
 }
@@ -650,14 +650,14 @@ function renderChickens(el) {
 
 async function chStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.chickens.betPlaced) return;
   let r1 = await gameApi("bet", {game: "chickens", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   let c = gs.chickens; c.betPlaced = true; c.score = 0; c.timeLeft = 20; c.gameOver = false;
   document.getElementById("ch-start").style.display = "none";
-  document.getElementById("ch-msg").textContent = "点击小鸡抓住它们！";
+  document.getElementById("ch-msg").textContent = t("点击小鸡抓住它们！");
   chSpawn();
   c.timer = setInterval(() => {
     c.timeLeft--; document.getElementById("ch-time").textContent = c.timeLeft;
@@ -666,7 +666,7 @@ async function chStart() {
       document.querySelectorAll(".ch-chicken").forEach(el => el.remove());
       let prize = c.score * 10;
       if (prize > 0) { gameApi("win", {game: "chickens", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-      document.getElementById("ch-msg").innerHTML = "<span class='" + (c.score >= 15 ? "game-win" : "game-lose") + "'>⏰ 时间到！抓住 " + c.score + " 只小鸡，获得 " + prize + " 积分</span>"
+      document.getElementById("ch-msg").innerHTML = "<span class='" + (c.score >= 15 ? "game-win" : "game-lose") + t("'>⏰ 时间到！抓住 ") + c.score + t(" 只小鸡，获得 ") + prize + " 积分</span>"
         + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'chickens\')">🔄 再来一局</button></div>';
     }
   }, 1000);
@@ -707,7 +707,7 @@ function renderCardWar(el) {
 
 async function cwStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.cardwar.betPlaced) return;
   let r1 = await gameApi("bet", {game: "cardwar", wager: 50});
   if (r1.error) { showError(r1.error); return; }
@@ -717,7 +717,7 @@ async function cwStart() {
   document.getElementById("cw-start").style.display = "none";
   document.getElementById("cw-card1").textContent = cwCardEmoji(c.currentCard);
   document.getElementById("cw-card2").textContent = "🂠";
-  document.getElementById("cw-msg").textContent = "下一张比它大还是小？";
+  document.getElementById("cw-msg").textContent = t("下一张比它大还是小？");
 }
 
 function cwCardEmoji(v) {
@@ -733,7 +733,7 @@ async function cwGuess(isBigger) {
   document.getElementById("cw-card2").textContent = cwCardEmoji(next);
   let correct = (isBigger && next > c.currentCard) || (!isBigger && next < c.currentCard) || next === c.currentCard;
   if (next === c.currentCard) {
-    document.getElementById("cw-msg").textContent = "🤝 平局，继续！";
+    document.getElementById("cw-msg").textContent = t("🤝 平局，继续！");
     c.revealed = false; c.currentCard = next;
     setTimeout(() => { document.getElementById("cw-card2").textContent = "🂠"; cwCardEmoji(c.currentCard); document.getElementById("cw-card1").textContent = cwCardEmoji(c.currentCard); }, 1000);
     return;
@@ -741,13 +741,13 @@ async function cwGuess(isBigger) {
   if (correct) {
     c.streak++; c.score += c.streak * 10; playGameSound('win');
     document.getElementById("cw-streak").textContent = c.streak; document.getElementById("cw-score").textContent = c.score;
-    document.getElementById("cw-msg").textContent = "✅ 正确！连对 " + c.streak + " 次";
+    document.getElementById("cw-msg").textContent = t("✅ 正确！连对 ") + c.streak + t(" 次");
     c.revealed = false; c.currentCard = next;
     setTimeout(() => { document.getElementById("cw-card2").textContent = "🂠"; document.getElementById("cw-card1").textContent = cwCardEmoji(c.currentCard); }, 1000);
   } else {
     c.gameOver = true; playGameSound('lose'); let prize = c.score;
     if (prize > 0) { gameApi("win", {game: "cardwar", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-    document.getElementById("cw-msg").innerHTML = "<span class='game-lose'>😢 错了！连对 " + c.streak + " 次，获得 " + prize + " 积分</span>"
+    document.getElementById("cw-msg").innerHTML = "<span class='game-lose'>😢 错了！连对 " + c.streak + t(" 次，获得 ") + prize + " 积分</span>"
       + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'cardwar\')">🔄 再来一局</button></div>';
   }
 }
@@ -769,14 +769,14 @@ function renderBubbles(el) {
 
 async function bbStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.bubbles.betPlaced) return;
   let r1 = await gameApi("bet", {game: "bubbles", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   let b = gs.bubbles; b.betPlaced = true; b.score = 0; b.missed = 0; b.gameOver = false;
   document.getElementById("bb-start").style.display = "none";
-  document.getElementById("bb-msg").textContent = "点击泡泡戳破它们！";
+  document.getElementById("bb-msg").textContent = t("点击泡泡戳破它们！");
   bbSpawn();
 }
 
@@ -789,7 +789,7 @@ function bbSpawn() {
       document.querySelectorAll(".bb-bubble").forEach(el => el.remove());
       let prize = b.score * 10;
       if (prize > 0) { gameApi("win", {game: "bubbles", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-      document.getElementById("bb-msg").innerHTML = "<span class='" + (b.score >= 20 ? "game-win" : "game-lose") + "'>🖱️ 戳破 " + b.score + " 个泡泡，获得 " + prize + " 积分</span>"
+      document.getElementById("bb-msg").innerHTML = "<span class='" + (b.score >= 20 ? "game-win" : "game-lose") + t("'>🖱️ 戳破 ") + b.score + t(" 个泡泡，获得 ") + prize + " 积分</span>"
         + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'bubbles\')">🔄 再来一局</button></div>';
       return;
     }
@@ -824,14 +824,14 @@ function renderSkeet(el) {
 
 async function skStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.skeet.betPlaced) return;
   let r1 = await gameApi("bet", {game: "skeet", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   let s = gs.skeet; s.betPlaced = true; s.score = 0; s.round = 0; s.gameOver = false;
   document.getElementById("sk-start").style.display = "none";
-  document.getElementById("sk-msg").textContent = "点击飞碟射击！";
+  document.getElementById("sk-msg").textContent = t("点击飞碟射击！");
   skNext();
 }
 
@@ -840,7 +840,7 @@ function skNext() {
   if (s.round >= s.maxRounds) {
     s.gameOver = true; let prize = s.score * 50;
     if (prize > 0) { gameApi("win", {game: "skeet", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
-    document.getElementById("sk-msg").innerHTML = "<span class='" + (s.score >= 7 ? "game-win" : "game-lose") + "'>🔫 命中 " + s.score + "/10 个飞碟，获得 " + prize + " 积分</span>"
+    document.getElementById("sk-msg").innerHTML = "<span class='" + (s.score >= 7 ? "game-win" : "game-lose") + t("'>🔫 命中 ") + s.score + t("/10 个飞碟，获得 ") + prize + " 积分</span>"
       + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'skeet\')">🔄 再来一局</button></div>';
     return;
   }
@@ -855,7 +855,7 @@ function skNext() {
   stage.appendChild(el);
   requestAnimationFrame(() => { el.style.left = fromLeft ? "540px" : "-40px"; });
   if (s.timer) clearTimeout(s.timer);
-  s.timer = setTimeout(() => { if (el.parentNode && el.textContent !== "💥") { el.remove(); document.getElementById("sk-msg").textContent = "⏰ 飞碟飞走了！"; setTimeout(skNext, 500); } }, 1300);
+  s.timer = setTimeout(() => { if (el.parentNode && el.textContent !== "💥") { el.remove(); document.getElementById("sk-msg").textContent = t("⏰ 飞碟飞走了！"); setTimeout(skNext, 500); } }, 1300);
 }
 
 registerGame("skeet", "🔫", "射飞碟", "射击飞过的飞碟，10 发射击", renderSkeet, () => ({ score: 0, round: 0, maxRounds: 10, gameOver: false, betPlaced: false, timer: null }));
@@ -889,7 +889,7 @@ function clUpdate() {
 
 async function clStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (gs.color.betPlaced) return;
   let r1 = await gameApi("bet", {game: "color", wager: 100});
   if (r1.error) { showError(r1.error); return; }
@@ -904,11 +904,11 @@ function clNext() {
   let c = gs.color; c.round++; let t = c.target;
   t.r = Math.floor(Math.random() * 256); t.g = Math.floor(Math.random() * 256); t.b = Math.floor(Math.random() * 256);
   document.getElementById("cl-target").style.background = "rgb(" + t.r + "," + t.g + "," + t.b + ")";
-  document.getElementById("cl-target").textContent = "目标颜色 " + c.round + "/5";
+  document.getElementById("cl-target").textContent = t("目标颜色 ") + c.round + "/5";
   document.getElementById("cl-round").textContent = c.round;
   document.getElementById("cl-r").value = 128; document.getElementById("cl-g").value = 128; document.getElementById("cl-b").value = 128;
   clUpdate();
-  document.getElementById("cl-msg").textContent = "拖动滑块匹配目标颜色！";
+  document.getElementById("cl-msg").textContent = t("拖动滑块匹配目标颜色！");
 }
 
 async function clSubmit() {
@@ -917,12 +917,12 @@ async function clSubmit() {
   let pts = Math.max(0, Math.floor((765 - diff) / 10));
   c.score += pts; playGameSound(pts > 30 ? 'win' : 'click');
   document.getElementById("cl-score").textContent = c.score;
-  document.getElementById("cl-msg").textContent = "相差 " + diff + "，获得 " + pts + " 分";
+  document.getElementById("cl-msg").textContent = t("相差 ") + diff + t("，获得 ") + pts + t(" 分");
   if (c.round >= 5) {
     c.gameOver = true; let prize = c.score * 2;
     if (prize > 0) { gameApi("win", {game: "color", win: prize}).then(r2 => { if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); } }); }
     document.getElementById("cl-submit").style.display = "none";
-    document.getElementById("cl-msg").innerHTML = "<span class='game-win'>🎨 总得分 " + c.score + "，获得 " + prize + " 积分</span>"
+    document.getElementById("cl-msg").innerHTML = "<span class='game-win'>🎨 总得分 " + c.score + t("，获得 ") + prize + " 积分</span>"
       + '<div style="margin-top:10px;"><button class="game-btn" onclick="switchGame(\'color\')">🔄 再来一局</button></div>';
   } else {
     setTimeout(clNext, 800);

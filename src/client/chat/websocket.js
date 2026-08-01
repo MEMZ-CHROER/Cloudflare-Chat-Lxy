@@ -1,5 +1,5 @@
 // WebSocket 连接 + 消息调度
-import { state } from './state.js';
+import { state, t } from './state.js';
 import { addChatMessage, addChatImage, addChatFile, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag } from './renderers.js';
 import { modifyOwnTag, playMsgSound, showTyping, flashTitle, checkAtMention, updateTitleUnread } from './ui.js';
 import { showUserMenu } from './menu.js';
@@ -49,7 +49,7 @@ export function join() {
     let data = JSON.parse(event.data);
 
     if (data.error) {
-      addChatMessage(null, "* 错误: " + data.error);
+      addChatMessage(null, t("* 错误: ") + data.error);
     } else if (data.system) {
       addChatMessage(null, "* " + data.system);
     } else if (data.joined) {
@@ -57,7 +57,7 @@ export function join() {
       let p = document.createElement("p");
       p.dataset.name = data.joined;
       p.style.cursor = "pointer";
-      p.title = "点击操作";
+      p.title = t("点击操作");
       p.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(data.joined, e.clientX, e.clientY); });
       if (data.tag) {
         let badge = createColoredTag(data.tag, data.tagColor, data.tagBorder, false);
@@ -70,8 +70,8 @@ export function join() {
       }
       state.roster.appendChild(p);
       if (state.wroteWelcomeMessages || data.joined === state.username) {
-        let joinText = "* " + data.joined + " 进入了聊天室";
-        if (data.tag) joinText = "* [" + data.tag + "]" + data.joined + " 进入了聊天室";
+        let joinText = "* " + data.joined + t(" 进入了聊天室");
+        if (data.tag) joinText = "* [" + data.tag + "]" + data.joined + t(" 进入了聊天室");
         addChatMessage(null, joinText);
         console.log('[banner] calling showWelcomeBanner', data.joined, data.tagColor, data.tagBorder);
         showWelcomeBanner(data.joined, data.tagColor, data.tagBorder);
@@ -86,23 +86,23 @@ export function join() {
       for (let child of state.roster.children) {
         if ((child.dataset.name || child.innerText) == data.kicked) { state.roster.removeChild(child); break; }
       }
-      addChatMessage(null, "* " + data.kicked + " 已被踢出房间");
+      addChatMessage(null, "* " + data.kicked + t(" 已被踢出房间"));
       updateRosterCount();
     } else if (data.ready) {
       if (!state.wroteWelcomeMessages) {
         state.wroteWelcomeMessages = true;
         updateRosterCount();
         updatePointsDisplay();
-        addChatMessage(null, "* 这是一个网页聊天室，无需注册即可畅聊。");
-        addChatMessage(null, "* 提示: 聊天室参与者是互联网上的匿名用户，名称未经认证，任何人都可以使用相同名称，请仔细甄别信息；请勿随意相信陌生人的链接或与陌生人交易");
-        if (state.roomname.length == 64) addChatMessage(null, "* 这是一个私人房间。你可以通过分享URL邀请他人加入。");
-        else addChatMessage(null, "* 欢迎来到 #" + state.roomname + " 房间！打个招呼吧！");
+        addChatMessage(null, t("* 这是一个网页聊天室，无需注册即可畅聊。"));
+        addChatMessage(null, t("* 提示: 聊天室参与者是互联网上的匿名用户，名称未经认证，任何人都可以使用相同名称，请仔细甄别信息；请勿随意相信陌生人的链接或与陌生人交易"));
+        if (state.roomname.length == 64) addChatMessage(null, t("* 这是一个私人房间。你可以通过分享URL邀请他人加入。"));
+        else addChatMessage(null, t("* 欢迎来到 #") + state.roomname + t(" 房间！打个招呼吧！"));
         state.chatlog.scrollBy(0, 1e8);
       }
     } else if (data.type === "schedule-confirm") {
-      addChatMessage(null, "* 定时消息已设置（ID: " + data.id + "）");
+      addChatMessage(null, t("* 定时消息已设置（ID: ") + data.id + "）");
     } else if (data.type === "schedule-cancel-confirm") {
-      addChatMessage(null, "* 定时消息已取消");
+      addChatMessage(null, t("* 定时消息已取消"));
     } else if (data.type === "poll") {
       renderPoll(data);
     } else if (data.type === "poll-update") {
@@ -198,7 +198,7 @@ export function join() {
         if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
       }
     } else if (data.type === "room-cleared") {
-      addChatMessage(null, "* 聊天记录已被管理员清空，即将刷新...");
+      addChatMessage(null, t("* 聊天记录已被管理员清空，即将刷新..."));
       setTimeout(() => document.location.reload(), 200);
     } else if (data.type === "highlights-update") {
       state._highlights = data.highlights || [];
@@ -209,7 +209,7 @@ export function join() {
         let recalledMsgEl = state.chatlog.querySelector('[data-timestamp="' + data.timestamp + '"]');
         if (recalledMsgEl) {
           let bubble = recalledMsgEl.querySelector(".bubble");
-          if (bubble) bubble.textContent = data.name === state.username ? "你撤回了一条消息" : "消息已撤回";
+          if (bubble) bubble.textContent = data.name === state.username ? "你撤回了一条消息" : t("消息已撤回");
           let extraBtns = recalledMsgEl.querySelectorAll(".reply-btn, .recall-btn");
           extraBtns.forEach(b => b.remove());
           recalledMsgEl.classList.add("recalled");
@@ -224,7 +224,7 @@ export function join() {
           bubble.querySelectorAll("pre").forEach(pre => {
             let copyBtn = document.createElement("button");
             copyBtn.className = "code-copy-btn";
-            copyBtn.textContent = "复制";
+            copyBtn.textContent = t("复制");
             pre.style.position = "relative";
             pre.appendChild(copyBtn);
           });
@@ -234,17 +234,17 @@ export function join() {
       if (data.name && data.name !== state.username) showTyping(data.name);
     } else if (data.type === "relay-new") {
       state.currentRelayId = data.relayId;
-      addChatMessage(null, "* [接龙] 主题: " + data.topic + " (发起: " + data.startedBy + ")");
+      addChatMessage(null, "* [接龙] 主题: " + data.topic + t(" (发起: ") + data.startedBy + ")");
     } else if (data.type === "relay-update") {
       addChatMessage(null, "* [#" + data.entry.number + "] " + data.entry.user + ": " + data.entry.content);
     } else if (data.type === "relay-ended") {
-      addChatMessage(null, "* [接龙结束] 共 " + data.totalCount + " 条，由 " + data.endedBy + " 结束");
+      addChatMessage(null, t("* [接龙结束] 共 ") + data.totalCount + t(" 条，由 ") + data.endedBy + t(" 结束"));
       state.currentRelayId = null;
     } else if (data.type === "relay-list-result") {
       if (data.relays && data.relays.length > 0) {
-        addChatMessage(null, "* 当前进行中的接龙:");
-        data.relays.forEach(r => addChatMessage(null, "*   [" + r.id.slice(0,8) + "] " + r.topic + " - " + r.entryCount + "条 (发起: " + r.startedBy + ")"));
-      } else { addChatMessage(null, "* 当前没有进行中的接龙"); }
+        addChatMessage(null, t("* 当前进行中的接龙:"));
+        data.relays.forEach(r => addChatMessage(null, "*   [" + r.id.slice(0,8) + "] " + r.topic + " - " + r.entryCount + t("条 (发起: ") + r.startedBy + ")"));
+      } else { addChatMessage(null, t("* 当前没有进行中的接龙")); }
     } else if (data.type === "effect") {
       if (data.effect === "wave") applyWaveEffect();
       else if (data.effect === "crash") applyCrashEffect();
@@ -268,16 +268,16 @@ export function join() {
         wrapper.appendChild(header);
         let bubble = document.createElement("span");
         bubble.className = "bubble redpacket-bubble";
-        let modeText = data.mode === "fixed" ? "固定金额" : "拼手气";
+        let modeText = data.mode === "fixed" ? "固定金额" : t("拼手气");
         bubble.innerHTML = '<span style="font-size:28px">🧧</span>' +
           '<div style="font-size:14px;font-weight:700;margin:4px 0">红包</div>' +
-          '<div style="font-size:12px;color:#888">' + escapeHtml(data.creator) + ' 发了 ' + modeText + ' 红包</div>' +
-          '<div style="font-size:13px;color:#e74c3c;font-weight:700;margin:4px 0">💰 ' + data.total + ' 积分 · ' + data.count + ' 份</div>' +
+          '<div style="font-size:12px;color:#888">' + escapeHtml(data.creator) + t(' 发了 ') + modeText + ' 红包</div>' +
+          '<div style="font-size:13px;color:#e74c3c;font-weight:700;margin:4px 0">💰 ' + data.total + t(' 积分 · ') + data.count + ' 份</div>' +
           '<button class="rp-grab-btn" data-rp-id="' + data.id + '" style="padding:6px 20px;background:#e74c3c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">开</button>';
         bubble.querySelector(".rp-grab-btn").addEventListener("click", function() {
           if (state.currentWebSocket) {
             state.currentWebSocket.send(JSON.stringify({type: "redpacket", action: "grab", id: data.id}));
-            this.textContent = "已抢";
+            this.textContent = t("已抢");
             this.disabled = true;
             this.style.opacity = "0.6";
           }
@@ -298,7 +298,7 @@ export function join() {
         btns.forEach(btn => {
           if (btn.dataset.rpGrabbed) return;
           if (data.remainingCount <= 0) {
-            btn.textContent = "已抢完";
+            btn.textContent = t("已抢完");
             btn.disabled = true;
             btn.style.opacity = "0.5";
             btn.style.background = "#999";
@@ -386,7 +386,7 @@ export function join() {
           if (state.dmUnreadTimer) clearTimeout(state.dmUnreadTimer);
           state.dmUnreadTimer = setTimeout(() => { state.dmUnreadTimer = null; updateDmBadge(); }, 100);
           updateDmBadge();
-          flashTitle("💬 " + data.from + " 发来私信");
+          flashTitle("💬 " + data.from + t(" 发来私信"));
         }
         let wrapper = document.createElement("p");
         wrapper.className = "chat-msg other whisper";
@@ -412,7 +412,7 @@ export function join() {
           let div = document.createElement("div");
           div.className = "new-msg-divider";
           div.style.cssText = "text-align:center;font-size:11px;color:var(--text-secondary);padding:4px 0;user-select:none;border-top:1px solid var(--primary);margin:6px 0;";
-          div.textContent = "─ 以下是新消息 ─";
+          div.textContent = t("─ 以下是新消息 ─");
           state.chatlog.appendChild(div);
         }
         checkKeywords(data.message, data.name);
@@ -432,8 +432,8 @@ export function join() {
         if (data.atAll && data.name !== state.username) {
           let banner = document.getElementById("announcement-banner");
           let textEl = document.getElementById("announcement-text");
-          if (banner && textEl) { textEl.textContent = "📢 @" + data.name + "  @了全体成员"; banner.style.display = "flex"; }
-          flashTitle("📢 " + data.name + "  @了全体成员");
+          if (banner && textEl) { textEl.textContent = "📢 @" + data.name + t("  @了全体成员"); banner.style.display = "flex"; }
+          flashTitle("📢 " + data.name + t("  @了全体成员"));
           if (state.unreadCount < 10) state.unreadCount += 3;
           updateTitleUnread();
         }
@@ -444,11 +444,11 @@ export function join() {
   });
 
   ws.addEventListener("close", event => {
-    if (event.reason === "kicked") { addChatMessage(null, "* 你已被踢出房间，即将刷新页面..."); setTimeout(() => document.location.reload(), 200); return; }
+    if (event.reason === "kicked") { addChatMessage(null, t("* 你已被踢出房间，即将刷新页面...")); setTimeout(() => document.location.reload(), 200); return; }
     rejoin();
   });
   ws.addEventListener("error", event => {
-    if (event.reason === "kicked") { addChatMessage(null, "* 你已被踢出房间，即将刷新页面..."); setTimeout(() => document.location.reload(), 200); return; }
+    if (event.reason === "kicked") { addChatMessage(null, t("* 你已被踢出房间，即将刷新页面...")); setTimeout(() => document.location.reload(), 200); return; }
     rejoin();
   });
 }

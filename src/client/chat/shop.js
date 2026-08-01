@@ -1,5 +1,5 @@
 // 商城弹窗
-import { state } from './state.js';
+import { state, t } from './state.js';
 import { escapeHtml, updatePointsDisplay } from './renderers.js';
 import { getAuthName, getAuthToken, isAuthenticated } from './auth.js';
 import { TAG_COLORS } from './vip.js';
@@ -22,7 +22,7 @@ function updateShopPoints() {
   if (!name) return;
   fetch("/api/points/all").then(r => r.json()).then(data => {
     let pts = data[name];
-    if (pts !== undefined) document.getElementById("shop-points-display").textContent = pts + " 积分";
+    if (pts !== undefined) document.getElementById("shop-points-display").textContent = pts + t(" 积分");
   }).catch(() => {});
 }
 
