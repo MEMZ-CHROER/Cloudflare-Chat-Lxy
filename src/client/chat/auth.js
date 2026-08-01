@@ -1,8 +1,7 @@
 // 认证模块 - 登录/注册 UI + 辅助函数
-import { state } from './state.js';
+import { state, t, getLang, setLang, applyI18n } from './state.js';
 import { escapeHtml } from './renderers.js';
 import { startRoomList } from './rooms.js';
-import { t, getLang, setLang, applyI18n } from './i18n.js';
 
 export function startNameChooser() {
   // ====== 多语言初始化 + 语言切换 ======

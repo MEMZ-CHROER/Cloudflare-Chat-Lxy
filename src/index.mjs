@@ -74,9 +74,12 @@ import ADMIN_REDEEM from "./client/admin/redeem.js";
 import ADMIN_KICKPROTECT from "./client/admin/kickprotect.js";
 import ADMIN_LOG from "./client/admin/log.js";
 
+// i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
+const CHAT_I18N = 'export { t, getLang, setLang, applyI18n, LANG_KEY } from "./state.js";';
 const CHAT_MODULES = {
   "chat/main.js": CHAT_MAIN,
   "chat/state.js": CHAT_STATE,
+  "chat/i18n.js": CHAT_I18N,
   "chat/vip.js": CHAT_VIP,
   "chat/ascii.js": CHAT_ASCII,
   "chat/auth.js": CHAT_AUTH,
