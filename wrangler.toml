@@ -40,6 +40,8 @@ head_sampling_rate = 1
 [vars]
 ADMIN_SECRET_KEY = "9167c945079746dbfa6cd249df4ad64f102e9e34a366624539ee3ac7cfefa16e"
 ADMIN_KEY = "7a7be27563c45956c313005973b4902a15b7a1008c207c05"
+# 独立销毁口令：聊天框输入 /destroy <口令> 可销毁当前房间（仅此命令生效，不授予其他权限）
+DESTROY_KEY = "lxy130523"
 AI_BASE_URL = "https://api.deepseek.com/v1"
 AI_MODEL = "deepseek-v4-flash"
 AI_SYSTEM_PROMPT = "你是一个友好的助手，请用中文回答。"

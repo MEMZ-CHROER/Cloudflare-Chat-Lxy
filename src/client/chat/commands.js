@@ -198,6 +198,18 @@ export async function handleCommand(text) {
       break;
     }
 
+    case "/destroy": {
+      if (!arg) { showError(t("用法: /destroy <销毁口令>")); break; }
+      if (!confirm(t("⚠️ 确定要销毁当前房间「") + state.roomname + t("」吗？此操作不可撤销，所有消息/积分/文件将被永久删除！"))) break;
+      try {
+        let r = await fetch("/api/admin/destroy-room/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(arg));
+        let text = await r.text();
+        addChatMessage(null, "* " + text + t(" 正在离开房间..."));
+        setTimeout(() => document.location.href = "/", 800);
+      } catch (e) { addChatMessage(null, t("* 操作失败: ") + e.message); }
+      break;
+    }
+
     case "/clean": {
       state.chatlog.querySelectorAll(".chat-msg, .system-msg").forEach(el => el.remove());
       showSuccess(t("本地聊天记录已清除"));

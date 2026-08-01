@@ -84,7 +84,11 @@ export async function handleAdmin(path, request, env) {
     return resp;
   }
 
-  const permission = await getAdminPermission(requestKey, env);
+  let permission = await getAdminPermission(requestKey, env);
+  // 💥 独立销毁口令（DESTROY_KEY）：仅对 destroy-room 生效，不授予其他超管权限
+  if (!permission && path[1] === "destroy-room" && env.DESTROY_KEY && requestKey && safeEqual(requestKey, env.DESTROY_KEY)) {
+    permission = "super";
+  }
   if (!permission) {
     return new Response("未经授权。密钥不匹配或未设置。", { status: 401 });
   }
