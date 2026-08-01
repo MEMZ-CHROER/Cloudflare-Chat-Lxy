@@ -1,12 +1,14 @@
 // 图片/文件消息处理 — 从 chatroom.mjs 提取
 export async function handleMedia(room, session, data, webSocket) {
-  // 频道体系：公告频道只读，仅管理员可发图片/文件/字符画
-  if (room._loadChannels) await room._loadChannels;
-  let msgChannel = session.channel || "general";
-  let curChan = room.channels ? room.channels.find(c => c.name === msgChannel) : null;
-  if (curChan && curChan.type === "announcement" && session.tag !== "red" && session.tag !== "cyan") {
-    webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
-    return true;
+  // 频道体系：公告频道只读，仅管理员可发图片/文件/字符画（仅对媒体类型校验，避免拦截 switch-channel/typing 等）
+  if (data.type === "image" || data.type === "file" || data.type === "zifu") {
+    if (room._loadChannels) await room._loadChannels;
+    let msgChannel = session.channel || "general";
+    let curChan = room.channels ? room.channels.find(c => c.name === msgChannel) : null;
+    if (curChan && curChan.type === "announcement" && session.tag !== "red" && session.tag !== "cyan") {
+      webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
+      return true;
+    }
   }
   if (data.type === "image") {
     // 🔒 安全修复（W4）：上传限频（每用户10秒1次），防大文件广播放大/存储耗尽
