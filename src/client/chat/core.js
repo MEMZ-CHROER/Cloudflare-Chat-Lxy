@@ -15,7 +15,7 @@ export function startChat() {
   state.chatroom.style.display = "block";
 
   state.roomname = state.roomname.replace(/[^a-zA-Z0-9_-]/g, "").replace(/_/g, "-").toLowerCase();
-  if (state.roomname.length > 32 && !state.roomname.match(/^[0-9a-f]{64}$/)) { addChatMessage("错误", "无效的房间名称。"); return; }
+  if (state.roomname.length > 32 && !state.roomname.match(/^[0-9a-f]{64}$/)) { addChatMessage(t("错误"), t("无效的房间名称。")); return; }
 
   document.location.hash = "#" + state.roomname;
 
@@ -146,7 +146,7 @@ export function startChat() {
   // Image upload
   async function compressAndSendImage(file) {
     if (!file || !state.currentWebSocket) return;
-    showUploadProgress(0, "正在处理图片...");
+    showUploadProgress(0, t("正在处理图片..."));
     let img = await createImageBitmap(file);
     let maxSize = 800;
     let w = img.width, h = img.height;
@@ -180,11 +180,11 @@ export function startChat() {
     let msg = prompt("输入定时发送的消息：");
     if (!msg || !msg.trim()) return;
     let minutes = prompt("多少分钟后发送？（1-10080，即7天内）", "5");
-    if (!minutes || isNaN(minutes) || minutes < 1 || minutes > 10080) { showError("时间范围：1分钟 - 7天"); return; }
+    if (!minutes || isNaN(minutes) || minutes < 1 || minutes > 10080) { showError(t("时间范围：1分钟 - 7天")); return; }
     let delayMs = parseInt(minutes) * 60 * 1000;
     if (state.currentWebSocket) {
       state.currentWebSocket.send(JSON.stringify({type: "schedule", message: msg.trim(), time: Date.now() + delayMs}));
-      showSuccess("消息已定时，将在 " + minutes + " 分钟后发送");
+      showSuccess(t("消息已定时，将在 ") + minutes + t(" 分钟后发送"));
     }
   });
 
@@ -194,14 +194,14 @@ export function startChat() {
     if (!question || !question.trim()) return;
     let options = [];
     for (let i = 1; i <= 5; i++) {
-      let opt = prompt("选项 " + i + "（留空结束）：");
+      let opt = prompt("选项 " + i + t("（留空结束）："));
       if (!opt) break;
       options.push(opt.trim());
     }
-    if (options.length < 2) { showError("投票至少需要2个选项"); return; }
+    if (options.length < 2) { showError(t("投票至少需要2个选项")); return; }
     if (state.currentWebSocket) {
       state.currentWebSocket.send(JSON.stringify({type: "poll-create", question: question.trim(), options}));
-      showSuccess("投票已创建");
+      showSuccess(t("投票已创建"));
     }
   });
 
@@ -252,20 +252,20 @@ export function startChat() {
   filePicker.addEventListener("change", async () => {
     let file = filePicker.files[0];
     if (!file || !state.currentWebSocket) return;
-    if (file.size > 15 * 1024 * 1024) { showError("文件过大，上限 15MB"); filePicker.value = ""; return; }
+    if (file.size > 15 * 1024 * 1024) { showError(t("文件过大，上限 15MB")); filePicker.value = ""; return; }
     let reader = new FileReader();
     reader.onprogress = (e) => {
-      if (e.lengthComputable) { let pct = Math.round((e.loaded / e.total) * 100); showUploadProgress(pct, "正在读取文件... " + pct + "%"); }
+      if (e.lengthComputable) { let pct = Math.round((e.loaded / e.total) * 100); showUploadProgress(pct, t("正在读取文件... ") + pct + "%"); }
     };
     reader.onload = () => {
-      showUploadProgress(100, "正在上传...");
+      showUploadProgress(100, t("正在上传..."));
       let fileMsg = {type: "file", data: reader.result, fileName: file.name, fileType: file.type || "application/octet-stream", fileSize: file.size};
       if (state.replyTarget) { fileMsg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
       state.currentWebSocket.send(JSON.stringify(fileMsg));
       hideUploadProgress();
       filePicker.value = "";
     };
-    reader.onerror = () => { showError("文件读取失败"); hideUploadProgress(); filePicker.value = ""; };
+    reader.onerror = () => { showError(t("文件读取失败")); hideUploadProgress(); filePicker.value = ""; };
     reader.readAsDataURL(file);
   });
 
@@ -372,7 +372,7 @@ export function startChat() {
     if (names.length > 0) {
       let divider = document.createElement("div");
       divider.style.cssText = "padding:4px 8px;font-size:11px;color:var(--text-secondary);border-top:1px solid var(--border);margin-top:4px;";
-      divider.textContent = "自定义";
+      divider.textContent = t("自定义");
       emojiPanel.appendChild(divider);
       names.forEach(name => {
         let span = document.createElement("span");

@@ -116,7 +116,7 @@ export function startNameChooser() {
           startRoomList();
         }
       } else {
-        errEl.textContent = data.error || "注册失败";
+        errEl.textContent = data.error || t("注册失败");
         errEl.style.display = "block";
       }
     } catch (e) {
@@ -129,7 +129,7 @@ export function startNameChooser() {
 
   document.querySelector("#skip-auth").addEventListener("click", (e) => {
     e.preventDefault();
-    let name = document.querySelector("#login-name").value.trim() || "游客" + Math.floor(Math.random() * 10000);
+    let name = document.querySelector("#login-name").value.trim() || t("游客") + Math.floor(Math.random() * 10000);
     state.username = name;
     localStorage.removeItem("chat_token");
     localStorage.removeItem("chat_user");

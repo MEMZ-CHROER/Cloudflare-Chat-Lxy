@@ -18,8 +18,8 @@ import { showSuccess, showInfo, showError } from './state.js';
 function lazyMod(name, fnName) {
   return function(...args) {
     import('./' + name + '.js').then(m => {
-      if (m[fnName]) try { m[fnName](...args); } catch(e) { showError("模块错误: " + e.message); }
-    }).catch(e => showError("加载模块失败: " + e.message));
+      if (m[fnName]) try { m[fnName](...args); } catch(e) { showError(t("模块错误: ") + e.message); }
+    }).catch(e => showError(t("加载模块失败: ") + e.message));
   };
 }
 const lazyMods = {
@@ -76,8 +76,8 @@ document.body.addEventListener("click", (e) => {
   let code = btn.parentNode.querySelector("code");
   if (code) {
     navigator.clipboard.writeText(code.textContent).then(() => {
-      btn.textContent = "已复制"; btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = "复制"; btn.classList.remove("copied"); }, 2000);
+      btn.textContent = t("已复制"); btn.classList.add("copied");
+      setTimeout(() => { btn.textContent = t("复制"); btn.classList.remove("copied"); }, 2000);
     }).catch(() => {});
   }
 });
@@ -90,7 +90,7 @@ document.getElementById("fav-close")?.addEventListener("click", toggleFavoritesP
 // 定时消息管理 - moved to more-menu
 
 window._showScheduledList = function(list) {
-  if (!list || list.length === 0) { showInfo("当前没有定时消息"); return; }
+  if (!list || list.length === 0) { showInfo(t("当前没有定时消息")); return; }
   let existing = document.getElementById("sched-list-panel");
   if (existing) { existing.remove(); return; }
   let overlay = document.createElement("div");
@@ -114,7 +114,7 @@ window._showScheduledList = function(list) {
       if (state.currentWebSocket) {
         state.currentWebSocket.send(JSON.stringify({type: "schedule-cancel", id: s.id}));
         row.remove();
-        if (listDiv.children.length === 0) { overlay.remove(); showSuccess("所有定时消息已取消"); }
+        if (listDiv.children.length === 0) { overlay.remove(); showSuccess(t("所有定时消息已取消")); }
       }
     });
     listDiv.appendChild(row);

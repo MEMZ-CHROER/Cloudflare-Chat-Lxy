@@ -51,23 +51,23 @@ export function handleMenuAction(action) {
       break;
     }
     case "dm": {
-      if (target === state.username) { showError("不能给自己发私信"); break; }
+      if (target === state.username) { showError(t("不能给自己发私信")); break; }
       openDM(target);
       break;
     }
     case "kick": {
-      if (target === state.username) { showError("不能踢出自己"); return; }
+      if (target === state.username) { showError(t("不能踢出自己")); return; }
       let k = "";
-      if (!k) { showError("请先登录管理后台才能踢出用户"); return; }
-      if (!confirm("确定要踢出「" + target + "」吗？")) return;
+      if (!k) { showError(t("请先登录管理后台才能踢出用户")); return; }
+      if (!confirm(t("确定要踢出「") + target + t("」吗？"))) return;
       fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target) + "&caller=" + encodeURIComponent(state.username))
         .then(r => r.text()).then(t => addChatMessage(null, "* " + t));
       break;
     }
     case "ban": {
       let k = "";
-      if (!k) { showError("请先登录管理后台才能封禁用户"); return; }
-      if (!confirm("确定要永久封禁「" + target + "」吗？（将同时封禁IP）")) return;
+      if (!k) { showError(t("请先登录管理后台才能封禁用户")); return; }
+      if (!confirm(t("确定要永久封禁「") + target + t("」吗？（将同时封禁IP）"))) return;
       fetch("/api/admin/global-kick?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target));
       fetch("/api/admin/ban/add?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target))
         .then(r => r.text()).then(t => addChatMessage(null, "* " + t));
@@ -75,13 +75,13 @@ export function handleMenuAction(action) {
     }
     case "banip": {
       let k = "";
-      if (!k) { showError("请先登录管理后台才能封禁IP"); return; }
-      if (!confirm("确定要封禁「" + target + "」的IP吗？")) return;
+      if (!k) { showError(t("请先登录管理后台才能封禁IP")); return; }
+      if (!confirm(t("确定要封禁「") + target + t("」的IP吗？"))) return;
       fetch("/api/admin/user-ips?key=" + encodeURIComponent(k))
         .then(r => r.json())
         .then(ipMap => {
           let ip = ipMap[target];
-          if (!ip) { showError("未找到 " + target + " 的IP记录"); return; }
+          if (!ip) { showError(t("未找到 ") + target + t(" 的IP记录")); return; }
           fetch("/api/admin/ip-ban/add?key=" + encodeURIComponent(k) + "&ip=" + encodeURIComponent(ip))
             .then(r => r.text()).then(t => addChatMessage(null, "* " + t));
         });
@@ -90,23 +90,23 @@ export function handleMenuAction(action) {
     case "block": {
       state.blockedUsers.add(target);
       saveBlockedUsers();
-      showSuccess("已屏蔽 " + target + " 的消息");
+      showSuccess(t("已屏蔽 ") + target + t(" 的消息"));
       break;
     }
     case "unblock": {
       state.blockedUsers.delete(target);
       saveBlockedUsers();
-      showSuccess("已取消屏蔽 " + target);
+      showSuccess(t("已取消屏蔽 ") + target);
       break;
     }
     case "pay": {
-      if (target === state.username) { showError("不能给自己转账"); return; }
-      if (!state.username) { showError("请先登录后再转账"); return; }
-      let amt = prompt("输入要转给「" + target + "」的积分数量：");
-      if (!amt || isNaN(amt) || parseInt(amt) <= 0) { showError("已取消或数量无效"); return; }
+      if (target === state.username) { showError(t("不能给自己转账")); return; }
+      if (!state.username) { showError(t("请先登录后再转账")); return; }
+      let amt = prompt("输入要转给「" + target + t("」的积分数量："));
+      if (!amt || isNaN(amt) || parseInt(amt) <= 0) { showError(t("已取消或数量无效")); return; }
       let token = localStorage.getItem("chat_token") || "";
       fetch("/api/points/transfer?sender=" + encodeURIComponent(state.username) + "&receiver=" + encodeURIComponent(target) + "&amount=" + parseInt(amt) + "&token=" + encodeURIComponent(token))
-        .then(r => { if (r.status === 403) { addChatMessage(null, "* 转账失败：请先登录账号"); return null; } return r.text(); })
+        .then(r => { if (r.status === 403) { addChatMessage(null, t("* 转账失败：请先登录账号")); return null; } return r.text(); })
         .then(t => { if (t) { addChatMessage(null, "* " + t); updatePointsDisplay(); } });
       break;
     }
@@ -116,8 +116,8 @@ export function handleMenuAction(action) {
     }
     case "tag": {
       let k = "";
-      if (!k) { showError("请先登录管理后台才能修改标签"); return; }
-      let newTag = prompt("输入「" + target + "」的新标签（留空取消）:");
+      if (!k) { showError(t("请先登录管理后台才能修改标签")); return; }
+      let newTag = prompt("输入「" + target + t("」的新标签（留空取消）:"));
       if (!newTag || !newTag.trim()) return;
       let newColor = prompt("标签颜色（留空默认）: red/blue/green/purple/pink/cyan/gray/orange");
       let url = "/api/admin/tag/set?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target) + "&tag=" + encodeURIComponent(newTag.trim());
@@ -127,12 +127,12 @@ export function handleMenuAction(action) {
     }
     case "batch-kick": {
       let k = "";
-      if (!k) { showError("请先登录管理后台才能批量踢出"); return; }
+      if (!k) { showError(t("请先登录管理后台才能批量踢出")); return; }
       let names = prompt("输入要批量踢出的用户名，用逗号分隔：");
       if (!names || !names.trim()) return;
       let nameList = names.split(/[,，\s]+/).filter(Boolean);
       if (nameList.length === 0) return;
-      if (!confirm("确定要踢出 " + nameList.length + " 个用户吗？")) return;
+      if (!confirm(t("确定要踢出 ") + nameList.length + t(" 个用户吗？"))) return;
       nameList.forEach(n => {
         fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(n))
           .then(r => r.text()).then(t => addChatMessage(null, "* " + t));
@@ -141,7 +141,7 @@ export function handleMenuAction(action) {
     }
     case "note": {
       let existing = getNote(target);
-      let alias = prompt(existing ? "当前备注: " + existing + "\n输入新备注（留空清除）:" : "输入「" + target + "」的备注名（留空清除）:", existing || "");
+      let alias = prompt(existing ? "当前备注: " + existing + "\n输入新备注（留空清除）:" : "输入「" + target + t("」的备注名（留空清除）:"), existing || "");
       if (alias === null) return;
       setNote(target, alias);
       break;
@@ -158,7 +158,7 @@ export async function showProfile(name) {
   let modal = document.getElementById("profile-modal");
   let content = document.getElementById("profile-content");
   modal.classList.add("show");
-  content.innerHTML = "加载中...";
+  content.innerHTML = t("加载中...");
   try {
     let r = await fetch("/api/user/profile?name=" + encodeURIComponent(name));
     let data = await r.json();
@@ -197,7 +197,7 @@ export async function showProfile(name) {
     let stats = document.createElement("div");
     stats.className = "profile-stats";
     stats.innerHTML = '<div class="profile-stat"><div class="profile-stat-val">' + data.points + '</div><div class="profile-stat-label">积分</div></div>'
-      + '<div class="profile-stat"><div class="profile-stat-val">' + (data.registered ? "是" : "否") + '</div><div class="profile-stat-label">已注册</div></div>';
+      + '<div class="profile-stat"><div class="profile-stat-val">' + (data.registered ? "是" : t("否")) + '</div><div class="profile-stat-label">已注册</div></div>';
     content.appendChild(stats);
     if (data.vip) {
       let vip = document.createElement("div");
@@ -208,12 +208,12 @@ export async function showProfile(name) {
     if (isSelf) {
       let editBtn = document.createElement("button");
       editBtn.className = "profile-edit-btn";
-      editBtn.textContent = "编辑资料";
+      editBtn.textContent = t("编辑资料");
       editBtn.addEventListener("click", () => showProfileEditor(name, data));
       content.appendChild(editBtn);
     }
   } catch (e) {
-    content.innerHTML = "加载失败: " + e.message;
+    content.innerHTML = t("加载失败: ") + e.message;
   }
 }
 

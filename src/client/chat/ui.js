@@ -5,10 +5,10 @@ import { showToast, showSuccess, showError, showInfo } from './state.js';
 
 export async function modifyOwnTag(currentTag, currentColor) {
   let adminKey = "";
-  if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）才能修改标签"); return; }
+  if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）才能修改标签")); return; }
   let newTag = prompt("输入新标签（留空取消）:", currentTag || "");
   if (newTag === null || !newTag.trim()) return;
-  let colorPrompt = "输入颜色（留空为默认）:\n可选: red, blue, green, purple, pink, cyan, gray, orange, yellow, teal, indigo, brown, lime, deeporange, rose, crimson, coral, gold, amber, forest, seagreen, turquoise, steel, royalblue, mediumpurple, darkviolet, chocolate, olive, firebrick, slateblue, darkcyan, mediumseagreen, indianred, cadetblue";
+  let colorPrompt = t("输入颜色（留空为默认）:\n可选: red, blue, green, purple, pink, cyan, gray, orange, yellow, teal, indigo, brown, lime, deeporange, rose, crimson, coral, gold, amber, forest, seagreen, turquoise, steel, royalblue, mediumpurple, darkviolet, chocolate, olive, firebrick, slateblue, darkcyan, mediumseagreen, indianred, cadetblue");
   let newColor = prompt(colorPrompt, currentColor || "");
   if (newColor === null) newColor = "";
   try {
@@ -17,7 +17,7 @@ export async function modifyOwnTag(currentTag, currentColor) {
     let r = await fetch(url);
     let t = await r.text();
     addChatMessage(null, "* " + t);
-  } catch (e) { showError("修改标签失败: " + e.message); }
+  } catch (e) { showError(t("修改标签失败: ") + e.message); }
 }
 
 export function startReply(name, text) {
@@ -32,7 +32,7 @@ export function startReply(name, text) {
   bar.appendChild(document.createTextNode(" " + (text.length > 60 ? text.slice(0, 60) + "..." : text)));
   let cancel = document.createElement("span");
   cancel.className = "reply-cancel";
-  cancel.textContent = "取消";
+  cancel.textContent = t("取消");
   bar.appendChild(cancel);
   bar.style.display = "block";
   state.chatInput.focus();
@@ -81,9 +81,9 @@ export async function recallMessage(timestamp) {
     let token = localStorage.getItem("chat_token") || "";
     let r = await fetch("/api/recall/" + encodeURIComponent(state.roomname) + "?timestamp=" + encodeURIComponent(timestamp) + "&name=" + encodeURIComponent(state.username) + "&token=" + encodeURIComponent(token));
     let text = await r.text();
-    if (r.ok) showSuccess("消息已撤回");
-    else showError("撤回失败: " + text);
-  } catch (e) { showError("撤回失败: " + e.message); }
+    if (r.ok) showSuccess(t("消息已撤回"));
+    else showError(t("撤回失败: ") + text);
+  } catch (e) { showError(t("撤回失败: ") + e.message); }
 }
 
 export function sendTyping() {
@@ -97,12 +97,12 @@ export function sendTyping() {
 export async function exportChatLog() {
   let fmt = confirm("确定导出为TXT格式？\n取消将导出为JSON格式") ? "txt" : "json";
   try {
-    showInfo("正在导出聊天记录...");
+    showInfo(t("正在导出聊天记录..."));
     // 🔒 安全修复（W1/A2）：密码房间导出需携带密码
     let exportUrl = "/api/room/" + encodeURIComponent(state.roomname) + "/export?format=" + fmt;
     if (state.roomPassword) exportUrl += "&password=" + encodeURIComponent(state.roomPassword);
     let r = await fetch(exportUrl);
-    if (!r.ok) { showError("导出失败"); return; }
+    if (!r.ok) { showError(t("导出失败")); return; }
     let blob = await r.blob();
     let url = URL.createObjectURL(blob);
     let a = document.createElement("a");
@@ -110,14 +110,14 @@ export async function exportChatLog() {
     a.download = "chatlog_" + state.roomname + "_" + new Date().toISOString().slice(0,10) + "." + fmt;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showSuccess("聊天记录已导出");
-  } catch (e) { showError("导出失败: " + e.message); }
+    showSuccess(t("聊天记录已导出"));
+  } catch (e) { showError(t("导出失败: ") + e.message); }
 }
 
 export function showTyping(name) {
   let el = document.getElementById("typing-indicator");
   if (!el) return;
-  el.textContent = name + " 正在输入...";
+  el.textContent = name + t(" 正在输入...");
   el.classList.add("show");
   if (state.typingTimers[name]) clearTimeout(state.typingTimers[name]);
   state.typingTimers[name] = setTimeout(() => {
@@ -203,7 +203,7 @@ export function checkAtMention(msgText, senderName) {
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       new Notification("@" + senderName + " @了所有人", { body: msgText.length > 80 ? msgText.slice(0, 80) + "..." : msgText });
     }
-    flashTitle("@" + senderName + " @了所有人");
+    flashTitle("@" + senderName + t(" @了所有人"));
     return;
   }
   let re = new RegExp("@(" + state.username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "i");
@@ -212,6 +212,6 @@ export function checkAtMention(msgText, senderName) {
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       new Notification("@" + senderName + " 提到了你", { body: msgText.length > 80 ? msgText.slice(0, 80) + "..." : msgText });
     }
-    flashTitle("@" + senderName + " 提到了你");
+    flashTitle("@" + senderName + t(" 提到了你"));
   }
 }

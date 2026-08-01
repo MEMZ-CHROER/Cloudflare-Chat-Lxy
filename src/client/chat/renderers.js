@@ -90,7 +90,7 @@ export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
 
     if (isSelf) {
       badge.style.cursor = "pointer";
-      badge.title = "点击修改标签";
+      badge.title = t("点击修改标签");
       badge.addEventListener("click", (e) => { e.stopPropagation(); modifyOwnTag(tag, tagColor); });
     }
     return badge;
@@ -102,7 +102,7 @@ export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
   if (borderColor) { badge.style.outline = "2px solid " + borderColor; badge.style.outlineOffset = "-1px"; }
   if (isSelf) {
     badge.style.cursor = "pointer";
-    badge.title = "点击修改标签";
+    badge.title = t("点击修改标签");
     badge.addEventListener("click", (e) => { e.stopPropagation(); modifyOwnTag(tag, tagColor); });
   }
   return badge;
@@ -191,7 +191,7 @@ export function renderPoll(data) {
   header.className = "msg-header";
   let creatorBadge = document.createElement("span");
   creatorBadge.className = "tag";
-  creatorBadge.textContent = "投票";
+  creatorBadge.textContent = t("投票");
   creatorBadge.style.backgroundColor = "#9b59b6";
   header.appendChild(creatorBadge);
   header.appendChild(document.createTextNode(" " + (data.creator || "")));
@@ -279,7 +279,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     let replyContent = document.createElement("span");
     replyContent.textContent = reply.text || "";
     quote.appendChild(replyContent);
-    quote.title = "点击跳转到原文";
+    quote.title = t("点击跳转到原文");
     quote.addEventListener("click", (e) => {
       e.stopPropagation();
       let msgEls = state.chatlog.querySelectorAll(".chat-msg");
@@ -295,7 +295,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
           }
         }
       }
-      showError("未找到引用的原始消息（可能已被清除）");
+      showError(t("未找到引用的原始消息（可能已被清除）"));
     });
     wrapper.appendChild(quote);
   }
@@ -306,7 +306,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
   bubble.querySelectorAll("pre").forEach(pre => {
     let copyBtn = document.createElement("button");
     copyBtn.className = "code-copy-btn";
-    copyBtn.textContent = "复制";
+    copyBtn.textContent = t("复制");
     pre.style.position = "relative";
     pre.appendChild(copyBtn);
   });
@@ -317,7 +317,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     navigator.clipboard.writeText(text).then(() => {
       let toast = document.createElement("span");
       toast.className = "copy-toast";
-      toast.textContent = "已复制";
+      toast.textContent = t("已复制");
       bubble.appendChild(toast);
       setTimeout(() => { if (toast.parentNode) toast.remove(); }, 1200);
     }).catch(() => {});
@@ -415,7 +415,7 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
     let replyContent = document.createElement("span");
     replyContent.textContent = reply.text || "";
     quote.appendChild(replyContent);
-    quote.title = "点击跳转到原文";
+    quote.title = t("点击跳转到原文");
     quote.addEventListener("click", (e) => {
       e.stopPropagation();
       let msgEls = state.chatlog.querySelectorAll(".chat-msg");
@@ -431,26 +431,26 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
           }
         }
       }
-      showError("未找到引用的原始消息（可能已被清除）");
+      showError(t("未找到引用的原始消息（可能已被清除）"));
     });
     wrapper.appendChild(quote);
   }
   let bubble = document.createElement("span");
   bubble.className = "bubble";
   if (!data) {
-    bubble.textContent = "[图片已过期]";
+    bubble.textContent = t("[图片已过期]");
     bubble.style.cssText = "color:var(--text-secondary);font-size:85%;font-style:italic;";
   } else {
     let img = document.createElement("img");
     img.src = data;
-    img.alt = "图片";
+    img.alt = t("图片");
     img.style.cursor = "pointer";
     img.addEventListener("click", () => showLightbox(data));
     bubble.appendChild(img);
   }
   wrapper.appendChild(bubble);
   buildActionMenu(wrapper, {
-    name, text: "[图片]", timestamp, msgId, tag, tagColor, tagBorder,
+    name, text: t("[图片]"), timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
     isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
     hasWs: !!state.currentWebSocket,
@@ -510,7 +510,7 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
     let replyContent = document.createElement("span");
     replyContent.textContent = reply.text || "";
     quote.appendChild(replyContent);
-    quote.title = "点击跳转到原文";
+    quote.title = t("点击跳转到原文");
     quote.addEventListener("click", (e) => {
       e.stopPropagation();
       let msgEls = state.chatlog.querySelectorAll(".chat-msg");
@@ -526,7 +526,7 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
           }
         }
       }
-      showError("未找到引用的原始消息（可能已被清除）");
+      showError(t("未找到引用的原始消息（可能已被清除）"));
     });
     wrapper.appendChild(quote);
   }
@@ -563,7 +563,7 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
   }
   wrapper.appendChild(bubble);
   buildActionMenu(wrapper, {
-    name, text: "[文件]", timestamp, msgId, tag, tagColor, tagBorder,
+    name, text: t("[文件]"), timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
     isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
     hasWs: !!state.currentWebSocket,
@@ -595,7 +595,7 @@ function buildActionMenu(wrapper, opts) {
   let btn = document.createElement("span");
   btn.className = "msg-actions-btn";
   btn.textContent = "⋮";
-  btn.title = "更多操作";
+  btn.title = t("更多操作");
   container.appendChild(btn);
 
   let dropdown = document.createElement("span");
@@ -624,45 +624,45 @@ function buildActionMenu(wrapper, opts) {
 
   // Reply
   if (!isSelf && name) {
-    addItem("💬 回复", () => startReply(name, text));
+    addItem(t("💬 回复"), () => startReply(name, text));
   }
 
   // Forward to room
   if (!isSelf && name && timestamp) {
-    addItem("↗️ 转房间", () => {
+    addItem(t("↗️ 转房间"), () => {
       let targetRoom = prompt("转发到哪个房间？\n（输入房间名，如: 闲聊）");
       if (!targetRoom || !targetRoom.trim()) return;
       let fwdText = (text || "").length > 200 ? text.slice(0, 200) + "..." : (text || "");
       let adminKey = "";
       if (adminKey) {
-        fetch("/api/admin/send-message/" + encodeURIComponent(targetRoom.trim()) + "?key=" + encodeURIComponent(adminKey) + "&text=" + encodeURIComponent("📨 " + name + " 转发: " + fwdText) + "&sender=" + encodeURIComponent(state.username || "系统")).then(r => {
-          if (r.ok) showSuccess("已转发消息到 " + targetRoom.trim());
-          else showError("转发失败，房间不存在？");
-        }).catch(() => showError("转发失败"));
+        fetch("/api/admin/send-message/" + encodeURIComponent(targetRoom.trim()) + "?key=" + encodeURIComponent(adminKey) + "&text=" + encodeURIComponent("📨 " + name + t(" 转发: ") + fwdText) + "&sender=" + encodeURIComponent(state.username || t("系统"))).then(r => {
+          if (r.ok) showSuccess(t("已转发消息到 ") + targetRoom.trim());
+          else showError(t("转发失败，房间不存在？"));
+        }).catch(() => showError(t("转发失败")));
       } else {
-        showError("转发需要管理权限，请先登录后台");
+        showError(t("转发需要管理权限，请先登录后台"));
       }
     });
   }
 
   // Copy link
   if (msgId) {
-    addItem("🔗 复制链接", () => {
+    addItem(t("🔗 复制链接"), () => {
       let link = window.location.origin + window.location.pathname + "#" + roomname + ":" + msgId;
-      navigator.clipboard.writeText(link).then(() => showSuccess("消息链接已复制")).catch(() => {});
+      navigator.clipboard.writeText(link).then(() => showSuccess(t("消息链接已复制"))).catch(() => {});
     });
   }
 
   // Favorite
   if (timestamp) {
     let isFav = isFavorited(timestamp);
-    addItem((isFav ? "★" : "☆") + " 收藏", () => toggleFavorite(wrapper, name || state.username, text, timestamp, tag, tagColor, tagBorder));
+    addItem((isFav ? "★" : "☆") + t(" 收藏"), () => toggleFavorite(wrapper, name || state.username, text, timestamp, tag, tagColor, tagBorder));
   }
 
   // Mark
   if (timestamp) {
     let marked = wrapper.dataset.marked === "1";
-    addItem(marked ? "🔖 取消标记" : "📍 标记", () => {
+    addItem(marked ? "🔖 取消标记" : t("📍 标记"), () => {
       let m = wrapper.dataset.marked === "1";
       wrapper.dataset.marked = m ? "0" : "1";
       wrapper.style.borderLeft = m ? "" : "3px solid #f39c12";
@@ -672,22 +672,22 @@ function buildActionMenu(wrapper, opts) {
 
   // Translate
   if (text && timestamp) {
-    addItem("🌐 翻译", () => {
+    addItem(t("🌐 翻译"), () => {
       showTranslation(wrapper, text, timestamp, name);
     });
   }
 
   // Pin (admin)
   if (timestamp && isAdmin && hasWs) {
-    addItem("📌 置顶", () => {
+    addItem(t("📌 置顶"), () => {
       state.currentWebSocket.send(JSON.stringify({type: "pin", text, timestamp, name: name || state.username}));
-      showSuccess("消息已置顶");
+      showSuccess(t("消息已置顶"));
     });
   }
 
   // Highlight (admin)
   if (timestamp && isAdmin && hasWs) {
-    addItem("⭐ 精华", () => {
+    addItem(t("⭐ 精华"), () => {
       state.currentWebSocket.send(JSON.stringify({type: "highlight", msgTimestamp: timestamp, text}));
     });
   }
@@ -700,7 +700,7 @@ function buildActionMenu(wrapper, opts) {
     ["👍","❤️","😂","😮","🎉","🔥","👀","💯"].forEach(emoji => {
       let e = document.createElement("span");
       e.textContent = emoji;
-      e.title = "添加 " + emoji + " 回应";
+      e.title = t("添加 ") + emoji + t(" 回应");
       e.style.cssText = "cursor:pointer;font-size:18px;padding:1px 3px;border-radius:4px;line-height:1;transition:background 0.1s;";
       e.addEventListener("mouseenter", () => e.style.background = "var(--bg)");
       e.addEventListener("mouseleave", () => e.style.background = "");
@@ -718,7 +718,7 @@ function buildActionMenu(wrapper, opts) {
 
   // Edit (self, within 2 min)
   if (isSelf && timestamp && Date.now() - timestamp < 120000) {
-    addItem("✏️ 编辑", () => {
+    addItem(t("✏️ 编辑"), () => {
       let bubble = wrapper.querySelector(".bubble");
       if (!bubble) return;
       let oldHtml = bubble.innerHTML;
@@ -729,11 +729,11 @@ function buildActionMenu(wrapper, opts) {
       bubble.innerHTML = "";
       bubble.appendChild(input);
       let saveBtn = document.createElement("button");
-      saveBtn.textContent = "保存";
+      saveBtn.textContent = t("保存");
       saveBtn.style.cssText = "margin-top:4px;padding:2px 10px;background:var(--primary);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;";
       bubble.appendChild(saveBtn);
       let cancelBtn = document.createElement("button");
-      cancelBtn.textContent = "取消";
+      cancelBtn.textContent = t("取消");
       cancelBtn.style.cssText = "margin-top:4px;margin-left:4px;padding:2px 10px;background:#888;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;";
       bubble.appendChild(cancelBtn);
       input.focus();
@@ -748,7 +748,7 @@ function buildActionMenu(wrapper, opts) {
 
   // Recall (self, within 2 min)
   if (isSelf && timestamp && Date.now() - timestamp < 120000) {
-    addItem("↩️ 撤回", () => recallMessage(timestamp), true);
+    addItem(t("↩️ 撤回"), () => recallMessage(timestamp), true);
   }
 
   if (dropdown.children.length > 0) {
@@ -816,22 +816,22 @@ export async function showTranslation(wrapper, text, timestamp, name) {
   let el = document.createElement("div");
   el.className = "translation-result";
   el.style.cssText = "font-size:12px;color:var(--text-secondary);margin-top:4px;padding-top:4px;border-top:1px dashed var(--border);";
-  el.textContent = "翻译中...";
+  el.textContent = t("翻译中...");
   bubble.parentNode.insertBefore(el, bubble.nextSibling);
   try {
     let r = await fetch("/api/translate", {
       method: "POST",
-      body: JSON.stringify({text, target: "中文"}),
+      body: JSON.stringify({text, target: t("中文")}),
       headers: {"Content-Type": "application/json"}
     });
     let data = await r.json();
     if (data.translated) {
-      let langLabel = data.target || "中文";
+      let langLabel = data.target || t("中文");
       el.innerHTML = '<span style="font-size:10px;opacity:0.6;">🌐 ' + langLabel + '</span> <span>' + escapeHtml(data.translated) + '</span>';
     } else {
-      el.textContent = "翻译失败: " + (data.error || "未知错误");
+      el.textContent = t("翻译失败: ") + (data.error || t("未知错误"));
     }
   } catch (e) {
-    el.textContent = "翻译失败: " + e.message;
+    el.textContent = t("翻译失败: ") + e.message;
   }
 }

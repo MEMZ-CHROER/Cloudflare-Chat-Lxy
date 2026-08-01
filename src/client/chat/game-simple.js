@@ -28,7 +28,7 @@ function renderSlots(el) {
 async function slotsSpin() {
   if (gs.slots.rolling) return;
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   let r1 = await gameApi("bet", {game: "slots", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance;
@@ -36,7 +36,7 @@ async function slotsSpin() {
   gs.slots.rolling = true;
   let spinBtn = document.getElementById("slots-spin");
   let resultEl = document.getElementById("slots-result");
-  if (spinBtn) { spinBtn.disabled = true; spinBtn.textContent = "旋转中..."; }
+  if (spinBtn) { spinBtn.disabled = true; spinBtn.textContent = t("旋转中..."); }
   if (resultEl) resultEl.textContent = "";
   let r = () => S_SYMBOLS[Math.floor(Math.random() * S_SYMBOLS.length)];
   let interval = setInterval(() => {
@@ -50,9 +50,9 @@ async function slotsSpin() {
     document.getElementById("slots-r1").textContent = f1;
     document.getElementById("slots-r2").textContent = f2;
     document.getElementById("slots-r3").textContent = f3;
-    let prize = 0, msg = "很遗憾，没有中奖 😢";
-    if (f1 === f2 && f2 === f3) { prize = 5000; msg = "🎉🎉🎉 恭喜！三连大奖！获得 " + prize + " 积分！"; }
-    else if (f1 === f2 || f2 === f3 || f1 === f3) { prize = 200; msg = "🎉 两个相同！获得 " + prize + " 积分！"; }
+    let prize = 0, msg = t("很遗憾，没有中奖 😢");
+    if (f1 === f2 && f2 === f3) { prize = 5000; msg = t("🎉🎉🎉 恭喜！三连大奖！获得 ") + prize + t(" 积分！"); }
+    else if (f1 === f2 || f2 === f3 || f1 === f3) { prize = 200; msg = t("🎉 两个相同！获得 ") + prize + t(" 积分！"); }
     if (prize > 0) {
       playGameSound(prize >= 5000 ? 'levelup' : 'win');
       let r2 = await gameApi("win", {game: "slots", win: prize});
@@ -60,7 +60,7 @@ async function slotsSpin() {
     }
     if (resultEl) resultEl.innerHTML = "<div class='slots-msg'>" + msg + "</div>";
     gs.slots.rolling = false;
-    if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = "🎰 再来一次"; }
+    if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = t("🎰 再来一次"); }
   }, 800);
 }
 
@@ -90,7 +90,7 @@ function renderDice(el) {
 async function dicePlay(choice) {
   if (gs.dice.playing) return;
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   let betEl = document.getElementById("dice-bet");
   let bet = Math.max(10, Math.min(1000, parseInt(betEl.value) || 100));
   betEl.value = bet;
@@ -110,11 +110,11 @@ async function dicePlay(choice) {
     let d1 = Math.floor(Math.random() * 6) + 1, d2 = Math.floor(Math.random() * 6) + 1;
     let total = d1 + d2;
     displayEl.textContent = "🎲 " + d1 + " + " + d2;
-    totalEl.textContent = "点数: " + total;
+    totalEl.textContent = t("点数: ") + total;
     if (total === 7) {
       let r3 = await gameApi("win", {game: "dice", win: bet});
       if (!r3.error) { gs.balance = r3.balance || gs.balance; updateBalance(); }
-      msgEl.innerHTML = "🤝 平局！退换赌注"; gs.dice.playing = false; return;
+      msgEl.innerHTML = t("🤝 平局！退换赌注"); gs.dice.playing = false; return;
     }
     let win = (choice === "low" && total >= 2 && total <= 6) || (choice === "high" && total >= 8 && total <= 12);
     if (win) {
@@ -122,18 +122,18 @@ async function dicePlay(choice) {
       let r2 = await gameApi("win", {game: "dice", win: prize});
       if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); }
       msgEl.innerHTML = "<span class='game-win'>🎉 赢了！获得 " + prize + " 积分！</span>";
-    } else { msgEl.innerHTML = "😢 输了，再试试"; }
+    } else { msgEl.innerHTML = t("😢 输了，再试试"); }
     gs.dice.playing = false;
   }, 600);
 }
 
-registerGame("dice", "🎲", "猜大小", "猜骰子点数大小，最高 2 倍赔付", renderDice, () => ({}));
+registerGame("dice", "🎲", t("猜大小"), t("猜骰子点数大小，最高 2 倍赔付"), renderDice, () => ({}));
 
 // ========== ✂️ 石头剪刀布 ==========
 
 const RPS_WIN = { rock: "scissors", paper: "rock", scissors: "paper" };
 const RPS_EMOJI = { rock: "🪨", paper: "📄", scissors: "✂️" };
-const RPS_CN = { rock: "石头", paper: "布", scissors: "剪刀" };
+const RPS_CN = { rock: "石头", paper: "布", scissors: t("剪刀") };
 
 function renderRPS(el) {
   el.innerHTML = `
@@ -159,7 +159,7 @@ function renderRPS(el) {
 async function rpsPlay(choice) {
   if (gs.rps.playing) return;
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   let betEl = document.getElementById("rps-bet");
   let bet = Math.max(50, Math.min(2000, parseInt(betEl.value) || 100));
   betEl.value = bet;
@@ -183,14 +183,14 @@ async function rpsPlay(choice) {
     if (choice === cpu) {
       let r3 = await gameApi("win", {game: "rps", win: bet});
       if (!r3.error) { gs.balance = r3.balance || gs.balance; updateBalance(); }
-      resultEl.innerHTML = "🤝 平局！退换赌注";
+      resultEl.innerHTML = t("🤝 平局！退换赌注");
     } else if (RPS_WIN[choice] === cpu) {
       let prize = bet * 2;
       let r2 = await gameApi("win", {game: "rps", win: prize});
       if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); }
       resultEl.innerHTML = "<span class='game-win'>🎉 赢了！获得 " + prize + " 积分！</span>";
     } else {
-      resultEl.innerHTML = "😢 输了（你出 " + RPS_CN[choice] + "，电脑出 " + RPS_CN[cpu] + "）";
+      resultEl.innerHTML = t("😢 输了（你出 ") + RPS_CN[choice] + t("，电脑出 ") + RPS_CN[cpu] + "）";
     }
     gs.rps.playing = false;
   }, 400);
@@ -245,14 +245,14 @@ function wheelPick() {
 async function wheelSpin() {
   if (gs.wheel.spinning) return;
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   let r1 = await gameApi("bet", {game: "wheel", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   gs.wheel.spinning = true;
   let circle = document.getElementById("wheel-circle");
   let spinBtn = document.getElementById("wheel-spin");
-  if (spinBtn) { spinBtn.disabled = true; spinBtn.textContent = "旋转中..."; }
+  if (spinBtn) { spinBtn.disabled = true; spinBtn.textContent = t("旋转中..."); }
   let idx = wheelPick();
   let targetAngle = 720 + idx * 45 + 22.5;
   circle.style.transition = "transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
@@ -261,7 +261,7 @@ async function wheelSpin() {
     gs.wheel.spinning = false;
     let prize = WHEEL_SEGMENTS[idx].prize;
     document.getElementById("wheel-result").innerHTML = "<span class='game-win'>🎉 恭喜！获得 " + prize + " 积分！</span>";
-    if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = "🎡 再转一次"; }
+    if (spinBtn) { spinBtn.disabled = false; spinBtn.textContent = t("🎡 再转一次"); }
     let r2 = await gameApi("win", {game: "wheel", win: prize});
     if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); }
   }, 3200);

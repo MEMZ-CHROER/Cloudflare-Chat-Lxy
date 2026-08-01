@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<!--
+  注意：这不是核心功能文件
+  
+  这只是一个UI界面文件，不包含核心逻辑。
+  本演示的核心功能在服务端代码 chat.mjs 中实现。
+
+  注意：此文件由系统工程师编写，非专业前端开发人员，代码风格可能不符合前端最佳实践。
+-->
+
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="CloudChat">
+  <meta name="theme-color" content="#10131d">
+  <!--===================================================================================-->
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="/static/chat/style.css">
+
+  <!--===================================================================================-->
+  <!-- 实际的HTML内容，结构非常简单 -->
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous"
+    integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+">
+</head>
+
+<body class="acrylic-applied">
+  <video id="video-wallpaper" autoplay muted loop playsinline style="display:none"></video>
+  <form id="name-form" action="javascript:void(0)">
+    <div class="name-card">
+      <h1>Cloud Chat</h1>
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login" data-i18n="login">登录</button>
+        <button class="auth-tab" data-tab="register" data-i18n="register">注册</button>
+      </div>
+      <div id="auth-section">
+        <div id="auth-login">
+          <input id="login-name" class="auth-input" placeholder="用户名" data-i18n-placeholder="username" maxlength="32">
+          <input id="login-password" type="password" class="auth-input" placeholder="密码" data-i18n-placeholder="password">
+          <button id="login-btn" class="auth-btn" type="button" data-i18n="login">登录</button>
+          <div id="login-error" class="auth-error"></div>
+          <p class="auth-skip"><a id="skip-auth" href="#" data-i18n="skipLogin">跳过，直接进入聊天</a></p>
+        </div>
+        <div id="auth-register" style="display:none">
+          <input id="register-name" class="auth-input" placeholder="用户名" data-i18n-placeholder="username" maxlength="32">
+          <input id="register-password" type="password" class="auth-input" placeholder="密码（至少6位）">
+          <button id="register-btn" class="auth-btn" type="button" data-i18n="register">注册</button>
+          <div id="register-error" class="auth-error"></div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:10px;font-size:12px;color:#888">
+        <select id="lang-select" style="padding:2px 6px;font-size:12px;border-radius:4px;border:1px solid #ccc">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <p style="font-size:12px;margin-top:20px;color:#999">由 <a
+          href="https://blog.cloudflare.com/introducing-workers-durable-objects" target="_blank">Cloudflare Workers</a>
+        提供技术支持</p>
+    </div>
+  </form>
+  <div id="auth-loading" style="display:none;text-align:center;padding:60px 20px;color:#999;">
+    <div style="font-size:36px;margin-bottom:12px">⏳</div>
+    <div data-i18n="checkingAuth">正在验证登录状态...</div>
+  </div>
+  <div id="room-list-form" style="display:none">
+    <div class="room-form-inner">
+      <h2 data-i18n="joinChat">加入聊天</h2>
+      <div id="account-bar"
+        style="display:none;font-size:13px;color:#888;margin-bottom:10px;padding:6px 12px;background:#f8f9fa;border-radius:6px;">
+      </div>
+      <p data-i18n="chooseRoom">选择一个房间开始聊天</p>
+      <div class="room-input-row">
+        <input id="room-name" placeholder="输入房间名称" data-i18n-placeholder="roomNamePlaceholder" maxlength="32">
+        <button id="go-public" data-i18n="enter">进入</button>
+      </div>
+      <div class="or-divider"><span data-i18n="or">或者</span></div>
+      <button id="go-private" data-i18n="createPrivate">✨ 创建私人房间</button>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;max-width:400px;margin:12px auto 0">
+      <button class="shop-entry-btn" onclick="openShop()" style="flex:1;margin:0" data-i18n="shop">🏪 商城</button>
+      <button class="task-entry-btn" onclick="openLottery()" style="flex:1;margin:0" data-i18n="lottery">🎰 抽奖</button>
+      <button class="task-entry-btn" onclick="openTasks()" style="flex:1;margin:0" data-i18n="tasks">📋 任务</button>
+      <button class="game-entry-btn" onclick="openGames()" style="flex:1;margin:0" data-i18n="games">🎮 游戏</button>
+    </div>
+    <div id="room-list-header" data-i18n="existingRooms">已有房间</div>
+    <div id="room-list">
+      <div id="room-list-loading">加载中...</div>
+    </div>
+  </div>
+  <form id="chatroom" action="/fake-form-action" style="display:none">
+    <div id="announcement-banner"
+      style="display:none;padding:8px 16px;margin:0 8px 8px;background:linear-gradient(135deg,#fff3cd,#ffe0b2);border-radius:8px;font-size:13px;color:#856404;align-items:center;gap:8px;flex-shrink:0;">
+      <span style="font-size:16px;">📢</span>
+      <span id="announcement-text" style="flex:1;"></span>
+      <span id="announcement-dismiss" style="cursor:pointer;font-size:18px;color:#856404;padding:0 4px;line-height:1;"
+        title="关闭">&times;</span>
+    </div>
+    <div id="welcome-banner"
+      style="display:none;overflow:hidden;flex-shrink:0;margin:0 8px 6px;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600;color:var(--text);align-items:center;justify-content:flex-end;height:36px;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,0.06);position:relative;z-index:5;background:var(--surface);">
+      <span class="welcome-banner-text" style="white-space:nowrap;display:inline-block;"></span>
+    </div>
+    <div id="pinned-bar"
+      style="display:none;overflow:hidden;flex-shrink:0;margin:0 8px 6px;padding:8px 14px;border-radius:8px;font-size:13px;color:var(--text);align-items:center;gap:8px;background:var(--surface);border-left:3px solid #f39c12;box-shadow:0 1px 4px rgba(0,0,0,0.06);cursor:pointer;position:relative;z-index:5;"
+      title="点击跳转">
+      <span style="font-size:14px;flex-shrink:0;">📌</span>
+      <span id="pinned-text" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <span id="pinned-cancel"
+        style="cursor:pointer;font-size:16px;color:var(--text-secondary);padding:0 4px;flex-shrink:0;display:none;"
+        title="取消置顶">&times;</span>
+    </div>
+    <style>
+      @keyframes welcomeMarquee {
+        0% {
+          transform: translateX(var(--marquee-offset, 0px));
+        }
+
+        100% {
+          transform: translateX(calc(var(--marquee-offset, 0px) - 150%));
+        }
+      }
+    </style>
+    <div id="chatlog">
+      <div id="spacer"></div>
+    </div>
+    <div id="roster">
+      <div id="roster-header"><span>在线用户</span><span class="roster-count" id="roster-count">0</span></div>
+    </div>
+    <div id="roster-backdrop"></div>
+    <div id="reconnect-banner" data-i18n="reconnectBanner">⚠ 连接已断开，正在尝试重新连接...</div>
+    <div id="roster-toggle">&#128101;</div>
+    <div id="typing-indicator"></div>
+    <div id="reply-bar"></div>
+    <button id="scroll-bottom-btn" type="button" title="滚动到底部">↓</button>
+    <input id="chat-input" placeholder="输入消息..." data-i18n-placeholder="chatInputPlaceholder">
+    <div id="md-toolbar"
+      style="display:none;position:fixed;bottom:52px;left:12px;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;z-index:25;align-items:center;">
+      <span class="md-btn" data-wrap="**"
+        style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:13px;font-weight:600;" title="加粗">B</span>
+      <span class="md-btn" data-wrap="*"
+        style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:13px;font-style:italic;"
+        title="斜体"><em>I</em></span>
+      <span class="md-btn" data-wrap="`"
+        style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:12px;font-family:monospace;"
+        title="行内代码">&lt;/&gt;</span>
+      <span class="md-btn" data-wrap="```\n" data-suffix="\n```"
+        style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:11px;font-family:monospace;" title="代码块">{
+        }</span>
+      <span class="md-btn" data-wrap="[" data-suffix="](url)"
+        style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:12px;" title="链接">🔗</span>
+    </div>
+    <button id="emoji-btn" type="button">😊</button>
+    <button id="more-toggle-btn" type="button" title="更多工具">➕</button>
+    <div id="emoji-panel"></div>
+    <div id="input-toolbar-expanded">
+      <button class="tb-btn" id="files-btn" type="button" title="附件管理">🗂️</button>
+      <button class="tb-btn" id="schedule-btn" type="button" title="定时消息">⏰</button>
+      <button class="tb-btn" id="kw-btn" type="button" title="关键词提醒">🔔</button>
+      <button class="tb-btn" id="poll-btn" type="button" title="创建投票">📊</button>
+      <button class="tb-btn" id="md-toggle-btn" type="button" title="Markdown 工具栏">T</button>
+    </div>
+    <div id="mention-dropdown"></div>
+    <button id="image-btn" type="button" data-i18n="image">图片</button>
+    <input type="file" id="image-picker" accept="image/*" style="display:none">
+    <button id="file-btn" type="button" data-i18n="file">📎 文件</button>
+    <input type="file" id="file-picker" style="display:none">
+    <div id="upload-progress"
+      style="display:none;position:fixed;bottom:60px;left:12px;right:12px;height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden;z-index:20;">
+      <div id="upload-progress-bar"
+        style="height:100%;width:0%;background:var(--primary);border-radius:2px;transition:width 0.2s;"></div>
+    </div>
+    <div id="upload-status"
+      style="display:none;position:fixed;bottom:65px;left:16px;font-size:11px;color:var(--text-secondary);z-index:20;">
+    </div>
+  </form>
+  <div id="user-menu">
+    <div class="user-menu-header" id="user-menu-name" data-i18n="userMenuTitle">用户</div>
+    <div class="user-menu-item" data-action="at" data-i18n="at">@ 提及</div>
+    <div class="user-menu-item" data-action="dm" data-i18n="dm">💬 私信</div>
+    <div class="user-menu-item danger" data-action="kick" data-i18n="kick">👢 踢出</div>
+    <div class="user-menu-item danger" data-action="ban" data-i18n="ban">🚫 封禁</div>
+    <div class="user-menu-item danger" data-action="banip" data-i18n="banip">🔨 封禁IP</div>
+    <div class="user-menu-item" data-action="batch-kick" data-i18n="batchKick">👢 批量踢出</div>
+    <div class="user-menu-item" data-action="note">📝 备注</div>
+    <div class="user-menu-item" data-action="pay">💰 转账积分</div>
+    <div class="user-menu-item" data-action="tag">🏷️ 修改标签</div>
+    <div class="user-menu-item" data-action="block">🚫 屏蔽</div>
+    <div class="user-menu-item" data-action="unblock" style="display:none">✅ 取消屏蔽</div>
+    <div class="user-menu-item" data-action="profile"
+      style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px;">👤 用户主页</div>
+  </div>
+  <!-- Profile Modal -->
+  <div id="profile-modal">
+    <div id="profile-backdrop" onclick="hideProfile()"></div>
+    <div id="profile-box">
+      <div id="profile-close" onclick="hideProfile()">&times;</div>
+      <div id="profile-content">加载中...</div>
+    </div>
+  </div>
+  <!-- DM Panel -->
+  <div id="dm-panel">
+    <div id="dm-header">
+      <span id="dm-username">私信</span>
+      <span id="dm-close" onclick="closeDM()">&times;</span>
+    </div>
+    <div id="dm-log">
+      <div class="dm-system">选择用户后开始私信</div>
+    </div>
+    <div id="dm-input-area">
+      <input id="dm-input" placeholder="输入消息..." data-i18n-placeholder="chatInputPlaceholder">
+      <button id="dm-send" type="button" onclick="sendDM()" data-i18n="send">发送</button>
+    </div>
+  </div>
+  <!-- Favorites Panel -->
+  <div id="favorites-panel">
+    <div id="fav-header">
+      <span>⭐ 收藏的消息</span>
+      <span id="fav-close">&times;</span>
+    </div>
+    <div class="fav-list"></div>
+  </div>
+  <div id="lightbox">
+    <span class="lb-close">&times;</span>
+    <span id="gallery-prev"
+      style="display:none;position:fixed;left:20px;top:50%;transform:translateY(-50%);font-size:48px;color:#fff;cursor:pointer;user-select:none;z-index:1001;opacity:0.7;text-shadow:0 2px 8px rgba(0,0,0,0.5);">&lsaquo;</span>
+    <span id="gallery-next"
+      style="display:none;position:fixed;right:20px;top:50%;transform:translateY(-50%);font-size:48px;color:#fff;cursor:pointer;user-select:none;z-index:1001;opacity:0.7;text-shadow:0 2px 8px rgba(0,0,0,0.5);">&rsaquo;</span>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+  <!-- Floating Action Buttons - kept visible: dark, sound, search, tag -->
+  <div id="more-menu-backdrop"></div>
+  <div class="floating-btn" id="sound-toggle" title="提示音">🔊</div>
+  <div class="floating-btn" id="dark-toggle" title="暗色模式">🌙</div>
+  <div class="floating-btn" id="search-toggle" title="搜索消息" data-i18n-title="search">🔍</div>
+  <div class="floating-btn" id="settings-toggle" title="设置" data-i18n-title="settings">⚙️</div>
+  <div class="floating-btn" id="music-toggle" title="音乐播放器">🎵</div>
+  <div class="floating-btn" id="tag-warehouse-btn" title="标签仓库" onclick="openShop('inventory')">🏷️</div>
+  <!-- More button + menu for less-used floating buttons -->
+  <div class="floating-btn" id="more-menu-btn" title="更多" data-i18n-title="more">···</div>
+  <div id="more-menu-panel">
+    <div class="more-menu-item" data-action="favorites"><span class="mm-icon">⭐</span><span
+        class="mm-label">收藏的消息</span></div>
+    <div class="more-menu-item" data-action="highlights"><span class="mm-icon">🏆</span><span
+        class="mm-label">精华消息</span></div>
+    <div class="more-menu-item" data-action="room-info"><span class="mm-icon">ℹ️</span><span
+        class="mm-label">房间信息</span></div>
+    <div class="more-menu-item" data-action="scheduler"><span class="mm-icon">⏰</span><span class="mm-label">定时消息</span>
+    </div>
+    <div class="more-menu-item" data-action="changelog"><span class="mm-icon">📋</span><span
+        class="mm-label">更新日志</span></div>
+    <div class="more-menu-item" data-action="archive"><span class="mm-icon">📦</span><span class="mm-label">版本存档</span>
+    </div>
+    <div class="more-menu-item" data-action="export"><span class="mm-icon">📥</span><span class="mm-label">导出聊天</span>
+    </div>
+  </div>
+  <!-- Search Bar -->
+  <div id="search-bar">
+    <input id="search-input" placeholder="搜索消息..." data-i18n-placeholder="searchPlaceholder" autocomplete="off">
+    <span id="search-count"></span>
+    <button id="search-prev" type="button" title="上一个">▲</button>
+    <button id="search-next" type="button" title="下一个">▼</button>
+    <button id="search-close" type="button" title="关闭">&times;</button>
+  </div>
+  <!-- 抽奖弹窗 -->
+  <div id="lottery-overlay">
+    <div class="overlay-content" style="max-width:500px">
+      <div class="overlay-header">
+        <h2>🎰 抽奖</h2>
+        <button class="overlay-close" onclick="closeLottery()">&times;</button>
+      </div>
+      <div id="lottery-body" style="padding:16px;min-height:200px">
+        <div id="lottery-loading" style="text-align:center;color:#888;padding:40px">加载中...</div>
+        <div id="lottery-pools" style="display:none"></div>
+        <div id="lottery-result" style="display:none;text-align:center;padding:20px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop-overlay">
+    <div class="shop-card">
+      <div class="shop-header">
+        <span>🏪 商城</span>
+        <span class="shop-points" id="shop-points-display">0 积分</span>
+        <button class="shop-close" onclick="closeShop()">&times;</button>
+      </div>
+      <div class="shop-tabs">
+        <button class="shop-tab active" data-shop-tab="buy" onclick="switchShopTab('buy')">商品列表</button>
+        <button class="shop-tab" data-shop-tab="inventory" onclick="switchShopTab('inventory')">我的背包</button>
+      </div>
+      <div class="shop-content" id="shop-content">
+        <div class="shop-empty" id="shop-loading">加载中...</div>
+      </div>
+    </div>
+  </div>
+  <div id="task-overlay">
+    <div class="task-card">
+      <div class="task-header">
+        <span>📋 任务</span>
+        <span class="task-points" id="task-points-display">0 积分</span>
+        <button class="task-close" onclick="closeTasks()">&times;</button>
+      </div>
+      <div class="task-content" id="task-content">
+        <div class="task-empty" id="task-loading">加载中...</div>
+        <div style="text-align:center;padding:8px 0 4px;font-size:12px;color:var(--text-secondary)"><a href="/tasks"
+            style="color:var(--primary);text-decoration:none">打开完整任务中心 →</a></div>
+      </div>
+    </div>
+  </div>
+  <!-- Game Overlay -->
+  <div id="game-overlay">
+    <div class="game-card">
+      <div class="game-header">
+        <span>🎮 游戏中心</span>
+        <span class="game-points" id="game-points-display">0 积分</span>
+        <button class="game-close" onclick="closeGames()">&times;</button>
+      </div>
+      <div class="game-content" id="game-content"></div>
+    </div>
+  </div>
+  <!-- Settings Overlay -->
+  <div id="settings-overlay">
+    <div class="settings-card">
+      <div class="settings-header">
+        <span data-i18n="settings">⚙️ 设置</span>
+        <button class="settings-close" onclick="closeSettings()">&times;</button>
+      </div>
+      <div class="settings-content">
+        <div class="settings-item">
+          <div class="settings-label">
+            <span data-i18n="language">语言</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button id="lang-zh" type="button" class="settings-btn-secondary">中文</button>
+            <button id="lang-en" type="button" class="settings-btn-secondary">English</button>
+          </div>
+        </div>
+        <div class="settings-item">
+          <div class="settings-label">
+            <span data-i18n="bgOpacity">背景透明度</span>
+            <span id="bg-opacity-value">100%</span>
+          </div>
+          <input type="range" id="bg-opacity-slider" min="0" max="100" value="100">
+          <p class="settings-hint">调整聊天背景磨砂层的透明度，数值越低背景图越清晰。</p>
+        </div>
+        <div class="settings-item">
+          <div class="settings-label">
+            <span data-i18n="bgBlur">磨砂程度</span>
+            <span id="bg-blur-value">18px</span>
+          </div>
+          <input type="range" id="bg-blur-slider" min="0" max="30" value="18">
+          <p class="settings-hint">调整磨砂玻璃模糊强度，数值越大越模糊。</p>
+        </div>
+        <div class="settings-item">
+          <div class="settings-label">
+            <span data-i18n="uiColor">界面色调</span>
+            <button id="color-reset-btn" type="button" class="settings-btn-danger" style="display:none" data-i18n="restoreDefault">恢复默认</button>
+          </div>
+          <div class="settings-color-row">
+            <input type="color" id="ui-color-input" value="#ffffff">
+            <span class="settings-color-hint">点击选择磨砂层底色</span>
+          </div>
+          <p class="settings-hint">自定义输入框、用户列表、聊天区的磨砂颜色。</p>
+        </div>
+        <div class="settings-item">
+          <div class="settings-label">
+            <span data-i18n="customWallpaper">自定义壁纸</span>
+            <button id="wallpaper-cancel-btn" type="button" class="settings-btn-danger" style="display:none" data-i18n="restoreRandom">恢复随机</button>
+          </div>
+          <div class="settings-input-row">
+            <input id="wallpaper-url-input" placeholder="输入图片 URL" data-i18n-placeholder="wallpaperUrl" type="url">
+            <button id="wallpaper-url-btn" type="button" data-i18n="apply">应用</button>
+          </div>
+          <button id="wallpaper-file-btn" type="button" class="settings-btn-secondary" data-i18n="uploadImage">📁 选择本地图片</button>
+          <input type="file" id="wallpaper-file-input" accept="image/*" style="display:none">
+          <p class="settings-hint" data-i18n="wallpaperHint">设置自定义图片壁纸，点击"恢复随机"返回随机背景。</p>
+        </div>
+        <div class="settings-item">
+          <div class="settings-label">
+            <span data-i18n="videoWallpaper">视频壁纸</span>
+            <button id="video-cancel-btn" type="button" class="settings-btn-danger" style="display:none" data-i18n="cancelWallpaper">取消视频</button>
+          </div>
+          <div class="settings-input-row">
+            <input id="video-url-input" placeholder="输入视频 URL" data-i18n-placeholder="videoUrl" type="url">
+            <button id="video-url-btn" type="button" data-i18n="apply">应用</button>
+          </div>
+          <button id="video-file-btn" type="button" class="settings-btn-secondary" data-i18n="uploadVideo">📁 选择本地视频</button>
+          <input type="file" id="video-file-input" accept="video/*" style="display:none">
+          <p class="settings-hint">设置视频动态壁纸，视频将循环静音播放。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Music Overlay -->
+  <div id="music-overlay">
+    <div class="music-card">
+      <div class="music-header">
+        <span>🎵 音乐播放器</span>
+        <button class="music-close" onclick="closeMusic()">&times;</button>
+      </div>
+      <div class="music-search-bar">
+        <input id="music-search-input" placeholder="搜索歌曲或歌手..." autocomplete="off">
+        <button id="music-search-btn" type="button">搜索</button>
+      </div>
+      <div class="music-results" id="music-results">
+        <div class="music-empty">输入歌曲名开始搜索</div>
+      </div>
+      <div class="music-player" id="music-player" style="display:none">
+        <div class="music-player-info">
+          <img id="music-cover" src="" alt="" onerror="this.style.visibility='hidden'">
+          <div class="music-player-text">
+            <div id="music-now-name">未播放</div>
+            <div id="music-now-artist"></div>
+          </div>
+        </div>
+        <div class="music-progress">
+          <span id="music-time-current">0:00</span>
+          <input type="range" id="music-progress-bar" min="0" max="100" value="0" step="0.1">
+          <span id="music-time-total">0:00</span>
+        </div>
+        <div class="music-controls">
+          <button id="music-prev" type="button" title="上一首">⏮</button>
+          <button id="music-play" type="button" title="播放/暂停">▶</button>
+          <button id="music-next" type="button" title="下一首">⏭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Mobile bottom bar -->
+  <div id="mobile-bottom-bar">
+    <button class="mbb-btn" id="mbb-sound" title="提示音">🔊</button>
+    <button class="mbb-btn" id="mbb-dark" title="暗色模式">🌙</button>
+    <button class="mbb-btn" id="mbb-search" title="搜索">🔍</button>
+    <button class="mbb-btn" id="mbb-more" title="更多">···</button>
+  </div>
+</body>
+
+<!--===================================================================================-->
+<!-- 客户端JavaScript代码 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
+  crossorigin="anonymous" integrity="sha384-wH75j6z1lH97ZOpMOInqhgKzFkAInZPPSPlZpYKYTOqsaizPvhQZmAtLcPKXpLyH">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"
+  integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous"
+  integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp"></script>
+<script type="module" src="/static/chat/main.js"></script>
+
+<!--===================================================================================-->
+
+</html>

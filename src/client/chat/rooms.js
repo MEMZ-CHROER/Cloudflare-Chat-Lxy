@@ -51,7 +51,7 @@ export function startRoomList() {
     let searchInput = document.createElement("input");
     searchInput.id = "room-search-input";
     searchInput.type = "text";
-    searchInput.placeholder = "🔍 搜索房间...";
+    searchInput.placeholder = t("🔍 搜索房间...");
     searchInput.style.cssText = "width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;";
     searchInput.addEventListener("input", () => {
       let v = searchInput.value.trim().toLowerCase();
@@ -126,7 +126,7 @@ export async function loadRoomList() {
   container.innerHTML = '<div id="room-list-loading">加载中...</div>';
   try {
     let response = await fetch("/api/rooms/list");
-    if (!response.ok) throw new Error("请求失败");
+    if (!response.ok) throw new Error(t("请求失败"));
     let rooms = await response.json();
     let entries = Object.entries(rooms);
     if (entries.length === 0) { container.innerHTML = '<div id="room-list-empty">暂无公开房间</div>'; return; }
@@ -155,7 +155,7 @@ export async function loadRoomList() {
       let pinBtn = document.createElement("span");
       pinBtn.className = "pin-btn";
       pinBtn.textContent = isPinned ? "📌" : "📍";
-      pinBtn.title = isPinned ? "取消置顶" : "置顶房间";
+      pinBtn.title = isPinned ? "取消置顶" : t("置顶房间");
       pinBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         togglePinRoom(name);

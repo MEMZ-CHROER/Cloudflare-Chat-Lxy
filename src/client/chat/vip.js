@@ -43,6 +43,6 @@ export function createVipBadge(vip) {
   badge.textContent = vip.label;
   var c = getVipColor(vip);
   if (c) badge.style.background = c;
-  badge.title = vip.label + " 用户";
+  badge.title = vip.label + t(" 用户");
   return badge;
 }

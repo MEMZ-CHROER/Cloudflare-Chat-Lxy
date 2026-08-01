@@ -20,13 +20,13 @@ function bjRender() {
   if (!playerEl) return;
   playerEl.innerHTML = gs.blackjack.hand.map(c => "<span class='bj-card" + (isRed(c) ? " bj-red" : "") + "'>" + c.rank + c.suit + "</span>").join("");
   let pv = handValue(gs.blackjack.hand);
-  pvEl.textContent = "点数: " + pv;
+  pvEl.textContent = t("点数: ") + pv;
   if (gs.blackjack.gameOver) {
     dealerEl.innerHTML = gs.blackjack.dealer.map(c => "<span class='bj-card" + (isRed(c) ? " bj-red" : "") + "'>" + c.rank + c.suit + "</span>").join("");
-    document.getElementById("bj-dealer-value").textContent = "点数: " + handValue(gs.blackjack.dealer);
+    document.getElementById("bj-dealer-value").textContent = t("点数: ") + handValue(gs.blackjack.dealer);
   } else {
     dealerEl.innerHTML = "<span class='bj-card" + (isRed(gs.blackjack.dealer[0]) ? " bj-red" : "") + "'>" + gs.blackjack.dealer[0].rank + gs.blackjack.dealer[0].suit + "</span><span class='bj-card bj-back'>🂠</span>";
-    document.getElementById("bj-dealer-value").textContent = "点数: " + cardValue(gs.blackjack.dealer[0]) + " + ?";
+    document.getElementById("bj-dealer-value").textContent = t("点数: ") + cardValue(gs.blackjack.dealer[0]) + " + ?";
   }
 }
 
@@ -47,7 +47,7 @@ function renderBlackjack(el) {
 
 async function bjStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   let betEl = document.getElementById("bj-bet");
   let bet = Math.max(10, Math.min(2000, parseInt(betEl.value) || 100));
   betEl.value = bet;
@@ -58,7 +58,7 @@ async function bjStart() {
   document.getElementById("bj-btns").innerHTML = '<button class="game-btn game-btn-sm" onclick="bjHit()">👆 要牌</button> <button class="game-btn game-btn-sm game-btn-sec" onclick="bjStand()">✋ 停牌</button>';
   bjRender();
   if (handValue(gs.blackjack.hand) === 21) { bjStand(); return; }
-  document.getElementById("bj-msg").textContent = "要牌还是停牌？";
+  document.getElementById("bj-msg").textContent = t("要牌还是停牌？");
 }
 
 async function bjHit() {
@@ -81,8 +81,8 @@ async function bjStand() {
   if (dv > 21 || pv > dv) {
     prize = pv === 21 && gs.blackjack.hand.length === 2 ? Math.floor(bet * 2.5) : bet * 2;
     document.getElementById("bj-msg").innerHTML = "<span class='game-win'>🎉 你赢了！获得 " + prize + " 积分！</span>";
-  } else if (pv === dv) { prize = bet; document.getElementById("bj-msg").innerHTML = "🤝 平局，退换赌注"; }
-  else { document.getElementById("bj-msg").innerHTML = "😢 庄家赢了，再试试"; }
+  } else if (pv === dv) { prize = bet; document.getElementById("bj-msg").innerHTML = t("🤝 平局，退换赌注"); }
+  else { document.getElementById("bj-msg").innerHTML = t("😢 庄家赢了，再试试"); }
   if (prize > 0) {
     let r2 = await gameApi("win", {game: "blackjack", win: prize});
     if (!r2.error) { gs.balance = r2.balance || gs.balance; updateBalance(); }
@@ -113,7 +113,7 @@ function renderMemory(el) {
 async function memoryFlip(idx) {
   if (gs.memory.gameOver || gs.memory.lockBoard || gs.memory.flipped.includes(idx) || gs.memory.matched.has(idx)) return;
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   if (!gs.memory.betPlaced) {
     gs.memory.betPlaced = true;
     let r1 = await gameApi("bet", {game: "memory", wager: 100});
@@ -121,7 +121,7 @@ async function memoryFlip(idx) {
     gs.balance = r1.balance || gs.balance; updateBalance();
   }
   gs.memory.moves++;
-  document.getElementById("memory-moves").textContent = "步数: " + gs.memory.moves;
+  document.getElementById("memory-moves").textContent = t("步数: ") + gs.memory.moves;
   gs.memory.flipped.push(idx);
   let btn = document.querySelector('.memory-card[data-idx="' + idx + '"]');
   btn.textContent = gs.memory.cards[idx];
@@ -175,7 +175,7 @@ function renderSimon(el) {
 
 async function simonStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError("请先设置用户名"); return; }
+  if (!name) { showError(t("请先设置用户名")); return; }
   let r1 = await gameApi("bet", {game: "simon", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
@@ -188,10 +188,10 @@ function simonNext() {
   let s = gs.simon; s.round++; s.sequence.push(Math.floor(Math.random() * 4)); s.playerSeq = []; s.showing = true;
   document.getElementById("simon-round").textContent = s.round;
   document.getElementById("simon-score").textContent = s.score;
-  document.getElementById("simon-msg").textContent = "👀 注意看！";
+  document.getElementById("simon-msg").textContent = t("👀 注意看！");
   let i = 0;
   let interval = setInterval(() => {
-    if (i >= s.sequence.length) { clearInterval(interval); document.querySelectorAll(".simon-btn").forEach(el => el.style.opacity = "1"); s.showing = false; document.getElementById("simon-msg").textContent = "🎯 轮到你！按顺序点击"; return; }
+    if (i >= s.sequence.length) { clearInterval(interval); document.querySelectorAll(".simon-btn").forEach(el => el.style.opacity = "1"); s.showing = false; document.getElementById("simon-msg").textContent = t("🎯 轮到你！按顺序点击"); return; }
     if (i > 0) { let prev = document.querySelector('.simon-btn[data-i="' + s.sequence[i - 1] + '"]'); if (prev) prev.style.opacity = "1"; }
     let cur = document.querySelector('.simon-btn[data-i="' + s.sequence[i] + '"]'); if (cur) cur.style.opacity = "0.3";
     i++;
@@ -213,7 +213,7 @@ async function simonClick(idx) {
   }
   if (s.playerSeq.length === s.sequence.length) {
     s.score += 200; document.getElementById("simon-score").textContent = s.score;
-    document.getElementById("simon-msg").textContent = "✅ 第 " + s.round + " 轮正确！+200";
+    document.getElementById("simon-msg").textContent = t("✅ 第 ") + s.round + t(" 轮正确！+200");
     setTimeout(simonNext, 800);
   }
 }
