@@ -115,6 +115,10 @@ const i18nDict = {
     wallpaperHint: "设置自定义图片壁纸，点击\"恢复随机\"返回随机背景。",
     videoHint: "设置视频动态壁纸，视频将循环静音播放。",
     wallpaperUrl: "图片 URL", videoUrl: "视频 URL", uploadImage: "上传本地图片", uploadVideo: "上传本地视频",
+    chatInputPlaceholder: "输入消息...", searchPlaceholder: "搜索消息...", userMenuTitle: "用户",
+    at: "@ 提及", dm: "私信", kick: "踢出", ban: "封禁", banip: "封禁IP", batchKick: "批量踢出",
+    image: "图片", file: "文件", moreTools: "更多工具", search: "搜索", more: "更多",
+    reconnectBanner: "连接已断开，正在尝试重新连接...",
   },
   en: {
     login: "Login", register: "Register", skipLogin: "Skip, enter as guest", send: "Send", settings: "Settings",
@@ -129,6 +133,10 @@ const i18nDict = {
     wallpaperHint: "Set a custom image wallpaper. Click \"Restore random\" to go back.",
     videoHint: "Set a looping muted video wallpaper.",
     wallpaperUrl: "Image URL", videoUrl: "Video URL", uploadImage: "Upload local image", uploadVideo: "Upload local video",
+    chatInputPlaceholder: "Type a message...", searchPlaceholder: "Search messages...", userMenuTitle: "User",
+    at: "@ Mention", dm: "DM", kick: "Kick", ban: "Ban", banip: "Ban IP", batchKick: "Batch kick",
+    image: "Image", file: "File", moreTools: "More tools", search: "Search", more: "More",
+    reconnectBanner: "Disconnected, reconnecting...",
   }
 };
 export function getLang() {

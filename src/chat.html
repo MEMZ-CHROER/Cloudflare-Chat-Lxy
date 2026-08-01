@@ -131,12 +131,12 @@
       <div id="roster-header"><span>在线用户</span><span class="roster-count" id="roster-count">0</span></div>
     </div>
     <div id="roster-backdrop"></div>
-    <div id="reconnect-banner">⚠ 连接已断开，正在尝试重新连接...</div>
+    <div id="reconnect-banner" data-i18n="reconnectBanner">⚠ 连接已断开，正在尝试重新连接...</div>
     <div id="roster-toggle">&#128101;</div>
     <div id="typing-indicator"></div>
     <div id="reply-bar"></div>
     <button id="scroll-bottom-btn" type="button" title="滚动到底部">↓</button>
-    <input id="chat-input" placeholder="输入消息...">
+    <input id="chat-input" placeholder="输入消息..." data-i18n-placeholder="chatInputPlaceholder">
     <div id="md-toolbar"
       style="display:none;position:fixed;bottom:52px;left:12px;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;z-index:25;align-items:center;">
       <span class="md-btn" data-wrap="**"
@@ -164,9 +164,9 @@
       <button class="tb-btn" id="md-toggle-btn" type="button" title="Markdown 工具栏">T</button>
     </div>
     <div id="mention-dropdown"></div>
-    <button id="image-btn" type="button">图片</button>
+    <button id="image-btn" type="button" data-i18n="image">图片</button>
     <input type="file" id="image-picker" accept="image/*" style="display:none">
-    <button id="file-btn" type="button">📎 文件</button>
+    <button id="file-btn" type="button" data-i18n="file">📎 文件</button>
     <input type="file" id="file-picker" style="display:none">
     <div id="upload-progress"
       style="display:none;position:fixed;bottom:60px;left:12px;right:12px;height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden;z-index:20;">
@@ -178,13 +178,13 @@
     </div>
   </form>
   <div id="user-menu">
-    <div class="user-menu-header" id="user-menu-name">用户</div>
-    <div class="user-menu-item" data-action="at">@ 提及</div>
-    <div class="user-menu-item" data-action="dm">💬 私信</div>
-    <div class="user-menu-item danger" data-action="kick">👢 踢出</div>
-    <div class="user-menu-item danger" data-action="ban">🚫 封禁</div>
-    <div class="user-menu-item danger" data-action="banip">🔨 封禁IP</div>
-    <div class="user-menu-item" data-action="batch-kick">👢 批量踢出</div>
+    <div class="user-menu-header" id="user-menu-name" data-i18n="userMenuTitle">用户</div>
+    <div class="user-menu-item" data-action="at" data-i18n="at">@ 提及</div>
+    <div class="user-menu-item" data-action="dm" data-i18n="dm">💬 私信</div>
+    <div class="user-menu-item danger" data-action="kick" data-i18n="kick">👢 踢出</div>
+    <div class="user-menu-item danger" data-action="ban" data-i18n="ban">🚫 封禁</div>
+    <div class="user-menu-item danger" data-action="banip" data-i18n="banip">🔨 封禁IP</div>
+    <div class="user-menu-item" data-action="batch-kick" data-i18n="batchKick">👢 批量踢出</div>
     <div class="user-menu-item" data-action="note">📝 备注</div>
     <div class="user-menu-item" data-action="pay">💰 转账积分</div>
     <div class="user-menu-item" data-action="tag">🏷️ 修改标签</div>
@@ -211,7 +211,7 @@
       <div class="dm-system">选择用户后开始私信</div>
     </div>
     <div id="dm-input-area">
-      <input id="dm-input" placeholder="输入消息...">
+      <input id="dm-input" placeholder="输入消息..." data-i18n-placeholder="chatInputPlaceholder">
       <button id="dm-send" type="button" onclick="sendDM()" data-i18n="send">发送</button>
     </div>
   </div>
@@ -235,12 +235,12 @@
   <div id="more-menu-backdrop"></div>
   <div class="floating-btn" id="sound-toggle" title="提示音">🔊</div>
   <div class="floating-btn" id="dark-toggle" title="暗色模式">🌙</div>
-  <div class="floating-btn" id="search-toggle" title="搜索消息">🔍</div>
+  <div class="floating-btn" id="search-toggle" title="搜索消息" data-i18n-title="search">🔍</div>
   <div class="floating-btn" id="settings-toggle" title="设置" data-i18n-title="settings">⚙️</div>
   <div class="floating-btn" id="music-toggle" title="音乐播放器">🎵</div>
   <div class="floating-btn" id="tag-warehouse-btn" title="标签仓库" onclick="openShop('inventory')">🏷️</div>
   <!-- More button + menu for less-used floating buttons -->
-  <div class="floating-btn" id="more-menu-btn" title="更多">···</div>
+  <div class="floating-btn" id="more-menu-btn" title="更多" data-i18n-title="more">···</div>
   <div id="more-menu-panel">
     <div class="more-menu-item" data-action="favorites"><span class="mm-icon">⭐</span><span
         class="mm-label">收藏的消息</span></div>
@@ -259,7 +259,7 @@
   </div>
   <!-- Search Bar -->
   <div id="search-bar">
-    <input id="search-input" placeholder="搜索消息..." autocomplete="off">
+    <input id="search-input" placeholder="搜索消息..." data-i18n-placeholder="searchPlaceholder" autocomplete="off">
     <span id="search-count"></span>
     <button id="search-prev" type="button" title="上一个">▲</button>
     <button id="search-next" type="button" title="下一个">▼</button>
