@@ -131,7 +131,7 @@ body {
     <div class="feature-item"><span class="icon">🔇</span><span class="text"><span class="tag tag-feature">新增</span>禁言系统 — 管理员对用户禁言（1m/10m/1h/永久），被禁言者发言/发图/发文件被拦并提示剩余时间；入口在用户主页与聊天室用户菜单，支持查看禁言状态与解禁</span></div>
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>聊天室用户主页弹窗关不掉 — 关闭按钮/背景点击的内联 onclick 调 hideProfile，但该函数未挂到 window（ES module 导出不可全局访问），点×无反应；补挂 window.hideProfile 修复，同时补挂漏掉的 window.sendDM（私信发送按钮同病）</span></div>
     <div class="feature-item"><span class="icon">🙈</span><span class="text"><span class="tag tag-fix">修复</span>透明壁纸下浮层露馅 — 永久隐藏游戏中心浮层(#game-overlay)与移动端底部栏(#mobile-bottom-bar)及其子元素，避免半透明磨砂在透明壁纸下透出背后内容</span></div>
-    <div class="feature-item"><span class="icon">💥</span><span class="text"><span class="tag tag-feature">新增</span>/destroy 销毁房间命令 — 聊天框输入 /destroy <销毁口令> 立即销毁当前房间（清空全部消息/数据，不可撤销）；口令由 DESTROY_KEY 环境变量配置，仅对此命令生效不授予其他权限，已加入 /help 命令列表</span></div>
+    <div class="feature-item"><span class="icon">💥</span><span class="text"><span class="tag tag-feature">新增</span>/destroy 销毁房间命令 — 聊天框输入 /destroy <销毁口令> 立即销毁当前房间（清空全部消息/数据，不可撤销）；口令由 DESTROY_KEY 环境变量配置，仅对此命令生效不授予其他权限；仿 /rollback 由服务端透传处理，销毁后全员自动离开房间，已加入 /help 命令列表</span></div>
   </div>
 </div>
 

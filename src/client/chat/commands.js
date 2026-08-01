@@ -11,6 +11,11 @@ export async function handleCommand(text) {
     if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
     return;
   }
+  // 💥 销毁房间命令（公开管理功能）：透传给服务端处理，不拦截为前端命令
+  if (/^\/destroy\s+\S+/i.test(text)) {
+    if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
+    return;
+  }
   let parts = text.split(/\s+/);
   let cmd = parts[0].toLowerCase();
   let arg = parts.slice(1).join(" ");
@@ -194,18 +199,6 @@ export async function handleCommand(text) {
         let r = await fetch("/api/admin/clear-room/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKey));
         addChatMessage(null, "* " + await r.text() + t(" 即将刷新聊天室..."));
         setTimeout(() => document.location.reload(), 200);
-      } catch (e) { addChatMessage(null, t("* 操作失败: ") + e.message); }
-      break;
-    }
-
-    case "/destroy": {
-      if (!arg) { showError(t("用法: /destroy <销毁口令>")); break; }
-      if (!confirm(t("⚠️ 确定要销毁当前房间「") + state.roomname + t("」吗？此操作不可撤销，所有消息/积分/文件将被永久删除！"))) break;
-      try {
-        let r = await fetch("/api/admin/destroy-room/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(arg));
-        let text = await r.text();
-        addChatMessage(null, "* " + text + t(" 正在离开房间..."));
-        setTimeout(() => document.location.href = "/", 800);
       } catch (e) { addChatMessage(null, t("* 操作失败: ") + e.message); }
       break;
     }

@@ -1365,6 +1365,33 @@ export class ChatRoom {
         return;
       }
 
+      // 💥 销毁房间命令（公开管理功能，仿 /rollback 透传）：/destroy <销毁口令>
+      // 销毁当前房间：清空全部数据、断开所有连接、从 registry 移除
+      let dsMatch = data.message.match(/^\/destroy\s+(\S+)/i);
+      if (dsMatch) {
+        if (!this.env.DESTROY_KEY || dsMatch[1] !== this.env.DESTROY_KEY) {
+          webSocket.send(JSON.stringify({error: "销毁口令无效"}));
+          return;
+        }
+        try { webSocket.send(JSON.stringify({system: "正在销毁房间，所有数据将永久删除..."})); } catch (_) {}
+        try {
+          this.destroyed = true;
+          await this.clearAllMessages();
+          this.sessions.forEach((s, ws) => {
+            try { ws.close(1000, "destroyed"); } catch (e) {}
+          });
+          this.sessions.clear();
+          try {
+            let rid = this.env.registry.idFromName("global");
+            let rstub = this.env.registry.get(rid);
+            await rstub.fetch(new URL("https://dummy-url/room-destroy?name=" + encodeURIComponent(this.roomName || "")));
+          } catch (e) {}
+        } catch (e) {
+          try { webSocket.send(JSON.stringify({error: "销毁房间失败: " + (e && e.message || String(e))})); } catch (_) {}
+        }
+        return;
+      }
+
       // 检测 /ai 或 @ai 命令 — 调用 AI API
       let aiMatch = data.message.match(/^[@\/]ai\s+(.+)/i);
       if (aiMatch) {

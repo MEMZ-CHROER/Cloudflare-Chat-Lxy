@@ -507,10 +507,12 @@ export function join() {
 
   ws.addEventListener("close", event => {
     if (event.reason === "kicked") { addChatMessage(null, t("* 你已被踢出房间，即将刷新页面...")); setTimeout(() => document.location.reload(), 200); return; }
+    if (event.reason === "destroyed") { addChatMessage(null, t("* 房间已销毁，正在离开...")); setTimeout(() => document.location.href = "/", 500); return; }
     rejoin();
   });
   ws.addEventListener("error", event => {
     if (event.reason === "kicked") { addChatMessage(null, t("* 你已被踢出房间，即将刷新页面...")); setTimeout(() => document.location.reload(), 200); return; }
+    if (event.reason === "destroyed") { addChatMessage(null, t("* 房间已销毁，正在离开...")); setTimeout(() => document.location.href = "/", 500); return; }
     rejoin();
   });
 }
