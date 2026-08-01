@@ -62,7 +62,7 @@ export function showGameLoading(text) {
   hideGameLoading();
   _loadingEl = document.createElement('div');
   _loadingEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;padding:16px 24px;background:rgba(0,0,0,0.7);color:#fff;border-radius:12px;font-size:14px;font-weight:600;pointer-events:none;animation:fadeIn .2s;';
-  _loadingEl.textContent = text || t('⏳ 加载中...');
+  _loadingEl.textContent = text || '⏳ 加载中...';
   document.body.appendChild(_loadingEl);
 }
 
@@ -102,7 +102,7 @@ async function getBalance() {
 
 function fmtPts(v) {
   let s = String(v);
-  if (s.length > 9) return s.slice(0, s.length - 8) + t("亿+");
+  if (s.length > 9) return s.slice(0, s.length - 8) + "亿+";
   return Number(s).toLocaleString();
 }
 
@@ -135,7 +135,7 @@ function ensureGameCSS() {
 }
 
 export async function openGames() {
-  showGameLoading(t('🎮 加载游戏中心...'));
+  showGameLoading('🎮 加载游戏中心...');
   gs.balance = await getBalance();
   gs.currentGame = "menu";
   ensureGameCSS();
@@ -207,5 +207,5 @@ function renderGameContent(el) {
 
 export function updateBalance() {
   let el = document.getElementById("game-points-display");
-  if (el) el.textContent = "💰 " + fmtPts(gs.balance) + t(" 积分");
+  if (el) el.textContent = "💰 " + fmtPts(gs.balance) + " 积分";
 }

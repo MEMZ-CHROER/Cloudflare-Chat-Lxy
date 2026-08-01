@@ -2,7 +2,7 @@
 import { state } from './state.js';
 
 const STORAGE_KEY = "chat_quick_phrases";
-const DEFAULT_PHRASES = ["👍", "😂", t("好的"), t("收到"), t("谢谢"), "👌"];
+const DEFAULT_PHRASES = ["👍", "😂", "好的", "收到", "谢谢", "👌"];
 
 export function loadPhrases() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch (e) { return []; }
@@ -57,7 +57,7 @@ export function toggleQuickPanel() {
     });
     btn.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      if (confirm(t("删除「") + p + "」?")) { removePhrase(p); panel.remove(); toggleQuickPanel(); }
+      if (confirm("删除「" + p + "」?")) { removePhrase(p); panel.remove(); toggleQuickPanel(); }
     });
     panel.appendChild(btn);
   });
@@ -66,7 +66,7 @@ export function toggleQuickPanel() {
   addRow.style.cssText = "display:flex;gap:4px;margin-top:6px;";
   let inp = document.createElement("input");
   inp.type = "text";
-  inp.placeholder = t("新短语...");
+  inp.placeholder = "新短语...";
   inp.style.cssText = "flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);outline:none;";
   let addBtn = document.createElement("button");
   addBtn.textContent = "+";

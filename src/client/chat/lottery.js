@@ -52,7 +52,7 @@ export async function doDraw(poolId) {
       let tagMsg = data.prize.tag ? "<br><span style=\"font-size:14px;color:#888\">🏷️ 标签已自动装备!</span>" : "";
       if (resultDiv) resultDiv.innerHTML = '<div style="padding:20px"><div style="font-size:48px;margin-bottom:12px">🎉</div><div style="font-size:20px;font-weight:600;margin-bottom:8px">恭喜获得:</div><div style="font-size:24px;color:#e67e22">' + escapeHtml(data.prize.name) + '</div>' + tagMsg + '</div>';
     } else {
-      if (resultDiv) resultDiv.innerHTML = '<div style="padding:20px"><div style="font-size:48px;margin-bottom:12px">😅</div><div style="font-size:16px;color:#666">' + escapeHtml(data.error || t("抽奖失败")) + '</div></div>';
+      if (resultDiv) resultDiv.innerHTML = '<div style="padding:20px"><div style="font-size:48px;margin-bottom:12px">😅</div><div style="font-size:16px;color:#666">' + escapeHtml(data.error || "抽奖失败") + '</div></div>';
     }
   } catch (e) {
     if (resultDiv) resultDiv.innerHTML = '<div style="padding:20px"><div style="font-size:16px;color:#c00">错误: ' + e.message + '</div></div>';

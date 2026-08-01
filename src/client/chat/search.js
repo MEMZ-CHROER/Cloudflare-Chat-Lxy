@@ -53,7 +53,7 @@ export function doSearch() {
     document.getElementById("search-count").textContent = (state.searchIndex + 1) + "/" + state.searchResults.length;
   } else {
     state.searchIndex = -1;
-    document.getElementById("search-count").textContent = t("无结果");
+    document.getElementById("search-count").textContent = "无结果";
   }
 }
 

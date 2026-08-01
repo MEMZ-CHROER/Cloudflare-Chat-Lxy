@@ -153,10 +153,10 @@ function schulteSetSize(s) { localStorage.setItem("schulte_size", String(s)); wi
 async function schulteClick(idx) {
   let s = gs.schulte, n = s.nums[idx];
   if (s.gameOver) return;
-  if (n !== s.next) { document.getElementById("schulte-msg").textContent = t("❌ 应该点 ") + s.next; return; }
+  if (n !== s.next) { document.getElementById("schulte-msg").textContent = "❌ 应该点 " + s.next; return; }
   if (!s.betPlaced) {
     let name = state.username || localStorage.getItem("chat_user") || "";
-    if (!name) { showError(t("请先设置用户名")); return; }
+    if (!name) { showError("请先设置用户名"); return; }
     let r1 = await gameApi("bet", {game: "schulte", wager: 100});
     if (r1.error) { showError(r1.error); return; }
     gs.balance = r1.balance || gs.balance; updateBalance(); s.betPlaced = true; s.startTime = Date.now();
@@ -172,7 +172,7 @@ async function schulteClick(idx) {
   } else {
     s.next++; document.getElementById("schulte-next").textContent = s.next;
     document.getElementById("schulte-time").textContent = ((Date.now() - s.startTime) / 1000).toFixed(1);
-    document.getElementById("schulte-msg").textContent = t("✅ 继续点 ") + s.next;
+    document.getElementById("schulte-msg").textContent = "✅ 继续点 " + s.next;
   }
 }
 
@@ -194,7 +194,7 @@ function renderTarget(el) {
 
 async function targetStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError(t("请先设置用户名")); return; }
+  if (!name) { showError("请先设置用户名"); return; }
   let r1 = await gameApi("bet", {game: "target", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
@@ -215,9 +215,9 @@ function targetNext() {
   let cell = document.querySelector('.target-cell[data-r="' + t.targetRow + '"][data-c="' + t.targetCol + '"]');
   if (cell) { cell.textContent = "🎯"; cell.classList.add("target-hit"); }
   document.getElementById("target-round").textContent = t.round + 1; document.getElementById("target-score").textContent = t.score;
-  document.getElementById("target-msg").textContent = t("点击 🎯 目标！");
+  document.getElementById("target-msg").textContent = "点击 🎯 目标！";
   if (t.timer) clearTimeout(t.timer);
-  t.timer = setTimeout(() => { if (!t.gameOver) { document.getElementById("target-msg").textContent = t("⏰ 超时！"); t.round++; setTimeout(targetNext, 500); } }, 3000);
+  t.timer = setTimeout(() => { if (!t.gameOver) { document.getElementById("target-msg").textContent = "⏰ 超时！"; t.round++; setTimeout(targetNext, 500); } }, 3000);
 }
 
 function targetClick(r, c) {
@@ -226,9 +226,9 @@ function targetClick(r, c) {
   if (r === t.targetRow && c === t.targetCol) {
     let pts = Math.max(1, Math.floor((3000 - (Date.now() - t.roundStart)) / 100) + 1);
     t.score += pts; document.getElementById("target-score").textContent = t.score;
-    document.getElementById("target-msg").textContent = t("🎯 命中！+") + pts + t(" 分"); t.round++;
+    document.getElementById("target-msg").textContent = "🎯 命中！+" + pts + " 分"; t.round++;
     if (t.timer) clearTimeout(t.timer); setTimeout(targetNext, 400);
-  } else { document.getElementById("target-msg").textContent = t("❌ 没打中！"); }
+  } else { document.getElementById("target-msg").textContent = "❌ 没打中！"; }
 }
 
 registerGame("target", "🎯", "打靶", "5×5 网格中快速点击目标，越准越快分越高", renderTarget, () => ({ round: 0, score: 0, maxRounds: 15, gameOver: false, timer: null, targetRow: -1, targetCol: -1, roundStart: 0, betPlaced: false }));
@@ -248,13 +248,13 @@ function renderUFO(el) {
 
 async function ufoStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError(t("请先设置用户名")); return; }
+  if (!name) { showError("请先设置用户名"); return; }
   if (gs.ufo.betPlaced) return;
   let r1 = await gameApi("bet", {game: "ufo", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   let u = gs.ufo; u.betPlaced = true; u.score = 0; u.timeLeft = 30; u.gameOver = false;
-  document.getElementById("ufo-start").disabled = true; document.getElementById("ufo-start").textContent = t("游戏中...");
+  document.getElementById("ufo-start").disabled = true; document.getElementById("ufo-start").textContent = "游戏中...";
   ufoSpawn();
   u.countdown = setInterval(() => {
     u.timeLeft--; document.getElementById("ufo-time").textContent = u.timeLeft;

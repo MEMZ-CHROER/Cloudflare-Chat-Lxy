@@ -4,11 +4,11 @@ import { state } from './state.js';
 console.log('[banner] module loaded');
 
 const COLOR_TITLE_MAP = {
-  red: t('管理员'),
-  'red+gold': t('金边红大佬'),
-  cyan: t('副管理员'),
-  teal: t('副管理员'),
-  gold: t('金标大佬'),
+  red: '管理员',
+  'red+gold': '金边红大佬',
+  cyan: '副管理员',
+  teal: '副管理员',
+  gold: '金标大佬',
 };
 
 const TARGET_COLORS = new Set(['red', 'cyan', 'teal', 'gold']);
@@ -20,9 +20,9 @@ export function showWelcomeBanner(username, tagColor, tagBorder) {
     if (!TARGET_COLORS.has(tagColor)) { console.log('[banner] skipped: color not target', tagColor); return; }
 
     let key = tagBorder ? tagColor + '+' + tagBorder : tagColor;
-    let title = COLOR_TITLE_MAP[key] || COLOR_TITLE_MAP[tagColor] || t('用户');
-    let roomName = state.roomname || t('未知');
-    let text = t('欢迎 ') + title + ' ' + username + t(' 来到 ') + roomName + t(' 聊天室！');
+    let title = COLOR_TITLE_MAP[key] || COLOR_TITLE_MAP[tagColor] || '用户';
+    let roomName = state.roomname || '未知';
+    let text = '欢迎 ' + title + ' ' + username + ' 来到 ' + roomName + ' 聊天室！';
 
     let container = document.getElementById('welcome-banner');
     if (!container) { console.log('[banner] ERROR: #welcome-banner not found in DOM'); return; }

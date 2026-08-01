@@ -9,15 +9,15 @@ export function updateDmBadge() {
     if (state.dmUnread > 0) {
       el.innerHTML = '💬 私信 <span class="dm-badge">' + state.dmUnread + '</span>';
     } else {
-      el.innerHTML = t('💬 私信');
+      el.innerHTML = '💬 私信';
     }
   });
 }
 
 export function openDM(user) {
-  if (user === state.username) { showError(t("不能给自己发私信")); return; }
+  if (user === state.username) { showError("不能给自己发私信"); return; }
   state.dmTarget = user;
-  document.querySelector("#dm-username").textContent = t("私信: ") + user;
+  document.querySelector("#dm-username").textContent = "私信: " + user;
   document.querySelector("#dm-panel").style.display = "flex";
   renderDMLog(user);
   state.dmUnread = 0;
@@ -62,8 +62,8 @@ export function sendDM() {
   let input = document.querySelector("#dm-input");
   let text = input.value.trim();
   if (!text) return;
-  if (!state.dmTarget) { showError(t("请先选择私信对象")); return; }
-  if (!state.currentWebSocket) { showError(t("未连接到聊天室")); return; }
+  if (!state.dmTarget) { showError("请先选择私信对象"); return; }
+  if (!state.currentWebSocket) { showError("未连接到聊天室"); return; }
   input.value = "";
   state.currentWebSocket.send(JSON.stringify({type: "whisper", target: state.dmTarget, message: text}));
   addToDMCache(state.dmTarget, {from: state.username, message: text, timestamp: Date.now()}, true);

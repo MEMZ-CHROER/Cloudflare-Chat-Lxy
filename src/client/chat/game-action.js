@@ -17,13 +17,13 @@ function renderMole(el) {
 
 async function moleStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError(t("请先设置用户名")); return; }
+  if (!name) { showError("请先设置用户名"); return; }
   if (gs.mole.betPlaced) return;
   let r1 = await gameApi("bet", {game: "mole", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   gs.mole.betPlaced = true; gs.mole.score = 0; gs.mole.timeLeft = 20; gs.mole.gameOver = false;
-  document.getElementById("mole-start").disabled = true; document.getElementById("mole-start").textContent = t("游戏中...");
+  document.getElementById("mole-start").disabled = true; document.getElementById("mole-start").textContent = "游戏中...";
   moleSpawn();
   gs.mole.timer = setInterval(() => {
     gs.mole.timeLeft--; document.getElementById("mole-time").textContent = gs.mole.timeLeft;
@@ -81,7 +81,7 @@ function renderQuiz(el) {
 
 async function quizStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError(t("请先设置用户名")); return; }
+  if (!name) { showError("请先设置用户名"); return; }
   let r1 = await gameApi("bet", {game: "quiz", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
@@ -106,7 +106,7 @@ function quizNext() {
   document.getElementById("quiz-msg").textContent = ""; q.answered = false; q.timeLeft = 5;
   document.getElementById("quiz-time").textContent = "5";
   if (q.timer) clearInterval(q.timer);
-  q.timer = setInterval(() => { q.timeLeft--; document.getElementById("quiz-time").textContent = q.timeLeft; if (q.timeLeft <= 0 && !q.answered) { clearInterval(q.timer); q.answered = true; document.getElementById("quiz-msg").textContent = t("⏰ 超时！答案是 ") + qd.answer; document.getElementById("quiz-options").innerHTML = ""; q.qIndex++; setTimeout(quizNext, 1200); } }, 1000);
+  q.timer = setInterval(() => { q.timeLeft--; document.getElementById("quiz-time").textContent = q.timeLeft; if (q.timeLeft <= 0 && !q.answered) { clearInterval(q.timer); q.answered = true; document.getElementById("quiz-msg").textContent = "⏰ 超时！答案是 " + qd.answer; document.getElementById("quiz-options").innerHTML = ""; q.qIndex++; setTimeout(quizNext, 1200); } }, 1000);
 }
 
 function quizAnswer(idx) {
@@ -137,7 +137,7 @@ function renderReaction(el) {
 
 async function rxnStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError(t("请先设置用户名")); return; }
+  if (!name) { showError("请先设置用户名"); return; }
   let r1 = await gameApi("bet", {game: "reaction", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
@@ -158,17 +158,17 @@ function rxnNext() {
   document.getElementById("rxn-round").textContent = r.round;
   let pad = document.getElementById("rxn-pad"), text = document.getElementById("rxn-text");
   if (pad) { pad.style.background = "#ff6b6b"; pad.style.cursor = "default"; }
-  if (text) text.textContent = t("等待绿色...");
+  if (text) text.textContent = "等待绿色...";
   let delay = 1000 + Math.random() * 3000;
   if (r.timer) clearTimeout(r.timer);
-  r.timer = setTimeout(() => { r.phase = "go"; r.startTime = Date.now(); if (pad) { pad.style.background = "#2ecc71"; pad.style.cursor = "pointer"; } if (text) text.textContent = t("点击！"); }, delay);
+  r.timer = setTimeout(() => { r.phase = "go"; r.startTime = Date.now(); if (pad) { pad.style.background = "#2ecc71"; pad.style.cursor = "pointer"; } if (text) text.textContent = "点击！"; }, delay);
 }
 
 function rxnClick() {
   let r = gs.reaction; if (r.gameOver) return;
   let pad = document.getElementById("rxn-pad"), text = document.getElementById("rxn-text");
   if (r.phase === "wait") {
-    if (pad) pad.style.background = "#ff6b6b"; if (text) text.textContent = t("❌ 抢跑了！等变绿");
+    if (pad) pad.style.background = "#ff6b6b"; if (text) text.textContent = "❌ 抢跑了！等变绿";
     if (r.timer) { clearTimeout(r.timer); r.timer = null; } r.phase = "penalty"; setTimeout(rxnNext, 1000);
   } else if (r.phase === "go") {
     let elapsed = Date.now() - r.startTime; r.score += elapsed;
@@ -197,13 +197,13 @@ function renderStack(el) {
 
 async function stackStart() {
   let name = state.username || localStorage.getItem("chat_user") || "";
-  if (!name) { showError(t("请先设置用户名")); return; }
+  if (!name) { showError("请先设置用户名"); return; }
   let r1 = await gameApi("bet", {game: "stack", wager: 100});
   if (r1.error) { showError(r1.error); return; }
   gs.balance = r1.balance || gs.balance; updateBalance();
   let s = gs.stack; s.betPlaced = true; s.blocks = [{x: 0, width: 200}]; s.width = 200; s.x = 0; s.dir = 1; s.speed = 3; s.level = 0; s.gameOver = false;
   document.getElementById("stack-start").style.display = "none";
-  document.getElementById("stack-msg").textContent = t("点击方块让它落下！");
+  document.getElementById("stack-msg").textContent = "点击方块让它落下！";
   stackAnim();
 }
 

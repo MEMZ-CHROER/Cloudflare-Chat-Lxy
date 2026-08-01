@@ -29,8 +29,8 @@ export function toggleFilesPanel() {
     return t;
   }
 
-  let tabImg = makeTab(t("🖼 图片"), "image");
-  let tabFile = makeTab(t("📎 文件"), "file");
+  let tabImg = makeTab("🖼 图片", "image");
+  let tabFile = makeTab("📎 文件", "file");
   tabs.appendChild(tabImg);
   tabs.appendChild(tabFile);
   panel.appendChild(tabs);
@@ -73,7 +73,7 @@ export function toggleFilesPanel() {
     });
 
     if (items.length === 0) {
-      list.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:40px 0;">暂无' + (type === "image" ? "图片" : t("文件")) + '</div>';
+      list.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:40px 0;">暂无' + (type === "image" ? "图片" : "文件") + '</div>';
       return;
     }
 

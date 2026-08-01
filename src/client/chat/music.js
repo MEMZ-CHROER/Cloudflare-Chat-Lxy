@@ -45,19 +45,19 @@ async function fetchMeting(type, id) {
       console.warn("Meting API failed:", apiTemplate, e);
     }
   }
-  throw new Error(t("所有音乐 API 均不可用"));
+  throw new Error("所有音乐 API 均不可用");
 }
 
 // ---- 搜索 ----
 export async function searchMusic(keywords) {
-  if (!keywords || !keywords.trim()) { showInfo(t("请输入搜索内容")); return; }
+  if (!keywords || !keywords.trim()) { showInfo("请输入搜索内容"); return; }
   const container = document.getElementById("music-results");
   container.innerHTML = '<div class="music-empty">搜索中...</div>';
   try {
     const data = await fetchMeting("search", keywords.trim());
     queue = data.map(item => ({
-      name: item.title || item.name || t("未知"),
-      artist: item.author || item.artist || t("未知"),
+      name: item.title || item.name || "未知",
+      artist: item.author || item.artist || "未知",
       url: item.url || "",
       cover: item.pic || item.cover || "",
       lrc: item.lrc || ""
@@ -113,7 +113,7 @@ export function playIndex(idx) {
 
   const a = ensureAudio();
   a.src = song.url;
-  a.play().catch(() => showError(t("自动播放被浏览器拦截，请点击播放按钮")));
+  a.play().catch(() => showError("自动播放被浏览器拦截，请点击播放按钮"));
 }
 
 export function togglePlay() {
@@ -163,7 +163,7 @@ function ensureAudio() {
     if (btn) btn.textContent = "▶";
   });
   audio.addEventListener("error", () => {
-    showError(t("播放失败，尝试下一首"));
+    showError("播放失败，尝试下一首");
     setTimeout(() => next(), 1500);
   });
   return audio;
