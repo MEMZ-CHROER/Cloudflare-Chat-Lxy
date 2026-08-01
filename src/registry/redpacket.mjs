@@ -34,7 +34,8 @@ export async function handleRedPacket(reg, request, url) {
         total = parseInt(total);
         count = parseInt(count);
         if (total < 1 || count < 1) return new Response(JSON.stringify({error: "金额或个数无效"}), {status: 400});
-        if (total < count && mode === "fixed") return new Response(JSON.stringify({error: "固定金额下每个至少1积分"}), {status: 400});
+        // 🔒 安全修复：任意模式都要求每个至少1积分，否则拼手气金额可算出 0/负数
+        if (total < count) return new Response(JSON.stringify({error: "金额不足，每个红包至少1积分"}), {status: 400});
         if (count > 100) return new Response(JSON.stringify({error: "最多100份"}), {status: 400});
         if (total > 100000) return new Response(JSON.stringify({error: "单次红包最多10万积分"}), {status: 400});
 
@@ -90,14 +91,17 @@ export async function handleRedPacket(reg, request, url) {
         // 计算金额
         let amount;
         if (rp.mode === "fixed") {
-          amount = Math.floor(rp.total / rp.count);
+          amount = Math.max(1, Math.floor(rp.remaining / rp.remainingCount));
         } else {
           // 拼手气：最后一份直接取剩余
           if (rp.remainingCount === 1) {
             amount = rp.remaining;
           } else {
-            let max = Math.floor(rp.remaining / rp.remainingCount * 2);
-            amount = 1 + Math.floor(Math.random() * Math.min(max, rp.remaining - rp.remainingCount));
+            // 🔒 安全修复：每份至少1积分、且不超过"给剩余每份留1分后的可分配额"，防 0/负数红包
+            let allocatable = rp.remaining - (rp.remainingCount - 1);
+            let max = Math.min(Math.floor(rp.remaining / rp.remainingCount * 2), allocatable);
+            amount = 1 + Math.floor(Math.random() * Math.max(1, max));
+            amount = Math.max(1, amount);
           }
         }
         // 加积分

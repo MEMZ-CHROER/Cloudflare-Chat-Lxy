@@ -645,6 +645,18 @@ export class ChatRoom {
         });
         delete session.blockedMessages;
 
+        // 🔒 安全修复：同名检测 — 同一名字仅允许一个在线会话，防止冒名截获私信（whisper 按名投递）与冒名投票/操作
+        let nameTaken = false;
+        for (let [ws, s] of this.sessions) {
+          if (ws !== webSocket && s.name === session.name) { nameTaken = true; break; }
+        }
+        if (nameTaken) {
+          webSocket.send(JSON.stringify({error: "该名字已在房间内在线，请更换名字后再加入"}));
+          this.sessions.delete(webSocket);
+          webSocket.close(1008, "名字已被占用");
+          return;
+        }
+
         let joinMsg = {joined: session.name};
         if (session.tag) joinMsg.tag = session.tag;
         if (session.tagColor) joinMsg.tagColor = session.tagColor;
@@ -838,7 +850,23 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "选项不存在"}));
           return;
         }
+        // 🔒 安全修复：同一IP每场投票限1票 + 限频，防批量连接换名刷票（保留按名字记录用于展示）
+        if (session.ip) {
+          if (poll.votedIps && poll.votedIps[session.ip]) {
+            webSocket.send(JSON.stringify({error: "同一IP只能投一票"}));
+            return;
+          }
+          if (!this.lastVote) this.lastVote = new Map();
+          let lastVoteAt = this.lastVote.get(session.ip) || 0;
+          if (Date.now() - lastVoteAt < 3000) {
+            webSocket.send(JSON.stringify({error: "投票太频繁，请稍后再试"}));
+            return;
+          }
+          this.lastVote.set(session.ip, Date.now());
+        }
         poll.voters[session.name] = optionIndex;
+        if (!poll.votedIps) poll.votedIps = {};
+        if (session.ip) poll.votedIps[session.ip] = true;
         poll.options[optionIndex].votes.push(session.name);
         await this.storage.put("polls", [...this.polls]);
         this.broadcast({
