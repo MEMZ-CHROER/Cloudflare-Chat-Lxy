@@ -1,5 +1,5 @@
 // 消息渲染 - addChatMessage, addChatImage, addChatFile, 投票, markdown 等
-import { state, t } from './state.js';
+import { state, t, getUserBio } from './state.js';
 import { TAG_COLORS, getVipLevel, createVipBadge } from './vip.js';
 import { modifyOwnTag, startReply, recallMessage, checkAtMention, showLightbox } from './ui.js';
 import { showUserMenu } from './menu.js';
@@ -227,6 +227,32 @@ export function renderPoll(data) {
   state.chatlog.scrollBy(0, 1e8);
 }
 
+// 个人签名展示 — 在用户名后追加签名标签，并设置悬停 tooltip
+export function attachSignature(nameSpan, name) {
+  if (!nameSpan || !name || name === state.username) return;
+  let sigEl = null;
+  getUserBio(name).then(bio => {
+    if (!bio || !nameSpan.isConnected) return;
+    sigEl = document.createElement("span");
+    sigEl.className = "msg-signature";
+    sigEl.textContent = bio.length > 12 ? bio.slice(0, 12) + "…" : bio;
+    sigEl.title = bio; // 完整签名悬停显示
+    nameSpan.appendChild(sigEl);
+  });
+  nameSpan.addEventListener("mouseenter", () => {
+    getUserBio(name).then(bio => {
+      if (!bio || !nameSpan.isConnected) return;
+      if (!sigEl) {
+        sigEl = document.createElement("span");
+        sigEl.className = "msg-signature";
+        sigEl.textContent = bio.length > 12 ? bio.slice(0, 12) + "…" : bio;
+        sigEl.title = bio;
+        nameSpan.appendChild(sigEl);
+      }
+    });
+  });
+}
+
 export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, reply, tagBorder, msgId, atAll, avatar) {
   if (!name) {
     let p = document.createElement("p");
@@ -268,6 +294,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     nameSpan.style.cursor = "pointer";
     nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
     header.appendChild(nameSpan);
+    attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
   }
   wrapper.appendChild(header);
   if (reply) {
@@ -404,6 +431,7 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
     nameSpan.style.cursor = "pointer";
     nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
     header.appendChild(nameSpan);
+    attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
   }
   wrapper.appendChild(header);
   if (reply) {
@@ -499,6 +527,7 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
     nameSpan.style.cursor = "pointer";
     nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
     header.appendChild(nameSpan);
+    attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
   }
   wrapper.appendChild(header);
   if (reply) {

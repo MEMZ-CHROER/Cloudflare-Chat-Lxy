@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -26,6 +26,7 @@ export async function loadAll(storage) {
       storage.get("emoji"),
       storage.get("redeemCodes"),
       storage.get("kickProtected"),
+      storage.get("mutes"),
     ]);
 
   return {
@@ -51,6 +52,7 @@ export async function loadAll(storage) {
     emoji: emojiData ? new Map(emojiData) : new Map(),
     redeemCodes: redeemCodesData ? new Map(redeemCodesData) : new Map(),
     kickProtected: kickProtectedData ? new Set(kickProtectedData) : new Set(),
+    mutes: mutesData ? new Map(mutesData) : new Map(),
   };
 }
 
@@ -119,4 +121,8 @@ export async function saveRedeemCodes(storage, data) {
 
 export async function saveKickProtected(storage, data) {
   await storage.put("kickProtected", [...data]);
+}
+
+export async function saveMutes(storage, data) {
+  await storage.put("mutes", [...data]);
 }

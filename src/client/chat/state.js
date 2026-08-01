@@ -50,6 +50,10 @@ export const state = {
 
   customEmoji: null, // {name: dataURL, ...} — loaded on startChat
 
+  // 个人签名（bio）缓存 — name -> bio，懒加载
+  bioCache: {},
+  bioCachePending: {},
+
   // 频道体系
   currentChannel: "general",
   channels: [{name: "general", type: "text"}, {name: "announcement", type: "announcement"}],
@@ -122,7 +126,7 @@ const i18nDict = {
     videoHint: "设置视频动态壁纸，视频将循环静音播放。",
     wallpaperUrl: "图片 URL", videoUrl: "视频 URL", uploadImage: "上传本地图片", uploadVideo: "上传本地视频",
     chatInputPlaceholder: "输入消息...", searchPlaceholder: "搜索消息...", userMenuTitle: "用户",
-    at: "@ 提及", dm: "私信", kick: "踢出", ban: "封禁", banip: "封禁IP", batchKick: "批量踢出",
+    at: "@ 提及", dm: "私信", kick: "踢出", mute: "🔇 禁言", ban: "封禁", banip: "封禁IP", batchKick: "批量踢出",
     image: "图片", file: "文件", moreTools: "更多工具", search: "搜索", more: "更多",
     reconnectBanner: "连接已断开，正在尝试重新连接...",
     joinChat: "加入聊天", chooseRoom: "选择一个房间开始聊天", roomNamePlaceholder: "输入房间名称",
@@ -155,6 +159,14 @@ const i18nDict = {
     "不能给自己发私信": "Cannot DM yourself",
     "不能给自己转账": "Cannot transfer to yourself",
     "不能踢出自己": "Cannot kick yourself",
+    "不能禁言自己": "Cannot mute yourself",
+    "选择禁言时长：\n1 - 1分钟\n2 - 10分钟\n3 - 1小时\n4 - 永久\n\n输入数字": "Choose mute duration:\n1 - 1 minute\n2 - 10 minutes\n3 - 1 hour\n4 - permanent\n\nEnter a number",
+    "禁言原因（可选，留空跳过）": "Mute reason (optional, leave empty to skip)",
+    "无效时长": "Invalid duration",
+    "已禁言 ": "Muted ",
+    "（永久）": " (permanent)",
+    "禁言失败: ": "Mute failed: ",
+    "禁言失败: 网络错误": "Mute failed: network error",
     "保存失败：存储空间不足（本地图片太大），请使用图片 URL": "Save failed: storage full (image too large), use an image URL",
     "保存失败：存储空间不足（本地视频太大），请使用视频 URL": "Save failed: storage full (video too large), use a video URL",
     "修改标签失败: ": "Failed to change tag: ",
@@ -494,4 +506,22 @@ export function applyI18n() {
     el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
   });
   document.documentElement.setAttribute("lang", getLang());
+}
+
+// —— 个人签名（bio）获取 — 懒加载缓存，每用户只请求一次 ——
+export async function getUserBio(name) {
+  if (!name) return "";
+  if (state.bioCache[name] !== undefined) return state.bioCache[name];
+  if (state.bioCachePending[name]) return state.bioCachePending[name];
+  let p = fetch("/api/user/profile?name=" + encodeURIComponent(name))
+    .then(r => r.json())
+    .then(data => {
+      let bio = data && data.bio ? String(data.bio).trim() : "";
+      state.bioCache[name] = bio;
+      delete state.bioCachePending[name];
+      return bio;
+    })
+    .catch(() => { state.bioCache[name] = ""; delete state.bioCachePending[name]; return ""; });
+  state.bioCachePending[name] = p;
+  return p;
 }

@@ -13,12 +13,13 @@ import { handleEmoji } from "./registry/emoji.mjs";
 import { handleRedeem } from "./registry/redeem.mjs";
 import { handleLog } from "./registry/log.mjs";
 import { handleRedPacket } from "./registry/redpacket.mjs";
+import { handleMute } from "./registry/mute.mjs";
 import {
   loadAll, saveRooms, saveBanned, saveBannedIps, saveTags, saveKnownUsers,
   saveUserIps, saveGlobalBlacklist, saveAdminKey, savePoints, saveRegisteredUsers,
   saveShopItems, saveBotCommands, saveUserInventory, saveTasks, saveTaskClaims,
   saveTaskCompletions, saveLotteryPools, saveLotteryRecords, saveEmoji,
-  saveRedeemCodes, saveKickProtected
+  saveRedeemCodes, saveKickProtected, saveMutes
 } from "./registry/persistence.mjs";
 
 // RoomRegistry Durable Object — 全局单例，跟踪所有房间、用户、商城、任务、抽奖等
@@ -48,6 +49,7 @@ export class RoomRegistry {
     this.emoji = new Map();
     this.redeemCodes = new Map();
     this.kickProtected = new Set();
+    this.mutes = new Map();
     this.redPackets = new Map();
     // 游戏防刷状态（内存字段，不持久化）
     this.gameBets = new Map();       // name -> {wager, ts} 未结算下注
@@ -85,6 +87,7 @@ export class RoomRegistry {
     if (data.emoji) this.emoji = data.emoji;
     if (data.redeemCodes) this.redeemCodes = data.redeemCodes;
     if (data.kickProtected) this.kickProtected = data.kickProtected;
+    if (data.mutes) this.mutes = data.mutes;
   }
 
   async save() { await saveRooms(this.storage, this.rooms); }
@@ -107,6 +110,7 @@ export class RoomRegistry {
   async saveLotteryRecords() { await saveLotteryRecords(this.storage, this.lotteryRecords); }
   async saveEmoji() { await saveEmoji(this.storage, this.emoji); }
   async saveKickProtected() { await saveKickProtected(this.storage, this.kickProtected); }
+  async saveMutes() { await saveMutes(this.storage, this.mutes); }
 
   async fetch(request) {
     if (this._loadPromise) await this._loadPromise;
@@ -146,6 +150,8 @@ export class RoomRegistry {
       handler = handleLog;
     else if (path.startsWith("/redpacket"))
       handler = handleRedPacket;
+    else if (path.startsWith("/admin/mute") || path.startsWith("/admin/unmute") || path === "/mute-status" || path === "/admin/mute-list")
+      handler = handleMute;
 
     if (handler) {
       let result = await handler(this, request, url);

@@ -1,6 +1,6 @@
 // WebSocket 连接 + 消息调度
 import { state, t } from './state.js';
-import { addChatMessage, addChatImage, addChatFile, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag } from './renderers.js';
+import { addChatMessage, addChatImage, addChatFile, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag, attachSignature } from './renderers.js';
 import { modifyOwnTag, playMsgSound, showTyping, flashTitle, checkAtMention, updateTitleUnread } from './ui.js';
 import { showUserMenu } from './menu.js';
 import { addToDMCache, updateDmBadge } from './dm.js';
@@ -452,6 +452,7 @@ export function join() {
         wrapper.querySelector(".username").textContent = data.from;
         wrapper.querySelector(".bubble").textContent = "🔒 " + data.message;
         wrapper.querySelector(".username").addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(data.from, e.clientX, e.clientY); });
+        attachSignature(wrapper.querySelector(".username"), data.from); // 个人签名：私聊消息旁展示 + 悬停
         if (data.timestamp) {
           let ts = document.createElement("span");
           ts.className = "msg-time";

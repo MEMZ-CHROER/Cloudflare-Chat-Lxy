@@ -17,6 +17,7 @@ export function showUserMenu(name, x, y) {
     if (a === "pay" || a === "at" || a === "dm" || a === "batch-kick" || a === "note" || a === "profile") { el.style.display = "block"; }
     else if (a === "block") { el.style.display = state.blockedUsers.has(name) ? "none" : "flex"; }
     else if (a === "unblock") { el.style.display = state.blockedUsers.has(name) ? "flex" : "none"; }
+    else if (a === "mute") { el.style.display = hasAdmin ? "flex" : "none"; }
     else { el.style.display = hasAdmin ? "flex" : "none"; }
   });
   let vw = window.innerWidth, vh = window.innerHeight;
@@ -62,6 +63,27 @@ export function handleMenuAction(action) {
       if (!confirm(t("确定要踢出「") + target + t("」吗？"))) return;
       fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target) + "&caller=" + encodeURIComponent(state.username))
         .then(r => r.text()).then(t => addChatMessage(null, "* " + t));
+      break;
+    }
+    case "mute": {
+      if (target === state.username) { showError(t("不能禁言自己")); return; }
+      let choice = prompt(t("选择禁言时长：\n1 - 1分钟\n2 - 10分钟\n3 - 1小时\n4 - 永久\n\n输入数字"));
+      if (!choice) return;
+      let duration;
+      if (choice === "1") duration = "1m";
+      else if (choice === "2") duration = "10m";
+      else if (choice === "3") duration = "1h";
+      else if (choice === "4") duration = "permanent";
+      else { showError(t("无效时长")); return; }
+      let reason = prompt(t("禁言原因（可选，留空跳过）"), "");
+      fetch("/api/admin/mute", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name: target, duration, reason: reason || ""})
+      }).then(r => r.json()).then(res => {
+        if (res.ok) addChatMessage(null, "* " + t("已禁言 ") + target + (duration === "permanent" ? t("（永久）") : ""));
+        else showError(t("禁言失败: ") + (res.error || ""));
+      }).catch(() => showError(t("禁言失败: 网络错误")));
       break;
     }
     case "ban": {

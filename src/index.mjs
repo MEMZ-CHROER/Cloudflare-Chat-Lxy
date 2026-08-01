@@ -405,6 +405,15 @@ async function handleApi(apiPath, request, env) {
       return new Response("未找到", {status: 404});
     }
 
+    case "mute-status": {
+      let rid = env.registry.idFromName("global");
+      let stub = env.registry.get(rid);
+      let url = new URL(request.url);
+      let name = url.searchParams.get("name") || "";
+      let r = await stub.fetch("https://dummy-url/mute-status?name=" + encodeURIComponent(name));
+      return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
+    }
+
     case "translate": {
       if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
       try {

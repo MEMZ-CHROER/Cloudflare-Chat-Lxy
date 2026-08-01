@@ -76,6 +76,14 @@ body {
 }
 .actions a:hover { opacity: 0.85; }
 .actions a.secondary { background: #f0f2f5; color: #555; }
+.actions a.danger { background: #e74c3c; color: #fff; }
+.mute-status {
+  background: #fdecea; border: 1px solid #f5c6c0; border-radius: 10px;
+  padding: 10px 14px; margin-top: 12px; font-size: 13px; color: #c0392b;
+}
+.mute-status .unmute-btn {
+  margin-left: 8px; color: #e74c3c; font-weight: 600; cursor: pointer; text-decoration: underline;
+}
 @media (max-width: 600px) {
   body { padding: 12px; }
   .profile-avatar { width: 64px; height: 64px; font-size: 24px; }
@@ -119,9 +127,11 @@ body {
         <div class="bio-label">📝 个人简介</div>
         <div id="bio" class="bio-empty">这个人很懒，什么都没写</div>
       </div>
+      <div id="mute-status" class="mute-status" style="display:none;"></div>
       <div class="actions">
         <a href="/" id="chat-link">💬 发消息</a>
         <a href="/leaderboard" class="secondary">🏆 排行榜</a>
+        <a href="javascript:void(0)" id="mute-btn" class="danger" style="display:none;">🔇 禁言</a>
       </div>
     </div>
   </div>
@@ -188,6 +198,81 @@ function render(data) {
     bio.textContent = "这个人很懒，什么都没写";
     bio.className = "bio-empty";
   }
+  setupMute(data.name);
+}
+// 🔇 禁言：状态展示 + 管理员操作入口
+function setupMute(name) {
+  let statusEl = document.getElementById("mute-status");
+  let btn = document.getElementById("mute-btn");
+  // 查询禁言状态（公开）
+  fetch("/api/mute-status?name=" + encodeURIComponent(name))
+    .then(r => r.json())
+    .then(d => {
+      if (d.muted) {
+        let remain = d.permanent ? "永久" : fmtRemain(d.remainingMs);
+        let txt = "🔇 该用户当前被禁言" + (remain ? "（" + remain + "）" : "") + (d.reason ? "，原因: " + d.reason : "");
+        statusEl.textContent = txt;
+        statusEl.style.display = "block";
+      }
+    }).catch(() => {});
+  // 管理员入口（cookie 判断，密钥由 httpOnly cookie 自动携带）
+  let isAdmin = document.cookie.indexOf("admin_logged=1") !== -1;
+  if (!isAdmin) return;
+  btn.style.display = "inline-block";
+  btn.addEventListener("click", () => {
+    let d = prompt("选择禁言时长：\n1 - 1分钟\n2 - 10分钟\n3 - 1小时\n4 - 永久\n\n输入数字（或直接输入其他分钟数）");
+    if (!d) return;
+    let duration;
+    if (d === "1") duration = "1m";
+    else if (d === "2") duration = "10m";
+    else if (d === "3") duration = "1h";
+    else if (d === "4") duration = "permanent";
+    else {
+      let mins = parseInt(d);
+      if (!mins || mins <= 0) { alert("无效时长"); return; }
+      if (mins === 60) duration = "1h";
+      else if (mins < 60) duration = "1m"; // 仅支持 1m/10m/1h/permanent
+      else duration = "1h";
+    }
+    let reason = prompt("禁言原因（可选，留空跳过）", "");
+    fetch("/api/admin/mute", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({name, duration, reason: reason || ""})
+    }).then(r => r.json()).then(res => {
+      if (res.ok) { alert("已禁言 " + name); statusEl.textContent = "🔇 该用户已被禁言"; statusEl.style.display = "block"; }
+      else alert("禁言失败: " + (res.error || "未知错误"));
+    }).catch(() => alert("禁言失败: 网络错误"));
+  });
+  // 若当前正被禁言，显示解禁按钮
+  fetch("/api/mute-status?name=" + encodeURIComponent(name))
+    .then(r => r.json()).then(d => {
+      if (d.muted) {
+        let ub = document.createElement("a");
+        ub.className = "unmute-btn";
+        ub.textContent = "解禁";
+        ub.href = "javascript:void(0)";
+        ub.addEventListener("click", () => {
+          fetch("/api/admin/unmute", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({name})
+          }).then(r => r.json()).then(res => {
+            if (res.ok) { alert("已解除禁言 " + name); statusEl.textContent = ""; statusEl.style.display = "none"; }
+            else alert("解禁失败: " + (res.error || ""));
+          });
+        });
+        statusEl.appendChild(ub);
+      }
+    }).catch(() => {});
+}
+function fmtRemain(ms) {
+  let s = Math.ceil(ms / 1000);
+  if (s < 60) return s + " 秒";
+  let m = Math.floor(s / 60);
+  if (m < 60) return m + " 分钟";
+  let h = Math.floor(m / 60);
+  return h + " 小时";
 }
 function getVipLevel(name) {
   if (!name) return null;

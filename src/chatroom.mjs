@@ -705,6 +705,29 @@ export class ChatRoom {
         return;
       }
 
+      // 🔇 禁言检查：被禁言者所有发言/操作被拦（typing 除外，避免打扰）
+      if (data.type !== "typing" && session.name && !this.isAdminSession(session)) {
+        let muted = null;
+        try {
+          let rid = this.env.registry.idFromName("global");
+          let rstub = this.env.registry.get(rid);
+          let r = await rstub.fetch("https://dummy-url/mute-status?name=" + encodeURIComponent(session.name));
+          let d = await r.json();
+          if (d.muted) {
+            muted = {remainingMs: d.remainingMs, permanent: d.permanent, reason: d.reason || ""};
+          }
+        } catch (e) {}
+        if (muted) {
+          let remainMin = Math.max(1, Math.ceil(muted.remainingMs / 60000));
+          let tip = muted.permanent
+            ? "你已被禁言，无法发言（永久）"
+            : "你已被禁言，剩余 " + remainMin + " 分钟无法发言";
+          if (muted.reason) tip += "（原因: " + muted.reason + "）";
+          webSocket.send(JSON.stringify({error: tip}));
+          return;
+        }
+      }
+
       if (data.type === "kick") {
         // 🔒 安全修复：踢人限频（普通用户30秒内只能踢1次，管理员不限），防反复骚扰他人
         let isKickAdmin = this.isAdminSession(session);
