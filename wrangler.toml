@@ -42,6 +42,7 @@ ADMIN_SECRET_KEY = "9167c945079746dbfa6cd249df4ad64f102e9e34a366624539ee3ac7cfef
 ADMIN_KEY = "7a7be27563c45956c313005973b4902a15b7a1008c207c05"
 # 独立销毁口令：聊天框输入 /destroy <口令> 可销毁当前房间（仅此命令生效，不授予其他权限）
 DESTROY_KEY = "lxy130523"
+# 注意：GITHUB_TOKEN / AI_API_KEY / CF_API_TOKEN 为 secret，用 `wrangler secret put <名>` 配置，勿写入仓库
 AI_BASE_URL = "https://api.deepseek.com/v1"
 AI_MODEL = "deepseek-v4-flash"
 AI_SYSTEM_PROMPT = "你是一个友好的助手，请用中文回答。"
