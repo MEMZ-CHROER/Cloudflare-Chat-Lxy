@@ -707,7 +707,7 @@ export class ChatRoom {
 
       if (data.type === "kick") {
         // 🔒 安全修复：踢人限频（普通用户30秒内只能踢1次，管理员不限），防反复骚扰他人
-        let isKickAdmin = session.tag === "red" || session.tag === "cyan";
+        let isKickAdmin = this.isAdminSession(session);
         if (!isKickAdmin) {
           if (!this.lastKick) this.lastKick = new Map();
           let last = this.lastKick.get(session.name) || 0;
@@ -1007,7 +1007,7 @@ export class ChatRoom {
         let sched = (this.scheduledMessages || []).find(s => s.id === cancelId);
         if (!sched) { webSocket.send(JSON.stringify({error: "定时消息不存在"})); return; }
         // 🔒 安全修复（W6）：只能取消自己创建的定时消息（管理员可取消任意）
-        if (sched.name !== session.name && session.tag !== "red" && session.tag !== "cyan") {
+        if (sched.name !== session.name && !this.isAdminSession(session)) {
           webSocket.send(JSON.stringify({error: "只能取消自己创建的定时消息"}));
           return;
         }
@@ -1094,7 +1094,7 @@ export class ChatRoom {
         let relay = this.relays.get(relayId);
         if (!relay) { webSocket.send(JSON.stringify({error: "接龙不存在"})); return; }
         // 🔒 安全修复（LD18）：发起者或管理员（red/cyan）可结束接龙，防游客创建后断线导致功能永久锁死
-        if (relay.startedBy !== session.name && session.tag !== "red" && session.tag !== "cyan") {
+        if (relay.startedBy !== session.name && !this.isAdminSession(session)) {
           webSocket.send(JSON.stringify({error: "只有发起者或管理员可以结束接龙"})); return;
         }
         relay.active = false;
@@ -1251,7 +1251,7 @@ export class ChatRoom {
       let msgChannel = session.channel || "general";
       // 频道体系：公告频道只读，仅管理员（red/cyan）可发言
       let curChan = this.channels.find(c => c.name === msgChannel);
-      if (curChan && curChan.type === "announcement" && session.tag !== "red" && session.tag !== "cyan") {
+      if (curChan && curChan.type === "announcement" && !this.isAdminSession(session)) {
         webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
         return;
       }
@@ -1581,6 +1581,13 @@ export class ChatRoom {
         this.broadcast({quit: quitter.name});
       }
     });
+  }
+
+  // 管理员判定：支持自定义红/青/金边超管标签（不只认 tag 字符串，"金边红大佬"等也可）
+  isAdminSession(session) {
+    return session.tag === "red" || session.tag === "cyan" ||
+           session.tagColor === "red" || session.tagColor === "cyan" ||
+           session.tagBorder === "gold";
   }
 
   // 频道体系：只发送给指定频道的已设名会话；未设名会话排队（命名后按频道分流）

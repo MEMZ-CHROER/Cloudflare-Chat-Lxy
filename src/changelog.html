@@ -101,6 +101,8 @@ body {
   <div class="version-body open">
     <div class="feature-item"><span class="icon">📡</span><span class="text"><span class="tag tag-feature">新增</span>频道体系 — 一房多频道（默认 #general + #announcement 公告只读），消息按频道隔离、频道栏切换、非当前频道未读计数</span></div>
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-feature">新增</span>管理员 /channel add|remove 增删频道、/switch 快捷切换频道</span></div>
+    <div class="feature-item"><span class="icon">🔨</span><span class="text"><span class="tag tag-fix">修复</span>频道切换被公告只读校验误拦截 — 切到 announcement 后 switch-channel/typing 也被当"公告频道发言"拦死，改为仅对图片/文件/字符画校验</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-fix">修复</span>金边红超管被误判普通用户 — 管理员判定统一走 isAdminSession（认 tag/tagColor/tagBorder 三围），金边红/金边青超管在公告频道发言、置顶、管频道、精华等权限恢复正常</span></div>
   </div>
 </div>
 

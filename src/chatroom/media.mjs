@@ -5,7 +5,7 @@ export async function handleMedia(room, session, data, webSocket) {
     if (room._loadChannels) await room._loadChannels;
     let msgChannel = session.channel || "general";
     let curChan = room.channels ? room.channels.find(c => c.name === msgChannel) : null;
-    if (curChan && curChan.type === "announcement" && session.tag !== "red" && session.tag !== "cyan") {
+    if (curChan && curChan.type === "announcement" && !room.isAdminSession(session)) {
       webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
       return true;
     }
