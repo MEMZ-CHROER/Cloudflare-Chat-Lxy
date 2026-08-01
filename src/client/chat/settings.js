@@ -1,5 +1,6 @@
 // 设置面板 — 背景透明度 / 磨砂程度 / 界面色调 / 自定义壁纸 / 视频壁纸
 import { showError, showInfo } from './state.js';
+import { setLang, getLang, applyI18n } from './i18n.js';
 
 const BG_TINT_KEY = "bgTint";
 const BG_BLUR_KEY = "bgBlur";
@@ -343,4 +344,12 @@ export function initSettings() {
       showInfo("已取消视频壁纸");
     });
   }
+
+  // 语言切换（设置面板）
+  const bindLangBtn = (id, lang) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener("click", () => { setLang(lang); });
+  };
+  bindLangBtn("lang-zh", "zh");
+  bindLangBtn("lang-en", "en");
 }
