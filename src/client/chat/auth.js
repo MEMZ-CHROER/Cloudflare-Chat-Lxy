@@ -178,6 +178,12 @@ export function updateAccountBar() {
 }
 
 export function doLogout() {
+  // 🔒 安全修复（LD8）：通知服务端吊销 token
+  let tk = localStorage.getItem("chat_token");
+  let usr = localStorage.getItem("chat_user");
+  if (tk && usr) {
+    fetch("/api/logout", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: usr, token: tk})}).catch(() => {});
+  }
   localStorage.removeItem("chat_token");
   localStorage.removeItem("chat_user");
   state.username = "";

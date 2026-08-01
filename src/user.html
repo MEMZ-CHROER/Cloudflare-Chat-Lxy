@@ -166,7 +166,12 @@ function render(data) {
   else { vb.style.display = "none"; }
   let avatar = document.getElementById("avatar");
   if (data.avatar && data.avatar.length > 50) {
-    avatar.innerHTML = '<img src="' + data.avatar + '" alt="avatar">';
+    // 🔒 安全修复（LD5）：用 src 属性赋值而非 innerHTML 拼接，杜绝引号逃逸 XSS
+    avatar.textContent = "";
+    let img = document.createElement("img");
+    img.src = data.avatar;
+    img.alt = "avatar";
+    avatar.appendChild(img);
   } else {
     avatar.textContent = data.name.charAt(0).toUpperCase();
   }

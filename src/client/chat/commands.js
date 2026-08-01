@@ -16,8 +16,8 @@ export async function handleCommand(text) {
 
     case "/kick": {
       if (!arg) { showError("用法: /kick <用户名>"); break; }
-      let adminKey = localStorage.getItem("admin_key");
-      if (!adminKey) { showError("请先登录管理后台（访问 /admin）"); break; }
+      let adminKey = "";
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）"); break; }
       try {
         let r = await fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg) + "&caller=" + encodeURIComponent(state.username));
         addChatMessage(null, "* " + await r.text());
@@ -29,7 +29,7 @@ export async function handleCommand(text) {
     case "/bkick": {
       let names = (arg || "").split(/[,，\s]+/).filter(Boolean);
       if (names.length < 1) { showError("用法: /batch-kick <用户名1>,<用户名2>,..."); break; }
-      let adminKeyK = localStorage.getItem("admin_key");
+      let adminKeyK = "";
       if (!adminKeyK) { showError("请先登录管理后台（访问 /admin）"); break; }
       if (!confirm("确定要踢出 " + names.length + " 个用户: " + names.join(", ") + " ?")) break;
       let results = [];
@@ -45,8 +45,8 @@ export async function handleCommand(text) {
 
     case "/ban": {
       if (!arg) { showError("用法: /ban <用户名>"); break; }
-      let adminKey = localStorage.getItem("admin_key");
-      if (!adminKey) { showError("请先登录管理后台（访问 /admin）"); break; }
+      let adminKey = "";
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）"); break; }
       try {
         await fetch("/api/admin/global-kick?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg));
         let r = await fetch("/api/admin/ban/add?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg));
@@ -57,8 +57,8 @@ export async function handleCommand(text) {
 
     case "/unban": {
       if (!arg) { showError("用法: /unban <用户名>"); break; }
-      let adminKey = localStorage.getItem("admin_key");
-      if (!adminKey) { showError("请先登录管理后台（访问 /admin）"); break; }
+      let adminKey = "";
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）"); break; }
       try {
         let r = await fetch("/api/admin/ban/remove?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg));
         addChatMessage(null, "* " + await r.text());
@@ -157,8 +157,8 @@ export async function handleCommand(text) {
     case "/tag": {
       let targetUser = parts[1], tagValue = parts[2], tagColor = parts[3] || "", tagBorder = parts[4] || "";
       if (!targetUser || !tagValue) { showError("用法: /tag <用户名> <标签> [颜色] [边框颜色]\n  支持多色: /tag 1 [red]五[green]彩[blue]斑斓"); break; }
-      let adminKey = localStorage.getItem("admin_key");
-      if (!adminKey) { showError("请先登录管理后台（访问 /admin）"); break; }
+      let adminKey = "";
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）"); break; }
       try {
         let url = "/api/admin/tag/set?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(targetUser) + "&tag=" + encodeURIComponent(tagValue);
         if (tagColor) url += "&color=" + encodeURIComponent(tagColor);
@@ -171,8 +171,8 @@ export async function handleCommand(text) {
     case "/untag": {
       let targetUser = parts[1];
       if (!targetUser) { showError("用法: /untag <用户名>"); break; }
-      let adminKey = localStorage.getItem("admin_key");
-      if (!adminKey) { showError("请先登录管理后台（访问 /admin）"); break; }
+      let adminKey = "";
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）"); break; }
       try {
         let r = await fetch("/api/admin/tag/remove?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(targetUser));
         addChatMessage(null, "* " + await r.text());
@@ -181,8 +181,8 @@ export async function handleCommand(text) {
     }
 
     case "/clear": {
-      let adminKey = localStorage.getItem("admin_key");
-      if (!adminKey) { showError("请先登录管理后台（访问 /admin）"); break; }
+      let adminKey = "";
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）"); break; }
       if (!confirm("确定清空 " + state.roomname + " 的聊天记录吗？")) break;
       try {
         let r = await fetch("/api/admin/clear-room/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKey));

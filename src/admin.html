@@ -454,7 +454,8 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus { border-colo
 <div id="login-form">
   <h1>管理后台</h1>
   <p style="color:#888;font-size:90%;margin-bottom:16px">请输入管理密钥登录</p>
-  <input type="text" id="admin-key" placeholder="管理密钥" autofocus>
+  <!-- 🔒 安全修复（LD16）：密码框，防密钥明文可见 -->
+  <input type="password" id="admin-key" placeholder="管理密钥" autofocus>
   <button id="login-btn">登录</button>
   <div id="login-error">认证失败，请重试</div>
 </div>

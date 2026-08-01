@@ -1,3 +1,4 @@
+import { tokenValid } from "../utils.mjs";
 // 抽奖系统
 
 // 🔒 安全修复（E6）：BigInt 解析，防余额大数精度丢失
@@ -46,7 +47,7 @@ export async function handleLottery(reg, request, url) {
       if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
       // 🔒 安全修复：registry 层校验 token，确保 name 与 token 匹配
       let regUser = reg.registeredUsers.get(name);
-      if (!regUser || regUser.token !== (body.token || "")) {
+      if (!tokenValid(regUser, body.token || "")) {
         return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
       }
       let pool = reg.lotteryPools.get(poolId);
@@ -75,6 +76,9 @@ export async function handleLottery(reg, request, url) {
       let poolPrize = pool.prizes.get(chosen.id);
       if (poolPrize) poolPrize.stock--;
       savePromises.push(reg.saveLotteryPools());
+      // 🔒 安全修复（LD20）：抽奖奖品禁止发放管理标签（red/cyan），防止普通用户抽中即获管理员权限
+      let ct = (chosen.tag || "").toUpperCase();
+      if (ct === "RED" || ct === "CYAN") chosen.tag = "";
       if (chosen.tag) {
         let itemId = "lottery_" + chosen.id + "_" + Date.now();
         if (!reg.userInventory.has(name)) reg.userInventory.set(name, new Map());

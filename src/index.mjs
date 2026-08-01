@@ -368,6 +368,7 @@ async function handleApi(apiPath, request, env) {
 
     case "register":
     case "login":
+    case "logout":
     case "check-auth":
       return handleAuth(apiPath, request, env);
 
@@ -405,7 +406,20 @@ async function handleApi(apiPath, request, env) {
         let body = await request.json();
         let text = (body.text || "").trim();
         if (!text) return new Response(JSON.stringify({error: "请提供要翻译的文本"}), {status: 400});
-        let targetLang = body.target || "中文";
+        // 🔒 安全修复（LD1）：要求登录（token 认证），堵死游客无认证刷付费 AI 翻译
+        let name = body.name || "";
+        let token = body.token || "";
+        let rid = env.registry.idFromName("global");
+        let stub = env.registry.get(rid);
+        let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
+        let authData = await authCheck.json();
+        if (!authData.authenticated) {
+          return new Response(JSON.stringify({error: "请先登录后使用翻译"}), {status: 403, headers: {"Content-Type": "application/json"}});
+        }
+        // 🔒 安全修复（LD1）：目标语言白名单，防 target 参数注入系统提示
+        const LANG_WHITELIST = ["中文","英语","English","日语","韩语","法语","德语","西班牙语","俄语","阿拉伯语","葡萄牙语","意大利语","泰语","越南语","en","zh","ja","ko","fr","de","es","ru","ar","pt","it","th","vi"];
+        let targetLang = String(body.target || "中文");
+        if (!LANG_WHITELIST.includes(targetLang)) targetLang = "中文";
         let resp = await fetch((env.AI_BASE_URL || "https://api.deepseek.com") + "/chat/completions", {
           method: "POST",
           headers: {
@@ -421,17 +435,15 @@ async function handleApi(apiPath, request, env) {
             max_tokens: 1000
           })
         });
-        if (!resp.ok) {
-          let errText = await resp.text();
-          throw new Error("API " + resp.status + ": " + errText.slice(0, 200));
-        }
+        // 🔒 安全修复（LD1）：错误脱敏，不向调用者回显上游 AI 服务错误体
+        if (!resp.ok) throw new Error("翻译服务暂时不可用");
         let data = await resp.json();
         let translated = data.choices?.[0]?.message?.content || "翻译失败";
         return new Response(JSON.stringify({original: text, translated, target: targetLang}), {
           headers: {"Content-Type": "application/json"}
         });
       } catch (e) {
-        return new Response(JSON.stringify({error: e.message}), {status: 500});
+        return new Response(JSON.stringify({error: "翻译失败，请稍后再试"}), {status: 500, headers: {"Content-Type": "application/json"}});
       }
     }
 

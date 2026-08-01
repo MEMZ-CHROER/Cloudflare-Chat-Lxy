@@ -6,6 +6,21 @@ export async function sha256(message) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// 🔒 安全修复（LD11）：常量时间字符串比较
+export function safeEqual(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
+// 🔒 安全修复（LD8/LD11）：校验用户 token 是否有效（常量时间比较 + 过期检查）
+export function tokenValid(user, token) {
+  return !!(user && user.token && (!user.tokenExpiry || user.tokenExpiry > Date.now()) && safeEqual(user.token, token));
+}
+
 // `handleErrors()` 是一个实用函数，用于包装 HTTP 请求处理器并在出错时向客户端返回错误信息
 // 注意：始终返回通用错误消息，不向客户端泄露堆栈细节
 export async function handleErrors(request, func) {

@@ -377,17 +377,16 @@ export class ChatRoom {
           if (!recallTs || !recallName) return new Response("缺少参数", {status: 400});
           let recallKey = new Date(parseInt(recallTs)).toISOString();
           let recallOrig = await this.storage.get(recallKey);
-          if (recallOrig) {
-            try {
-              let origData = JSON.parse(recallOrig);
-              if (origData.name !== recallName) {
-                return new Response("无权撤回他人的消息", {status: 403});
-              }
-              let now = Date.now();
-              if (now - parseInt(recallTs) > 120000) {
-                return new Response("超过2分钟无法撤回", {status: 400});
-              }
-            } catch (e) {}
+          // 🔒 安全修复（LD19）：消息不存在直接拒绝，杜绝伪造"已撤回"篡改视图 + 任意 storage key 写入
+          if (!recallOrig) return new Response("消息不存在或已过期，无法撤回", {status: 400});
+          let origData;
+          try { origData = JSON.parse(recallOrig); } catch (e) { return new Response("消息不存在或已过期，无法撤回", {status: 400}); }
+          if (origData.name !== recallName) {
+            return new Response("无权撤回他人的消息", {status: 403});
+          }
+          let now = Date.now();
+          if (now - parseInt(recallTs) > 120000) {
+            return new Response("超过2分钟无法撤回", {status: 400});
           }
           let recalledMsg = JSON.stringify({type: "recalled", name: recallName, timestamp: parseInt(recallTs)});
           await this.storage.put(recallKey, recalledMsg);
@@ -402,12 +401,12 @@ export class ChatRoom {
           let newBorder = url.searchParams.get("border") || "";
           if (!targetName) return new Response("请提供用户名", {status: 400});
 
+          // 🔒 安全修复（LD9）：tag-update 只更新"已认证"的同名会话，防游客陈旧会话被改标签获得管理权限
           for (let [ws, s] of this.sessions) {
-            if (s.name === targetName) {
+            if (s.name === targetName && s.authenticated) {
               s.tag = newTag;
               s.tagColor = newColor;
               s.tagBorder = newBorder;
-              break;
             }
           }
 
@@ -616,6 +615,9 @@ export class ChatRoom {
             webSocket.close(1000, "unauthorized");
             return;
           }
+          // 🔒 安全修复（LD9）：记录会话的 token 与认证状态，供红包/标签等特权操作持续校验
+          session.token = data.token || "";
+          session.authenticated = !!(initData.authenticated);
 
           if (initData.tag) {
             session.tag = initData.tag;
@@ -939,6 +941,16 @@ export class ChatRoom {
           return;
         }
         if (!this.scheduledMessages) this.scheduledMessages = [];
+        // 🔒 安全修复（LD17）：定时消息数量上限（每用户5条、房间50条），防整数组重写 storage 造成 O(n²) 存储/CPU DoS
+        let myCount = this.scheduledMessages.filter(s => s.name === session.name).length;
+        if (myCount >= 5) {
+          webSocket.send(JSON.stringify({error: "你最多可创建5条定时消息，请先取消旧的"}));
+          return;
+        }
+        if (this.scheduledMessages.length >= 50) {
+          webSocket.send(JSON.stringify({error: "房间定时消息已达上限（50条）"}));
+          return;
+        }
         let schedEntry = {
           id: "sched_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
           name: session.name,
@@ -990,12 +1002,20 @@ export class ChatRoom {
           return;
         }
         if (this._loadRelays) await this._loadRelays;
+        let autoEnded = false;
         for (let [, relay] of this.relays) {
           if (relay.active) {
+            // 🔒 安全修复（LD18）：超过24小时的接龙自动结束，防游客创建后断线永久锁死接龙功能
+            if (Date.now() - (relay.startedAt || 0) > 24 * 3600 * 1000) {
+              relay.active = false;
+              autoEnded = true;
+              continue;
+            }
             webSocket.send(JSON.stringify({error: "已存在进行中的接龙: " + relay.topic + "，请先结束"}));
             return;
           }
         }
+        if (autoEnded) await this.storage.put("relays", [...this.relays]);
         let relayId = "relay_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
         this.relays.set(relayId, {
           id: relayId, topic: topic, entries: [], active: true,
@@ -1042,8 +1062,9 @@ export class ChatRoom {
         if (this._loadRelays) await this._loadRelays;
         let relay = this.relays.get(relayId);
         if (!relay) { webSocket.send(JSON.stringify({error: "接龙不存在"})); return; }
-        if (relay.startedBy !== session.name) {
-          webSocket.send(JSON.stringify({error: "只有发起者可以结束接龙"})); return;
+        // 🔒 安全修复（LD18）：发起者或管理员（red/cyan）可结束接龙，防游客创建后断线导致功能永久锁死
+        if (relay.startedBy !== session.name && session.tag !== "red" && session.tag !== "cyan") {
+          webSocket.send(JSON.stringify({error: "只有发起者或管理员可以结束接龙"})); return;
         }
         relay.active = false;
         await this.storage.put("relays", [...this.relays]);
@@ -1127,7 +1148,7 @@ export class ChatRoom {
             if (total < 1 || count < 1) { webSocket.send(JSON.stringify({error: "参数无效"})); return; }
             let r = await stub.fetch("https://dummy-url/redpacket/create", {
               method: "POST",
-              body: JSON.stringify({creator: session.name, total, count, mode, room: this.roomName}),
+              body: JSON.stringify({creator: session.name, total, count, mode, room: this.roomName, token: session.token || ""}),
               headers: {"Content-Type": "application/json"}
             });
             let result = await r.json();
@@ -1158,7 +1179,7 @@ export class ChatRoom {
             // 🔒 安全修复（E3）：抢红包需注册用户，并校验所在房间 + 携带 IP 用于限频
             let r = await stub.fetch("https://dummy-url/redpacket/grab", {
               method: "POST",
-              body: JSON.stringify({id: rpId, user: session.name, room: this.roomName, ip: session.ip || ""}),
+              body: JSON.stringify({id: rpId, user: session.name, room: this.roomName, ip: session.ip || "", token: session.token || ""}),
               headers: {"Content-Type": "application/json"}
             });
             let result = await r.json();
@@ -1265,6 +1286,11 @@ export class ChatRoom {
       // 检测 /ai 或 @ai 命令 — 调用 AI API
       let aiMatch = data.message.match(/^[@\/]ai\s+(.+)/i);
       if (aiMatch) {
+        // 🔒 安全修复（LD2）：AI 调用仅限已登录（token 认证）用户，堵死游客无限刷付费 AI（频率限制不做，仅认证门槛）
+        if (!session.authenticated) {
+          webSocket.send(JSON.stringify({error: "请先登录后再使用 AI 功能"}));
+          return;
+        }
         try {
           // 先把用户的消息广播出去
           data.timestamp = Math.max(Date.now(), this.lastTimestamp + 1);

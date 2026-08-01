@@ -1,6 +1,16 @@
 // 用户注册/登录/认证 + user-seen/ips
 import { sha256, getVipLevel, getVipFeatures } from "../utils.mjs";
 
+// 🔒 安全修复（LD11）：常量时间字符串比较，防 token 时序侧信道
+function safeEqual(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
 export async function handleUsers(reg, request, url) {
   switch (url.pathname) {
     case "/user-seen": {
@@ -42,7 +52,8 @@ export async function handleUsers(reg, request, url) {
       if (!name || !password) return new Response(JSON.stringify({error: "请提供用户名和密码"}), {status: 400});
       if (name.length > 32) return new Response(JSON.stringify({error: "用户名过长"}), {status: 400});
       if (/[<>&"'\\]/.test(name)) return new Response(JSON.stringify({error: "用户名包含非法字符"}), {status: 400});
-      /* 允许任意长度密码 */
+      // 🔒 安全修复（LD7）：服务端强制密码强度（至少6位），防止注册弱口令
+      if (password.length < 6) return new Response(JSON.stringify({error: "密码至少6个字符"}), {status: 400});
       if (reg.registeredUsers.has(name)) return new Response(JSON.stringify({error: "用户名已被注册"}), {status: 409});
       // 🔒 安全修复（E4）：每 IP 每日最多注册 3 个账号，防批量注册小号铸币
       let rip = body.ip || "";
@@ -55,8 +66,12 @@ export async function handleUsers(reg, request, url) {
         rec.count++;
         reg.registerByIp.set(rip, rec);
       }
-      let hash = await sha256(password);
-      reg.registeredUsers.set(name, {passwordHash: hash, token: null, avatar: "", bio: ""});
+      // 🔒 安全修复（LD10）：每用户随机盐 + sha256(salt+password)，防离线爆破/彩虹表
+      let saltBytes = new Uint8Array(16);
+      crypto.getRandomValues(saltBytes);
+      let salt = Array.from(saltBytes, b => b.toString(16).padStart(2, '0')).join('');
+      let hash = await sha256(salt + password);
+      reg.registeredUsers.set(name, {passwordHash: hash, salt, token: null, tokenExpiry: null, avatar: "", bio: ""});
       await reg.saveRegisteredUsers();
       return new Response(JSON.stringify({ok: true}));
     }
@@ -69,14 +84,49 @@ export async function handleUsers(reg, request, url) {
       if (!name || !password) return new Response(JSON.stringify({error: "请提供用户名和密码"}), {status: 400});
       let user = reg.registeredUsers.get(name);
       if (!user) return new Response(JSON.stringify({error: "用户名或密码错误"}), {status: 401});
-      let hash = await sha256(password);
-      if (hash !== user.passwordHash) return new Response(JSON.stringify({error: "用户名或密码错误"}), {status: 401});
+      let now = Date.now();
+      // 🔒 安全修复（LD7）：登录失败锁定（5次失败锁30分钟）
+      if (user.lockedUntil && user.lockedUntil > now) {
+        return new Response(JSON.stringify({error: "尝试次数过多，请稍后再试"}), {status: 429});
+      }
+      // 🔒 安全修复（LD10）：带盐校验（兼容旧账号：无 salt 字段视为空盐）
+      let salt = user.salt || "";
+      let hash = await sha256(salt + password);
+      if (hash !== user.passwordHash) {
+        user.loginFails = (user.loginFails || 0) + 1;
+        if (user.loginFails >= 5) {
+          user.lockedUntil = now + 30 * 60 * 1000;
+          user.loginFails = 0;
+        }
+        await reg.saveRegisteredUsers();
+        return new Response(JSON.stringify({error: "用户名或密码错误"}), {status: 401});
+      }
+      user.loginFails = 0;
+      user.lockedUntil = null;
       let tokenBytes = new Uint8Array(32);
       crypto.getRandomValues(tokenBytes);
       let token = Array.from(tokenBytes, b => b.toString(16).padStart(2, '0')).join('');
+      // 🔒 安全修复（LD8）：token 带 30 天过期时间
       user.token = token;
+      user.tokenExpiry = now + 30 * 24 * 3600 * 1000;
       await reg.saveRegisteredUsers();
       return new Response(JSON.stringify({ok: true, name, token}));
+    }
+
+    case "/user-logout": {
+      // 🔒 安全修复（LD8）：服务端登出/吊销 token
+      if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
+      let body = await request.json();
+      let name = body.name;
+      let token = body.token || "";
+      if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      let user = reg.registeredUsers.get(name);
+      if (user && user.token && safeEqual(user.token, token)) {
+        user.token = null;
+        user.tokenExpiry = null;
+        await reg.saveRegisteredUsers();
+      }
+      return new Response(JSON.stringify({ok: true}));
     }
 
     case "/user-avatar": {
@@ -88,9 +138,13 @@ export async function handleUsers(reg, request, url) {
         let body = await request.json();
         // 🔒 H3 修复：修改头像必须验证 token，只能改自己的
         let token = body.token || "";
-        if (!user || user.token !== token) return new Response(JSON.stringify({error: "请先登录后再修改头像"}), {status: 403});
+        if (!user || !(user.token && safeEqual(user.token, token))) return new Response(JSON.stringify({error: "请先登录后再修改头像"}), {status: 403});
         let avatar = body.avatar || "";
         if (avatar && avatar.length > 200000) return new Response(JSON.stringify({error: "头像文件过大"}), {status: 400});
+        // 🔒 安全修复（LD5）：头像必须是 data:image/... 且拒绝 svg+xml（防存储型 XSS 经 /user 主页触发）
+        if (avatar && (!/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(avatar) || /^data:image\/svg\+xml/i.test(avatar))) {
+          return new Response(JSON.stringify({error: "头像格式不合法，仅支持 png/jpg/gif/webp"}), {status: 400});
+        }
         user.avatar = avatar;
         await reg.saveRegisteredUsers();
         return new Response(JSON.stringify({ok: true}));
@@ -107,7 +161,7 @@ export async function handleUsers(reg, request, url) {
         let body = await request.json();
         // 🔒 H3 修复：修改简介必须验证 token，只能改自己的
         let token = body.token || "";
-        if (!user || user.token !== token) return new Response(JSON.stringify({error: "请先登录后再修改简介"}), {status: 403});
+        if (!user || !(user.token && safeEqual(user.token, token))) return new Response(JSON.stringify({error: "请先登录后再修改简介"}), {status: 403});
         let bio = (body.bio || "").slice(0, 200);
         user.bio = bio;
         await reg.saveRegisteredUsers();
@@ -146,7 +200,14 @@ export async function handleUsers(reg, request, url) {
       if (!name) return new Response(JSON.stringify({registered: false, authenticated: false}), {headers: {"Content-Type": "application/json"}});
       let user = reg.registeredUsers.get(name);
       if (!user) return new Response(JSON.stringify({registered: false, authenticated: false}), {headers: {"Content-Type": "application/json"}});
-      return new Response(JSON.stringify({registered: true, authenticated: user.token === token}), {headers: {"Content-Type": "application/json"}});
+      // 🔒 安全修复（LD8/LD11）：token 常量时间比较 + 过期校验（过期视为未认证并清 token）
+      let valid = user.token && (!user.tokenExpiry || user.tokenExpiry > Date.now()) && safeEqual(user.token, token);
+      if (user.token && !valid) {
+        user.token = null;
+        user.tokenExpiry = null;
+        await reg.saveRegisteredUsers();
+      }
+      return new Response(JSON.stringify({registered: true, authenticated: !!valid}), {headers: {"Content-Type": "application/json"}});
     }
 
     case "/user-init": {
@@ -163,7 +224,8 @@ export async function handleUsers(reg, request, url) {
       let userAvatar = "", userBio = "";
       if (uiUser) {
         registered = true;
-        authenticated = uiUser.token === token;
+        // 🔒 安全修复（LD8/LD11）：token 常量时间比较 + 过期校验
+        authenticated = !!(uiUser.token && (!uiUser.tokenExpiry || uiUser.tokenExpiry > Date.now()) && safeEqual(uiUser.token, token));
         if (uiUser.avatar) userAvatar = uiUser.avatar;
         if (uiUser.bio) userBio = uiUser.bio;
       }

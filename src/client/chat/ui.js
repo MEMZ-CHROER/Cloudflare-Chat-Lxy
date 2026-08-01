@@ -4,8 +4,8 @@ import { addChatMessage } from './renderers.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
 
 export async function modifyOwnTag(currentTag, currentColor) {
-  let adminKey = localStorage.getItem("admin_key");
-  if (!adminKey) { showError("请先登录管理后台（访问 /admin）才能修改标签"); return; }
+  let adminKey = "";
+  if (document.cookie.indexOf("admin_logged=1") === -1) { showError("请先登录管理后台（访问 /admin）才能修改标签"); return; }
   let newTag = prompt("输入新标签（留空取消）:", currentTag || "");
   if (newTag === null || !newTag.trim()) return;
   let colorPrompt = "输入颜色（留空为默认）:\n可选: red, blue, green, purple, pink, cyan, gray, orange, yellow, teal, indigo, brown, lime, deeporange, rose, crimson, coral, gold, amber, forest, seagreen, turquoise, steel, royalblue, mediumpurple, darkviolet, chocolate, olive, firebrick, slateblue, darkcyan, mediumseagreen, indianred, cadetblue";

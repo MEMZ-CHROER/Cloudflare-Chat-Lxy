@@ -162,7 +162,8 @@ export function markdownToHtml(text) {
     html = html.replace(/:([a-zA-Z0-9_一-鿿]+):/g, (match, name) => {
       let dataUrl = state.customEmoji[name];
       if (dataUrl) {
-        return '<img src="' + dataUrl.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '" class="custom-emoji" alt=":' + escapeHtml(name) + ':" title=":' + escapeHtml(name) + ':" style="width:20px;height:20px;vertical-align:middle;display:inline-block;object-fit:contain;">';
+        // 🔒 安全修复（LD6）：图片 src 一并转义引号，防属性逃逸注入 on* 事件
+        return '<img src="' + dataUrl.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '" class="custom-emoji" alt=":' + escapeHtml(name) + ':" title=":' + escapeHtml(name) + ':" style="width:20px;height:20px;vertical-align:middle;display:inline-block;object-fit:contain;">';
       }
       return match;
     });
@@ -343,7 +344,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
   buildActionMenu(wrapper, {
     name, text, timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: !!localStorage.getItem("admin_key"),
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });
@@ -451,7 +452,7 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
   buildActionMenu(wrapper, {
     name, text: "[图片]", timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: !!localStorage.getItem("admin_key"),
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });
@@ -564,7 +565,7 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
   buildActionMenu(wrapper, {
     name, text: "[文件]", timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: !!localStorage.getItem("admin_key"),
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });
@@ -632,7 +633,7 @@ function buildActionMenu(wrapper, opts) {
       let targetRoom = prompt("转发到哪个房间？\n（输入房间名，如: 闲聊）");
       if (!targetRoom || !targetRoom.trim()) return;
       let fwdText = (text || "").length > 200 ? text.slice(0, 200) + "..." : (text || "");
-      let adminKey = localStorage.getItem("admin_key");
+      let adminKey = "";
       if (adminKey) {
         fetch("/api/admin/send-message/" + encodeURIComponent(targetRoom.trim()) + "?key=" + encodeURIComponent(adminKey) + "&text=" + encodeURIComponent("📨 " + name + " 转发: " + fwdText) + "&sender=" + encodeURIComponent(state.username || "系统")).then(r => {
           if (r.ok) showSuccess("已转发消息到 " + targetRoom.trim());

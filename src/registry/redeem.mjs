@@ -1,3 +1,4 @@
+import { tokenValid } from "../utils.mjs";
 // 兑换码系统 — 存储在 RoomRegistry 中
 // 数据结构: Map<code, { points, createdBy, createdAt, usedBy, usedAt }>
 // code 自动转为大写
@@ -50,7 +51,7 @@ export async function handleRedeem(reg, request, url) {
       if (!user) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
       // 🔒 安全修复：registry 层校验 token，确保 user 与 token 匹配
       let regUser = reg.registeredUsers.get(user);
-      if (!regUser || regUser.token !== (body.token || "")) {
+      if (!tokenValid(regUser, body.token || "")) {
         return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
       }
 

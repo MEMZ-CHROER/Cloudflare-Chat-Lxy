@@ -142,13 +142,15 @@ window.clearLog = clearLog;
 
 // 登录
 document.querySelector("#login-btn").addEventListener("click", async () => {
-  state.adminKey = document.querySelector("#admin-key").value;
-  if (!state.adminKey) return;
+  let k = document.querySelector("#admin-key").value;
+  if (!k) return;
   try {
-    let r = await fetch("/api/admin/auth-check?key=" + encodeURIComponent(state.adminKey));
+    // 🔒 安全修复（LD12）：改走登录端点，服务端下发 httpOnly Cookie（JS 不可读），不再把密钥存 localStorage
+    let r = await fetch("/api/admin/login", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({key: k})});
+    if (!r.ok) throw new Error("密钥错误");
     let data = await r.json();
-    if (!data.level) throw new Error("密钥错误");
-    localStorage.setItem("admin_key", state.adminKey);
+    localStorage.removeItem("admin_key");
+    state.adminKey = "";
     state.adminLevel = data.level;
     document.querySelector("#login-form").style.display = "none";
     document.querySelector("#admin-panel").style.display = "block";

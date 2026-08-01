@@ -11,7 +11,7 @@ export function showUserMenu(name, x, y) {
   let nameLabel = document.getElementById("user-menu-name");
   let note = getNote(name);
   nameLabel.textContent = note ? name + " (" + note + ")" : name;
-  let hasAdmin = !!localStorage.getItem("admin_key");
+  let hasAdmin = document.cookie.indexOf("admin_logged=1") !== -1;
   menu.querySelectorAll(".user-menu-item").forEach(el => {
     let a = el.dataset.action;
     if (a === "pay" || a === "at" || a === "dm" || a === "batch-kick" || a === "note" || a === "profile") { el.style.display = "block"; }
@@ -57,7 +57,7 @@ export function handleMenuAction(action) {
     }
     case "kick": {
       if (target === state.username) { showError("不能踢出自己"); return; }
-      let k = localStorage.getItem("admin_key");
+      let k = "";
       if (!k) { showError("请先登录管理后台才能踢出用户"); return; }
       if (!confirm("确定要踢出「" + target + "」吗？")) return;
       fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target) + "&caller=" + encodeURIComponent(state.username))
@@ -65,7 +65,7 @@ export function handleMenuAction(action) {
       break;
     }
     case "ban": {
-      let k = localStorage.getItem("admin_key");
+      let k = "";
       if (!k) { showError("请先登录管理后台才能封禁用户"); return; }
       if (!confirm("确定要永久封禁「" + target + "」吗？（将同时封禁IP）")) return;
       fetch("/api/admin/global-kick?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target));
@@ -74,7 +74,7 @@ export function handleMenuAction(action) {
       break;
     }
     case "banip": {
-      let k = localStorage.getItem("admin_key");
+      let k = "";
       if (!k) { showError("请先登录管理后台才能封禁IP"); return; }
       if (!confirm("确定要封禁「" + target + "」的IP吗？")) return;
       fetch("/api/admin/user-ips?key=" + encodeURIComponent(k))
@@ -115,7 +115,7 @@ export function handleMenuAction(action) {
       break;
     }
     case "tag": {
-      let k = localStorage.getItem("admin_key");
+      let k = "";
       if (!k) { showError("请先登录管理后台才能修改标签"); return; }
       let newTag = prompt("输入「" + target + "」的新标签（留空取消）:");
       if (!newTag || !newTag.trim()) return;
@@ -126,7 +126,7 @@ export function handleMenuAction(action) {
       break;
     }
     case "batch-kick": {
-      let k = localStorage.getItem("admin_key");
+      let k = "";
       if (!k) { showError("请先登录管理后台才能批量踢出"); return; }
       let names = prompt("输入要批量踢出的用户名，用逗号分隔：");
       if (!names || !names.trim()) return;

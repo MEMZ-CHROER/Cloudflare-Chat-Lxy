@@ -133,6 +133,15 @@ body {
     <div class="feature-item"><span class="icon">🗳️</span><span class="text"><span class="tag tag-fix">安全</span>投票加固 — 选项限长、创建限频、过期轮询自动清理</span></div>
     <div class="feature-item"><span class="icon">🖼️</span><span class="text"><span class="tag tag-fix">安全</span>图片/文件强制 data: 数据 — 拒绝外链URL防追踪钓鱼；消息颜色白名单</span></div>
     <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span>历史消息分页非法时间戳不再500</span></div>
+    <div class="feature-item"><span class="icon">🖼️</span><span class="text"><span class="tag tag-fix">安全</span>头像/表情存储型XSS修复 — data:image 内容白名单（拒 svg+xml）+ 前端转义引号</span></div>
+    <div class="feature-item"><span class="icon">🔐</span><span class="text"><span class="tag tag-fix">安全</span>密码加固 — 服务端强制密码强度 + 每用户随机盐 + 登录失败5次锁定30分钟</span></div>
+    <div class="feature-item"><span class="icon">🎫</span><span class="text"><span class="tag tag-fix">安全</span>登录 token 加固 — 30天过期 + 服务端登出吊销 + 常量时间比较</span></div>
+    <div class="feature-item"><span class="icon">👤</span><span class="text"><span class="tag tag-fix">安全</span>陈旧会话冒名修复 — 红包创建/领取校验 token，标签更新仅限已认证会话</span></div>
+    <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-fix">安全</span>管理密钥 httpOnly Cookie 化 — 不再存 localStorage，聊天页不再读取，防 XSS 窃取密钥；日志脱敏；密钥只回掩码</span></div>
+    <div class="feature-item"><span class="icon">⏰</span><span class="text"><span class="tag tag-fix">安全</span>定时消息条数上限（每人5条/房间50条）；接龙仅管理员可结束+24小时自动结束</span></div>
+    <div class="feature-item"><span class="icon">🙅</span><span class="text"><span class="tag tag-fix">安全</span>消息撤回严格校验 — 消息不存在拒绝，杜绝伪造撤回/任意写入；商城/抽奖禁止发放管理标签</span></div>
+    <div class="feature-item"><span class="icon">🤖</span><span class="text"><span class="tag tag-fix">安全</span>AI 功能加固 — 翻译/对话要求登录，目标语言白名单，错误脱敏</span></div>
+    <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-fix">安全</span>密码房校验 fail-closed；CORS 收敛同源</span></div>
   </div>
 </div>
 

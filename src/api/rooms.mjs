@@ -14,7 +14,10 @@ async function requireRoomPassword(env, name, request) {
     });
     let vData = await vResp.json();
     return !!vData.ok;
-  } catch (e) { return true; }
+  } catch (e) {
+    // 🔒 安全修复（LD3）：校验出错一律拒绝（fail-closed），宁可误伤也不让密码房在故障窗口裸奔
+    return false;
+  }
 }
 
 export async function handleRooms(path, request, env) {
@@ -26,8 +29,9 @@ export async function handleRooms(path, request, env) {
           let registryStub = env.registry.get(registryId);
           let response = await registryStub.fetch(new URL("https://dummy-url/list"));
           let data = await response.json();
+          // 🔒 安全修复（LD4）：移除通配 CORS，房间清单仅允许同源访问
           return new Response(JSON.stringify(data), {
-            headers: {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+            headers: {"Content-Type": "application/json"}
           });
         } catch (error) {
           return new Response(JSON.stringify({error: error.message}), {status: 500});
@@ -40,7 +44,7 @@ export async function handleRooms(path, request, env) {
       if (!path[1]) {
         if (request.method == "POST") {
           let id = env.rooms.newUniqueId();
-          return new Response(id.toString(), {headers: {"Access-Control-Allow-Origin": "*"}});
+          return new Response(id.toString());
         } else {
           return new Response("方法不允许", {status: 405});
         }

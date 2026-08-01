@@ -140,7 +140,7 @@ export function join() {
           if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("msg-ref-highlight"); setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000); }
         };
         if (cancelBtn) {
-          cancelBtn.style.display = localStorage.getItem("admin_key") ? "inline" : "none";
+          cancelBtn.style.display = document.cookie.indexOf("admin_logged=1") !== -1 ? "inline" : "none";
           cancelBtn.onclick = (e) => {
             e.stopPropagation();
             if (state.currentWebSocket) {

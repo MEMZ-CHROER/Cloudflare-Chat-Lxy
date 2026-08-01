@@ -23,6 +23,10 @@ export async function handleEmoji(reg, request, url) {
           return new Response(JSON.stringify({error: "表情名称只能包含字母、数字、下划线和中文"}), {status: 400});
         }
         if (name.length > 20) return new Response(JSON.stringify({error: "表情名称过长"}), {status: 400});
+        // 🔒 安全修复（LD6）：表情图片数据必须是 data:image/... 且拒绝 svg+xml（防存储型 XSS 经 :表情: 渲染触发）
+        if (!/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(data) || /^data:image\/svg\+xml/i.test(data)) {
+          return new Response(JSON.stringify({error: "表情图片格式不合法，仅支持 png/jpg/gif/webp"}), {status: 400});
+        }
         reg.emoji.set(name, data);
         await reg.saveEmoji();
         return new Response(JSON.stringify({ok: true, name}), {

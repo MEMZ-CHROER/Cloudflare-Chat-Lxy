@@ -44,6 +44,11 @@ export async function handleAdmin(path, request, env) {
   const requestKey = url.searchParams.get("key");
 
   async function getAdminPermission(k, e) {
+    // 🔒 安全修复（LD12/LD13）：URL 无 key 时从 httpOnly Cookie 读取（JS 不可读，防 XSS 窃取管理密钥）
+    if (!k) {
+      let m = (request.headers.get("Cookie") || "").match(/(?:^|;\s*)admin_key=([^;]+)/);
+      if (m) { try { k = decodeURIComponent(m[1]); } catch (_) { k = m[1]; } }
+    }
     // 🔒 安全修复：未配置管理密钥时直接拒绝，绝不用默认弱密钥("del"/"mod")兜底；空 key 一律拒绝
     if (k && safeEqual(k, e.ADMIN_SECRET_KEY)) return "super";
     if (k && safeEqual(k, e.ADMIN_KEY)) return "admin";
@@ -55,6 +60,27 @@ export async function handleAdmin(path, request, env) {
       if (d.level) return d.level;
     } catch (_) {}
     return null;
+  }
+
+  // 🔒 安全修复（LD12）：管理登录/登出端点（httpOnly Cookie，JS 不可读）
+  if (path[1] === "login" && request.method === "POST") {
+    try {
+      let body = await request.json();
+      let k = String(body.key || "");
+      let p = await getAdminPermission(k, env);
+      if (!p) return new Response(JSON.stringify({error: "密钥无效"}), {status: 401, headers: {"Content-Type": "application/json"}});
+      let resp = new Response(JSON.stringify({ok: true, level: p}), {status: 200, headers: {"Content-Type": "application/json"}});
+      // admin_key: httpOnly 密钥（JS 不可读）；admin_logged: 非 httpOnly 登录标记（供前端显示管理菜单，不含密钥）
+      resp.headers.set("Set-Cookie", "admin_key=" + encodeURIComponent(k) + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400");
+      resp.headers.append("Set-Cookie", "admin_logged=1; Path=/; SameSite=Lax; Max-Age=86400");
+      return resp;
+    } catch (e) { return new Response(JSON.stringify({error: "请求解析失败"}), {status: 400}); }
+  }
+  if (path[1] === "logout" && request.method === "POST") {
+    let resp = new Response(JSON.stringify({ok: true}), {status: 200});
+    resp.headers.set("Set-Cookie", "admin_key=; Path=/; HttpOnly; Max-Age=0");
+    resp.headers.append("Set-Cookie", "admin_logged=; Path=/; Max-Age=0");
+    return resp;
   }
 
   const permission = await getAdminPermission(requestKey, env);
@@ -131,7 +157,12 @@ export async function handleAdmin(path, request, env) {
     // 🔒 安全修复（A4）：记录管理操作日志（此前 logAdminAction 从未被调用，审计形同虚设）
     if (result.status && result.status < 300) {
       let target = url.searchParams.get("name") || url.searchParams.get("room") || url.searchParams.get("ip") || "";
-      await logAdminAction(env, permission === "super" ? "super" : "admin", path[1], target, url.pathname + url.search);
+      // 🔒 安全修复（LD14）：剥离 key/newkey/auth 等敏感参数，管理密钥不写入日志
+      let cleanParams = new URLSearchParams(url.search);
+      cleanParams.delete("key"); cleanParams.delete("newkey"); cleanParams.delete("auth");
+      let cleanQs = cleanParams.toString();
+      let detail = url.pathname + (cleanQs ? "?" + cleanQs : "");
+      await logAdminAction(env, permission === "super" ? "super" : "admin", path[1], target, detail);
     }
     return result;
   }

@@ -1,3 +1,4 @@
+import { tokenValid } from "../utils.mjs";
 // 商城系统 + 管理员商城 CRUD
 
 // 🔒 安全修复（E6）：BigInt 解析，防余额大数精度丢失
@@ -68,7 +69,7 @@ export async function handleShop(reg, request, url) {
       if (!name || !itemId) return new Response(JSON.stringify({error: "请提供用户名和商品ID"}), {status: 400});
       // 🔒 S4 纵深防御：registry 层校验 token，确保 name 与 token 匹配
       let regUser = reg.registeredUsers.get(name);
-      if (!regUser || regUser.token !== (body.token || "")) {
+      if (!tokenValid(regUser, body.token || "")) {
         return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
       }
       let item = reg.shopItems.get(itemId);
@@ -98,13 +99,18 @@ export async function handleShop(reg, request, url) {
       if (!name || !itemId) return new Response(JSON.stringify({error: "请提供用户名和商品ID"}), {status: 400});
       // 🔒 S4 纵深防御：registry 层校验 token，确保 name 与 token 匹配
       let regUser = reg.registeredUsers.get(name);
-      if (!regUser || regUser.token !== (body.token || "")) {
+      if (!tokenValid(regUser, body.token || "")) {
         return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
       }
       let inv = reg.userInventory.get(name);
       if (!inv || !inv.has(itemId)) return new Response(JSON.stringify({error: "未拥有此商品"}), {status: 400});
       let item = reg.shopItems.get(itemId);
       if (!item) return new Response(JSON.stringify({error: "商品不存在"}), {status: 404});
+      // 🔒 安全修复（LD20）：禁止通过商城商品获得管理标签（red/cyan=管理员/超管），防止普通用户静默提权
+      let itTag = (item.tag || "").toUpperCase();
+      if (itTag === "RED" || itTag === "CYAN") {
+        return new Response(JSON.stringify({error: "该标签为管理专用，无法装备"}), {status: 400});
+      }
       for (let [id, info] of inv) { if (info.equipped) info.equipped = false; }
       inv.get(itemId).equipped = true;
       await reg.saveUserInventory();
@@ -122,7 +128,7 @@ export async function handleShop(reg, request, url) {
       if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
       // 🔒 S4 纵深防御：registry 层校验 token
       let regUser = reg.registeredUsers.get(name);
-      if (!regUser || regUser.token !== (body.token || "")) {
+      if (!tokenValid(regUser, body.token || "")) {
         return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
       }
       let inv = reg.userInventory.get(name);

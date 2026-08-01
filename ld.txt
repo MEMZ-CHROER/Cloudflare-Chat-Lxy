@@ -1,0 +1,139 @@
+================================================================================
+ Cloudflare Chat 新挖漏洞清单（ld.txt）
+ 日期：2026-08-01（第2轮白盒审计，5 个攻击面并行）
+ 攻击面：① 架构边界/AI  ② 前端/客户端  ③ 认证/会话  ④ admin前端/密钥  ⑤ 命令/功能
+ 状态：2026-08-01 已全部修复（LD1/LD2/LD7 仅做非限频部分：登录门槛/白名单/脱敏/密码强度/锁定）
+================================================================================
+
+【① 架构边界 / AI 滥用】
+
+LD1 [高] /api/translate 无认证 + 无限频 → 付费 AI 成本耗尽 + 提示注入
+    文件: src/index.mjs:402-436
+    触发: 任何人 POST /api/translate {text,target} 循环调用（无登录/无 token/无限频），每次打真实 DeepSeek 接口
+    附加: body.target 未净化拼进 system prompt（可覆盖系统角色）；上游错误体原样回显
+    修复: 要求登录 + 限频/每日配额 + target 白名单 + 错误信息脱敏
+
+LD2 [高] /ai 聊天命令无限频 → 付费 AI 成本耗尽 + 全房广播放大
+    文件: src/chatroom.mjs:1266-1316（AI 调用 1283-1297）
+    触发: 游客连 WS 后连续发 /ai xxx，无消息限频、无 AI 调用限频、无登录要求
+    修复: AI 按用户限频 + 每日上限；仅注册认证用户可用
+
+LD3 [中] 密码房数据端点 fail-open（registry 故障即放行）
+    文件: src/api/rooms.mjs:4-18（catch 返回 true）
+    触发: password-status/verify-password 的 registry 调用异常时，requireRoomPassword 返回 true → /history /messages /files /export 等无密码可读
+    修复: 改 fail-closed（异常返回 false）
+
+LD4 [低] CORS 过宽（/api/rooms/list、/api/room POST 设 Access-Control-Allow-Origin:*）
+    文件: src/api/rooms.mjs:30,43
+    影响: 任意站点可读房间清单（房间名/在线数/hasPassword 标记）
+    修复: ACAO 收敛为本站 origin
+
+【② 前端 / 客户端攻击面】
+
+LD5 [高] 存储型 XSS — 头像（公开 /user 主页）
+    文件: src/user.html:93（avatar.innerHTML 直接拼 data.avatar 未转义引号）；
+          src/registry/users.mjs:92-94（/user-avatar 仅验长度/授权，内容零校验）
+    触发: 注册用户 POST /api/user/avatar，body.avatar = 'xxx" onerror="alert(document.cookie)'（>50字符）
+          → 受害者访问 /user?name=攻击者 即触发 → 窃取 localStorage.admin_key / chat_token
+    修复: 服务端强制 avatar 为 data:image/(png|jpe?g|gif|webp);base64（拒 svg+xml）；user.html 改用 img.src 或 escapeHtml
+
+LD6 [中] 存储型 XSS — 自定义表情 data 未转义引号（=C4 同根因）
+    文件: src/client/chat/renderers.js:165（img src 只转义 &amp;&lt;&gt; 未转义 "）；
+          src/registry/emoji.mjs:15-34（/emoji/add 对 data 零校验）
+    触发: 管理员添加 data="x" onerror="..." 的表情 → 任意房间含 :name: 的消息使全体在线用户触发
+    修复: emoji.mjs 强制 data 为 data:image/...;base64（拒 svg+xml）；renderers.js:165 转义 "'
+
+【③ 认证 / 会话体系】
+
+LD7 [高] 登录无限频无锁定 → 在线爆破密码
+    文件: src/registry/users.mjs:64-80（/user-login）、src/api/auth.mjs:36-47
+    触发: POST /api/login 无限尝试（无速率限制/无锁定/无 IP 节流；注册有 IP 限频但登录没有）
+    影响: 弱口令账号被爆破 → 积分/库存/身份被窃取
+    修复: 登录按 用户名+IP 双重限频、失败锁定/退避、服务端强制密码强度
+
+LD8 [中] token 无过期、无服务端登出/吊销、经 URL 查询串传输
+    文件: src/registry/users.mjs:74-79（无 expiry）、auth.js:180-195（登出仅清 localStorage）、
+          commands.js:139、menu.js:108、ui.js:82（token 走 query）
+    影响: 泄露的 token 永久有效，可无限期冒名执行全部写操作
+    修复: token 加过期 + 刷新；新增登出/吊销端点；token 走 POST body/Authorization 头
+
+LD9 [中] 陈旧会话冒名（WS 会话名仅连接时校验一次，红包/tag-update 不校验 token）
+    文件: src/chatroom.mjs:576-674（仅连接时 user-init 校验）、1123-1180（红包不传 token）；
+          src/registry/redpacket.mjs:28-145（仅查"名字已注册"）；
+          src/chatroom.mjs:398-416（tag-update 无条件更新同名字所有会话）
+    触发A: 游客占住"victim"名 → victim 注册有积分后，陈旧会话以 victim 名义发红包抽干积分
+    触发B: victim 被设 red/cyan 标签时 tag-update 把攻击者陈旧会话也打上管理标签 → 提权
+    修复: 红包 create/grab 传并校验 token；tag-update 只更新已认证且名字匹配的会话
+
+LD10 [低] 密码无盐 SHA-256
+    文件: src/utils.mjs:2-7、src/registry/users.mjs:58,72
+    影响: 存储泄露时常见密码秒破/彩虹表直查
+    修复: 改用 scrypt/argon2id/bcrypt + 随机盐
+
+LD11 [低] token 比较非恒定时间
+    文件: src/registry/users.mjs:149,166、shop.mjs:71/101/125、tasks.mjs:51/78、lottery.mjs:49、redeem.mjs:53
+    修复: 复用 safeEqual 常量时间比较
+
+【④ admin 前端 / 密钥处理】
+
+LD12 [高] 管理密钥明文存 localStorage，且聊天页主动读取使用（最严重）
+    文件: src/client/admin/main.js:151（写入）、state.js:3（读取）、
+          src/client/chat/commands.js:19-184、menu.js、renderers.js、ui.js、websocket.js:143（聊天页使用）
+    触发: 管理员 /admin 登录后密钥留 localStorage；任意聊天页脚本可 getItem("admin_key")
+          → 同源任意 XSS/恶意脚本零门槛拿到共享管理密钥 → 全部管理操作
+    修复: 密钥改 httpOnly+SameSite Cookie（限 /admin）或短期会话 token；聊天页不得读取 admin_key
+
+LD13 [中] 管理密钥明文出现在 URL 查询串与下载链接
+    文件: src/client/admin/*.js 全部 /api/admin/*?key= 调用；rooms.js:99 下载链接内嵌 key；key.js:24 新密钥走 URL
+    影响: key 进浏览器历史/访问日志/代理日志
+    修复: key 走 X-Admin-Key 请求头或 POST body；下载用短期签名 token
+
+LD14 [中] 审计日志明文持久化所有管理密钥（含新设置的密钥）
+    文件: src/api/admin.mjs:130-134（logAdminAction 记录完整 url.search 含 key/newkey）；src/registry/log.mjs:22-29
+    影响: 日志/备份泄露即暴露全部历史密钥，无法抹除
+    修复: 日志只记 action/target/operator，剥离 key/newkey 参数
+
+LD15 [中] /api/admin/admin-key/get 明文返回完整管理密钥（前端掩码仅装饰）
+    文件: src/client/admin/key.js:7-11、src/registry/adminKey.mjs:15-19、src/api/admin/key.mjs:12-16
+    影响: 能读该响应者即得可用的普通管理密钥
+    修复: 服务端只返回掩码或哈希，明文不回传
+
+LD16 [低] 管理登录输入框明文文本、无 autocomplete 抑制、无 CSP
+    文件: src/admin.html:18
+    修复: type="password" + autocomplete="off"；/admin 页面加 CSP
+
+【⑤ 命令 / 功能模块】
+
+LD17 [中] 定时消息创建无频率/数量限制 → 存储 + CPU DoS
+    文件: src/chatroom.mjs:919-958
+    触发: 游客循环发 {type:"schedule"...}，每次整数组重写 storage（O(n²)），到期后大量广播刷屏
+    修复: 每用户限条数（如5）+ 创建限频 + 房间总数上限 + setAlarm 合并
+
+LD18 [中] 接龙可被恶意游客永久锁死
+    文件: src/chatroom.mjs:981-1010（relay-create）、1040-1052（relay-end）
+    触发: 游客创建接龙后断开 → 仅发起者可结束、无超时/过期 → 房间接龙功能永久锁死
+    修复: 允许管理员结束他人接龙 / 接龙自动过期 / 发起者掉线超时自动结束
+
+LD19 [中] 消息撤回：目标消息不在 storage 时绕过属主/2分钟校验
+    文件: src/chatroom.mjs:374-396（/message/recall）
+    触发: 对 storage 不存在的时间戳调用撤回 → 跳过属主与超时校验 → 伪造"已撤回"事件篡改聊天视图 + 任意 storage key 写入原语
+    修复: 仅当消息存在且属主匹配且未超时才成功；不存在返回错误，不写入不广播
+
+LD20 [低/设计] 管理员权限 = 标签颜色 "red"/"cyan"，可通过商城商品/抽奖奖品被普通用户静默获得
+    文件: src/chatroom.mjs:678,967；manage.mjs:6,68,78（权限判定）；
+          registry/shop.mjs:111、lottery.mjs:84（商品/奖品标签直接写 reg.tags）
+    触发: 管理员若创建了 tag=red/cyan 的商品或奖池奖品，普通用户购买/抽中即获得房间管理员权限
+    修复: 管理员判定与展示标签解耦（独立角色字段）；商城/抽奖禁止写入 red/cyan 标签
+
+================================================================================
+ 去重与联动说明
+ - LD6 与 LD5 同根因：服务端对"图片/表情数据"只做长度/授权校验、不做 data:image 内容白名单
+ - LD5（头像 XSS）与 LD12（密钥 localStorage）联动：头像 XSS 可窃取 admin_key → 完整接管
+ - LD2（/ai 无限频）即此前搁置的 W3，LD17 即 W12 相邻面（定时），LD12/LD15 与密钥相关
+================================================================================
+ 建议优先级
+ 第一梯队: LD12（密钥 localStorage）、LD5（头像XSS）、LD7（登录爆破）、LD1/LD2（AI烧钱）
+ 第二梯队: LD9（陈旧会话冒名）、LD19（撤回越权）、LD17（定时DoS）、LD3（fail-open）
+ 第三梯队: LD8/LD13/LD14/LD15（token与密钥传输/持久化）、LD18（接龙锁死）
+ 第四梯队: LD4/LD6/LD10/LD11/LD16/LD20（低危/加固/设计）
+================================================================================
