@@ -68,6 +68,27 @@ export function join() {
       return;
     }
 
+    // 频道体系：跨频道 @全体 / @#频道 提醒 —— 即使不在该频道也能收到
+    if (data.type === "channel-ping") {
+      if (data.name && data.name !== state.username) {
+        let fromCh = "#" + (data.fromChannel || "general");
+        let text;
+        if (data.targetChannel) {
+          text = "📢 " + data.name + t(" 在 ") + fromCh + t(" 提到了 #") + data.targetChannel + t(" 频道");
+        } else {
+          text = "📢 " + data.name + t(" 在 ") + fromCh + t("  @了全体成员");
+        }
+        let banner = document.getElementById("announcement-banner");
+        let textEl = document.getElementById("announcement-text");
+        if (banner && textEl) { textEl.textContent = text; banner.style.display = "flex"; }
+        flashTitle(text);
+        if (state.unreadCount < 10) state.unreadCount += 3;
+        updateTitleUnread();
+        playMsgSound();
+      }
+      return;
+    }
+
     if (data.error) {
       addChatMessage(null, t("* 错误: ") + data.error);
     } else if (data.system) {

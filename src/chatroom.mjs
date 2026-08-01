@@ -1420,6 +1420,35 @@ export class ChatRoom {
       let dataStr = JSON.stringify(data);
       this.broadcastToChannel(msgChannel, dataStr);
 
+      // 频道体系：@全体 / @#频道 跨频道提醒 —— 不在本频道的在线用户也要收到提醒
+      {
+        let isAtAll = !!data.atAll || /@(all|everyone|全体)/i.test(data.message || "");
+        let pingTarget = null; // null=不ping, "__all__"=全体, 否则=目标频道名
+        if (isAtAll) {
+          pingTarget = "__all__";
+        } else {
+          let pingMatch = (data.message || "").match(/@#([a-zA-Z0-9_-]{1,24})/);
+          if (pingMatch && this.channels.some(c => c.name === pingMatch[1])) pingTarget = pingMatch[1];
+        }
+        if (pingTarget !== null) {
+          let pingStr = JSON.stringify({
+            type: "channel-ping",
+            name: session.name,
+            fromChannel: msgChannel,
+            targetChannel: pingTarget === "__all__" ? null : pingTarget,
+            atAll: isAtAll
+          });
+          this.sessions.forEach((s, ws) => {
+            // 跳过自己 + 跳过本频道的(他们已看到消息与常规 @全体 横幅)
+            if (!s.name || s.name === session.name) return;
+            if ((s.channel || "general") === msgChannel) return;
+            // 指定频道时只通知该频道的用户
+            if (pingTarget !== "__all__" && (s.channel || "general") !== pingTarget) return;
+            try { ws.send(pingStr); } catch (_) {}
+          });
+        }
+      }
+
       let key = new Date(data.timestamp).toISOString();
       await this.storage.put(key, dataStr);
     } catch (err) {

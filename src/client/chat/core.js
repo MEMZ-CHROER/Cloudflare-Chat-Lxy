@@ -74,7 +74,7 @@ export function startChat() {
       if (text.startsWith("/")) { handleCommand(text); return; }
       let msg = {message: text, color: state.selectedColor, channel: state.currentChannel};
       if (state.replyTarget) { msg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
-      if (/@(all|everyone)/i.test(text)) msg.atAll = true;
+      if (/@(all|everyone|全体)/i.test(text)) msg.atAll = true;
       state.currentWebSocket.send(JSON.stringify(msg));
       localStorage.removeItem("chat_draft");
       state.chatlog.scrollBy(0, 1e8);

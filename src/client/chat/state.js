@@ -225,6 +225,9 @@ const i18nDict = {
     "转发需要管理权限，请先登录后台": "Forward needs admin permission, please login",
     // —— 全量片段翻译（自动包裹 t() 的拼接片段）——
     "  @了全体成员": "  @ everyone",
+    " 在 ": " in ",
+    " 提到了 #": " mentioned #",
+    " 频道": " channel",
     " (发起: ": " (started by: ",
     " 个用户: ": " users: ",
     " 个用户吗？": " users?",
