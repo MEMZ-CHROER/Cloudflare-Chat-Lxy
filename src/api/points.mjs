@@ -1,66 +1,57 @@
-// 积分 API - 转账、查询
-// 重要：转账操作要求 sender 提供 token 验证身份，防止任意盗转积分
+// 管理后台积分操作
 
-export async function handlePoints(path, request, env) {
-  const url = new URL(request.url);
-  const action = path[1];
-  if (action === "get") {
-    let name = url.searchParams.get("name");
-    if (!name) return new Response(JSON.stringify({points: 0}), {headers: {"Content-Type": "application/json"}});
+export async function handleAdminPoints(path, request, env, url) {
+  if (path[1] !== "points") return null;
+
+  const action = path[2];
+  const name = url.searchParams.get("name");
+  try {
     let registryId = env.registry.idFromName("global");
-    let stub = env.registry.get(registryId);
-    let r = await stub.fetch(new URL("https://dummy-url/points/get?name=" + encodeURIComponent(name)));
-    return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
-  }
-  if (action === "transfer") {
-    let sender = url.searchParams.get("sender");
-    let receiver = url.searchParams.get("receiver");
-    let amount = url.searchParams.get("amount");
-    let token = url.searchParams.get("token") || "";
-    if (!sender || !receiver || !amount) {
-      return new Response("请提供 sender、receiver 和 amount", { status: 400 });
+    let registryStub = env.registry.get(registryId);
+
+    if (action === "get") {
+      if (!name) return new Response("请提供用户名", { status: 400 });
+      let r = await registryStub.fetch(new URL("https://dummy-url/points/get?name=" + encodeURIComponent(name)));
+      return new Response(await r.text(), { status: r.status, headers: {"Content-Type": "application/json"} });
     }
-    try {
-      let registryId = env.registry.idFromName("global");
-      let stub = env.registry.get(registryId);
-      // 验证 sender 身份：查询注册用户 token 是否匹配
-      let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(sender) + "&token=" + encodeURIComponent(token)));
-      let authData = await authCheck.json();
-      if (!authData.authenticated) {
-        return new Response("转账失败：请先登录并验证身份", { status: 403 });
+    if (action === "set" || action === "add") {
+      if (!name) return new Response("请提供用户名", { status: 400 });
+      let amount = url.searchParams.get("amount");
+      if (!amount) return new Response("请提供积分数量", { status: 400 });
+      // 🔒 安全修复（E5）：附带管理密钥作为 registry 内部校验凭证
+      // 🔒 安全修复（LD12）：URL 无 key 时从 httpOnly Cookie 读取管理密钥作 registry auth 校验
+      let ak = url.searchParams.get("key") || "";
+      if (!ak) {
+        let m = (request.headers.get("Cookie") || "").match(/(?:^|;\s*)admin_key=([^;]+)/);
+        if (m) { try { ak = decodeURIComponent(m[1]); } catch (_) { ak = m[1]; } }
       }
-      let r = await stub.fetch(new URL("https://dummy-url/points/transfer?sender=" + encodeURIComponent(sender) + "&receiver=" + encodeURIComponent(receiver) + "&amount=" + encodeURIComponent(amount)));
+      let auth = encodeURIComponent(ak);
+      let r = await registryStub.fetch(new URL("https://dummy-url/points/" + action + "?name=" + encodeURIComponent(name) + "&amount=" + encodeURIComponent(amount) + "&auth=" + auth));
       return new Response(await r.text(), { status: r.status });
-    } catch (error) {
-      return new Response("转账失败: " + error.message, { status: 500 });
     }
-  }
-  if (action === "all") {
-    // 🔒 安全修复（A7）：复用与 /api/admin/* 一致的认证（env 密钥 + registry 轮换密钥），空 key 一律拒绝，杜绝平行口子
-    let key = url.searchParams.get("key") || "";
-    let permission = null;
-    if (key && key === (env.ADMIN_SECRET_KEY || "")) permission = "super";
-    if (!permission && key && key === (env.ADMIN_KEY || "")) permission = "admin";
-    if (!permission && key) {
-      try {
-        let rid = env.registry.idFromName("global");
-        let rStub = env.registry.get(rid);
-        let aResp = await rStub.fetch("https://dummy-url/combined-auth?key=" + encodeURIComponent(key));
-        let aData = await aResp.json();
-        if (aData.level) permission = aData.level;
-      } catch (_) {}
-    }
-    if (!permission) {
-      return new Response(JSON.stringify({error: "需要管理密钥"}), { status: 403, headers: {"Content-Type": "application/json"}});
-    }
-    try {
-      let registryId = env.registry.idFromName("global");
-      let stub = env.registry.get(registryId);
-      let r = await stub.fetch(new URL("https://dummy-url/points/all"));
+    if (action === "all") {
+      let r = await registryStub.fetch(new URL("https://dummy-url/points/all"));
       return new Response(await r.text(), { status: 200, headers: {"Content-Type": "application/json"} });
-    } catch (error) {
-      return new Response("获取积分失败: " + error.message, { status: 500 });
     }
+    if (action === "batch") {
+      let names = url.searchParams.get("names");
+      let amount = url.searchParams.get("amount");
+      let batchAction = url.searchParams.get("action") || "add";
+      if (!names) return new Response("请提供用户名列表", { status: 400 });
+      if (!amount) return new Response("请提供积分数量", { status: 400 });
+      // 🔒 安全修复（E5）：附带管理密钥作为 registry 内部校验凭证
+      // 🔒 安全修复（LD12）：URL 无 key 时从 httpOnly Cookie 读取管理密钥作 registry auth 校验
+      let ak = url.searchParams.get("key") || "";
+      if (!ak) {
+        let m = (request.headers.get("Cookie") || "").match(/(?:^|;\s*)admin_key=([^;]+)/);
+        if (m) { try { ak = decodeURIComponent(m[1]); } catch (_) { ak = m[1]; } }
+      }
+      let auth = encodeURIComponent(ak);
+      let r = await registryStub.fetch(new URL("https://dummy-url/points/batch?names=" + encodeURIComponent(names) + "&amount=" + encodeURIComponent(amount) + "&action=" + encodeURIComponent(batchAction) + "&auth=" + auth));
+      return new Response(await r.text(), { status: r.status });
+    }
+    return new Response("未找到该操作", { status: 404 });
+  } catch (error) {
+    return new Response("积分操作失败: " + "操作失败", { status: 500 });
   }
-  return new Response("未找到该操作", { status: 404 });
 }
