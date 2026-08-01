@@ -94,11 +94,24 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
-    <span class="version-tag">v1.21.5</span>
+    <span class="version-tag">v1.22</span>
     <span class="version-date">2026-08-01</span>
     <span class="version-arrow open">▶</span>
   </div>
   <div class="version-body open">
+    <div class="feature-item"><span class="icon">🌍</span><span class="text"><span class="tag tag-feature">新增</span>全面多语言 i18n — 界面/toast提示/系统消息/游戏文案全量中英切换（300+条词典，英文模式查表、未命中回退中文）</span></div>
+    <div class="feature-item"><span class="icon">⚡</span><span class="text"><span class="tag tag-fix">优化</span>静态资源缓存缩短至60秒 — 前端更新 1 分钟内生效，不再被 CDN 旧缓存卡住</span></div>
+    <div class="feature-item"><span class="icon">📦</span><span class="text"><span class="tag tag-feature">存档</span>主站与 Dsl 站均已存档 v1.22，可用于 /rollback 应急回滚</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.21.5</span>
+    <span class="version-date">2026-08-01</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
     <div class="feature-item"><span class="icon">🌍</span><span class="text"><span class="tag tag-feature">新增</span>多语言 i18n — 界面中/英切换，登录页选择语言（覆盖登录界面/设置面板/常用文案）</span></div>
     <div class="feature-item"><span class="icon">🤖</span><span class="text"><span class="tag tag-feature">新增</span>AI 读取对话上下文 — /ai 会结合房间最近10条消息回答，更贴合聊天语境</span></div>
     <div class="feature-item"><span class="icon">🚀</span><span class="text"><span class="tag tag-feature">新增</span>应急回滚 — 超管聊天框输入 /rollback &lt;版本号&gt; &lt;超管密钥&gt; 一键回滚部署到存档稳定版</span></div>
