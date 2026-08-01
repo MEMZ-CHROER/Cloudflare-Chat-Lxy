@@ -1596,7 +1596,7 @@ function unzipStore(zipData) {
   const td = new TextDecoder();
   let pos = cdOffset;
   for (let i = 0; i < cdCount; i++) {
-    if (dv[pos] !== 0x50 || dv[pos+1] !== 0x4b || dv[pos+2] !== 0x02 || dv[pos+3] !== 0x14) break;
+    if (dv[pos] !== 0x50 || dv[pos+1] !== 0x4b || dv[pos+2] !== 0x01 || dv[pos+3] !== 0x02) break;
     const method = dv[pos + 10] | (dv[pos + 11] << 8);
     const compSize = (dv[pos + 20] | (dv[pos + 21] << 8) | (dv[pos + 22] << 16) | (dv[pos + 23] << 24)) >>> 0;
     const nameLen = dv[pos + 28] | (dv[pos + 29] << 8);
