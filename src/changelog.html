@@ -116,6 +116,7 @@ body {
     <div class="feature-item"><span class="icon">📢</span><span class="text"><span class="tag tag-feature">新增</span>公告频道（announcement）UI 高亮 — 频道栏琥珀金底色+边框醒目显示，📢 喇叭图标，选中态同步高亮</span></div>
     <div class="feature-item"><span class="icon">🛠️</span><span class="text"><span class="tag tag-fix">修复</span>Service Worker 缓存兜底 — 网络波动时缓存 miss 曾致 respondWith(undefined) 全部资源 ERR_FAILED 页面变裸 HTML；现在返回 503 兜底响应 + 缓存版本升至 v7 自动清旧缓存</span></div>
     <div class="feature-item"><span class="icon">📣</span><span class="text"><span class="tag tag-feature">新增</span>频道全体提醒 — 输入 @全体/@all/@everyone 提醒所有在线用户，或 @#频道名 提醒指定频道；即使不在该频道也能收到横幅+标题闪烁+声音提醒</span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>用户主页 500 — handleApi 的 case "user" 引用了作用域外的 url 变量导致 ReferenceError(全站 /api/user/* 接口崩溃)，补 url 定义后恢复</span></div>
   </div>
 </div>
 

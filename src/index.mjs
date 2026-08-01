@@ -453,6 +453,7 @@ async function handleApi(apiPath, request, env) {
     }
 
     case "user": {
+      let url = new URL(request.url); // 🔒 修复: handleApi 作用域无 url, 补定义防 ReferenceError → 用户主页500
       let rid = env.registry.idFromName("global");
       let stub = env.registry.get(rid);
       let name = url.searchParams.get("name");
