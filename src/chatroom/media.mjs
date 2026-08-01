@@ -1,5 +1,12 @@
 // 图片/文件消息处理 — 从 chatroom.mjs 提取
 export async function handleMedia(room, session, data, webSocket) {
+  // 频道体系：公告频道只读，仅管理员可发图片/文件/字符画
+  let msgChannel = session.channel || "general";
+  let curChan = room.channels ? room.channels.find(c => c.name === msgChannel) : null;
+  if (curChan && curChan.type === "announcement" && session.tag !== "red" && session.tag !== "cyan") {
+    webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
+    return true;
+  }
   if (data.type === "image") {
     // 🔒 安全修复（W4）：上传限频（每用户10秒1次），防大文件广播放大/存储耗尽
     if (!room.lastUpload) room.lastUpload = new Map();
@@ -27,7 +34,7 @@ export async function handleMedia(room, session, data, webSocket) {
     }
     let imgReply = data.reply;
     let broadcastImg = {
-      name: session.name, type: "image", data: imageData,
+      name: session.name, type: "image", data: imageData, channel: msgChannel,
       timestamp: Math.max(Date.now(), room.lastTimestamp + 1)
     };
     if (session.tag) broadcastImg.tag = session.tag;
@@ -38,7 +45,7 @@ export async function handleMedia(room, session, data, webSocket) {
     room.lastTimestamp = broadcastImg.timestamp;
     broadcastImg.id = ++room.msgCounter;
     room.messages.set(broadcastImg.id, broadcastImg);
-    room.broadcast(JSON.stringify(broadcastImg));
+    room.broadcastToChannel(msgChannel, JSON.stringify(broadcastImg));
     // 存 FileBucket + 元信息（大 base64 不占主 DO）
     let fid = "img_" + broadcastImg.timestamp + "_" + session.name;
     try {
@@ -94,7 +101,7 @@ export async function handleMedia(room, session, data, webSocket) {
     }
     let fileReply = data.reply;
     let broadcastData = {
-      name: session.name, type: "file", data: fileData,
+      name: session.name, type: "file", data: fileData, channel: msgChannel,
       fileName, fileType, fileSize,
       timestamp: Math.max(Date.now(), room.lastTimestamp + 1)
     };
@@ -106,7 +113,7 @@ export async function handleMedia(room, session, data, webSocket) {
     room.lastTimestamp = broadcastData.timestamp;
     broadcastData.id = ++room.msgCounter;
     room.messages.set(broadcastData.id, broadcastData);
-    room.broadcast(JSON.stringify(broadcastData));
+    room.broadcastToChannel(msgChannel, JSON.stringify(broadcastData));
     // 存 FileBucket + 元信息
     let fid = "file_" + broadcastData.timestamp + "_" + session.name;
     try {
@@ -140,7 +147,7 @@ export async function handleMedia(room, session, data, webSocket) {
       return true;
     }
     data = {
-      name: session.name, type: "zifu", message: art,
+      name: session.name, type: "zifu", message: art, channel: msgChannel,
       timestamp: Math.max(Date.now(), room.lastTimestamp + 1)
     };
     if (session.tag) data.tag = session.tag;
@@ -149,7 +156,7 @@ export async function handleMedia(room, session, data, webSocket) {
     room.lastTimestamp = data.timestamp;
     data.id = ++room.msgCounter;
     room.messages.set(data.id, data);
-    room.broadcast(JSON.stringify(data));
+    room.broadcastToChannel(msgChannel, JSON.stringify(data));
     await room.storage.put(new Date(data.timestamp).toISOString(), JSON.stringify(data));
     return true;
   }

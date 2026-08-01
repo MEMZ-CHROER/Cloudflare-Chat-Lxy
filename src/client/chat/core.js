@@ -72,7 +72,7 @@ export function startChat() {
       let text = state.chatInput.value;
       state.chatInput.value = "";
       if (text.startsWith("/")) { handleCommand(text); return; }
-      let msg = {message: text, color: state.selectedColor};
+      let msg = {message: text, color: state.selectedColor, channel: state.currentChannel};
       if (state.replyTarget) { msg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
       if (/@(all|everyone)/i.test(text)) msg.atAll = true;
       state.currentWebSocket.send(JSON.stringify(msg));
@@ -160,7 +160,7 @@ export function startChat() {
     ctx.drawImage(img, 0, 0, w, h);
     let base64 = canvas.toDataURL("image/jpeg", 0.7);
     img.close();
-    let imgMsg = {type: "image", data: base64};
+    let imgMsg = {type: "image", data: base64, channel: state.currentChannel};
     if (state.replyTarget) { imgMsg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
     state.currentWebSocket.send(JSON.stringify(imgMsg));
     hideUploadProgress();
@@ -183,7 +183,7 @@ export function startChat() {
     if (!minutes || isNaN(minutes) || minutes < 1 || minutes > 10080) { showError(t("时间范围：1分钟 - 7天")); return; }
     let delayMs = parseInt(minutes) * 60 * 1000;
     if (state.currentWebSocket) {
-      state.currentWebSocket.send(JSON.stringify({type: "schedule", message: msg.trim(), time: Date.now() + delayMs}));
+      state.currentWebSocket.send(JSON.stringify({type: "schedule", message: msg.trim(), time: Date.now() + delayMs, channel: state.currentChannel}));
       showSuccess(t("消息已定时，将在 ") + minutes + t(" 分钟后发送"));
     }
   });
@@ -259,7 +259,7 @@ export function startChat() {
     };
     reader.onload = () => {
       showUploadProgress(100, t("正在上传..."));
-      let fileMsg = {type: "file", data: reader.result, fileName: file.name, fileType: file.type || "application/octet-stream", fileSize: file.size};
+      let fileMsg = {type: "file", data: reader.result, fileName: file.name, fileType: file.type || "application/octet-stream", fileSize: file.size, channel: state.currentChannel};
       if (state.replyTarget) { fileMsg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
       state.currentWebSocket.send(JSON.stringify(fileMsg));
       hideUploadProgress();
@@ -357,7 +357,7 @@ export function startChat() {
     span.textContent = e;
     span.title = e;
     span.addEventListener("click", () => {
-      if (state.currentWebSocket) { state.currentWebSocket.send(JSON.stringify({message: e})); state.chatlog.scrollBy(0, 1e8); }
+      if (state.currentWebSocket) { state.currentWebSocket.send(JSON.stringify({message: e, channel: state.currentChannel})); state.chatlog.scrollBy(0, 1e8); }
       emojiPanel.classList.remove("show");
     });
     emojiPanel.appendChild(span);

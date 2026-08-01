@@ -3,6 +3,7 @@ import { state, t } from './state.js';
 import { addChatMessage, updatePointsDisplay, applyRoomBackground } from './renderers.js';
 import { renderTextToAsciiCanvas } from './ascii.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
+import { switchChannel } from './channels.js';
 
 export async function handleCommand(text) {
   // 应急回滚命令（公开管理功能）：透传给服务端处理，不拦截为前端命令
@@ -264,6 +265,20 @@ export async function handleCommand(text) {
       break;
     }
 
+    case "/channel": {
+      let sub = arg.trim().split(/\s+/);
+      let action = sub[0] || "";
+      let name = sub[1] || "";
+      if (!action || !name) { showError("用法: /channel add <名称> 或 /channel remove <名称>"); break; }
+      if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({type: "channel", action, name}));
+      break;
+    }
+    case "/switch": {
+      let name = arg.trim();
+      if (name) switchChannel(name);
+      else showError("用法: /switch <频道名>");
+      break;
+    }
     default:
       showError(t("未知命令: ") + cmd + t("，输入 /help 查看可用命令"));
   }

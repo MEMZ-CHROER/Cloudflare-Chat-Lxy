@@ -8,6 +8,7 @@ import { TAG_COLORS, getVipLevel, createVipBadge } from './vip.js';
 import { showWelcomeBanner } from './banner.js';
 import { checkKeywords } from './keywords.js';
 import { applyWaveEffect, applyCrashEffect } from './commands.js';
+import { buildChannelBar, updateChannelBadges, renderChannelMessage, pushToChannelCache, bumpChannelUnread, updateCachedMessage } from './channels.js';
 
 export function join() {
   if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
@@ -47,6 +48,25 @@ export function join() {
 
   ws.addEventListener("message", event => {
     let data = JSON.parse(event.data);
+
+    // 频道体系：频道列表 / 切换历史
+    if (data.type === "channels") {
+      state.channels = data.channels || state.channels;
+      buildChannelBar();
+      return;
+    }
+    if (data.type === "channel-history") {
+      state.channels = data.channels || state.channels;
+      buildChannelBar();
+      if (data.channel !== state.currentChannel) return;
+      state.chatlog.innerHTML = '<div id="spacer"></div>';
+      state.lastSeenTimestamp = 0;
+      (data.messages || []).forEach(m => renderChannelMessage(m));
+      state.chatlog.scrollBy(0, 1e8);
+      state.channelUnread[data.channel] = 0;
+      updateChannelBadges();
+      return;
+    }
 
     if (data.error) {
       addChatMessage(null, t("* 错误: ") + data.error);
@@ -182,6 +202,8 @@ export function join() {
       }
     } else if (data.type === "image") {
       if (state.blockedUsers.has(data.name)) return;
+      let imgCh = data.channel || "general";
+      if (imgCh !== state.currentChannel) { pushToChannelCache(imgCh, data); bumpChannelUnread(imgCh); return; }
       if (data.timestamp > state.lastSeenTimestamp) {
         addChatImage(data.name, data.data, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.reply, data.id, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
@@ -190,6 +212,8 @@ export function join() {
       }
     } else if (data.type === "file") {
       if (state.blockedUsers.has(data.name)) return;
+      let fileCh = data.channel || "general";
+      if (fileCh !== state.currentChannel) { pushToChannelCache(fileCh, data); bumpChannelUnread(fileCh); return; }
       if (data.timestamp > state.lastSeenTimestamp) {
         addChatFile(data.name, data.data, data.fileName, data.fileSize, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.reply, data.id, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
@@ -213,10 +237,17 @@ export function join() {
           let extraBtns = recalledMsgEl.querySelectorAll(".reply-btn, .recall-btn");
           extraBtns.forEach(b => b.remove());
           recalledMsgEl.classList.add("recalled");
+        } else if (data.channel) {
+          // 跨频道缓存也标记撤回
+          updateCachedMessage(data.channel, data.timestamp, m => { m.recalled = true; m.message = "消息已撤回"; });
         }
       }
     } else if (data.type === "edit") {
       let editEl = state.chatlog.querySelector('[data-msg-id="' + data.id + '"]');
+      if (!editEl && data.channel) {
+        // 跨频道缓存也同步编辑
+        updateCachedMessage(data.channel, data.timestamp, m => { m.message = data.message; });
+      }
       if (editEl && !editEl.classList.contains("recalled")) {
         let bubble = editEl.querySelector(".bubble");
         if (bubble) {
@@ -231,7 +262,9 @@ export function join() {
         }
       }
     } else if (data.type === "typing") {
-      if (data.name && data.name !== state.username) showTyping(data.name);
+      if (!data.channel || data.channel === state.currentChannel) {
+        if (data.name && data.name !== state.username) showTyping(data.name);
+      }
     } else if (data.type === "relay-new") {
       state.currentRelayId = data.relayId;
       addChatMessage(null, "* [接龙] 主题: " + data.topic + t(" (发起: ") + data.startedBy + ")");
@@ -250,7 +283,9 @@ export function join() {
       else if (data.effect === "crash") applyCrashEffect();
     } else if (data.type === "redpacket") {
       if (data.action === "new") {
-        // 新红包
+        // 新红包（按频道隔离）
+        let rpCh = data.channel || "general";
+        if (rpCh !== state.currentChannel) { pushToChannelCache(rpCh, data); bumpChannelUnread(rpCh); return; }
         let wrapper = document.createElement("p");
         wrapper.className = "chat-msg other";
         if (data.timestamp) wrapper.dataset.timestamp = data.timestamp;
@@ -312,6 +347,8 @@ export function join() {
         // 查询结果
       }
     } else if (data.type === "zifu") {
+      let zifuCh = data.channel || "general";
+      if (zifuCh !== state.currentChannel) { pushToChannelCache(zifuCh, data); bumpChannelUnread(zifuCh); return; }
       if (data.timestamp > state.lastSeenTimestamp) {
         let wrapper = document.createElement("p");
         wrapper.className = "chat-msg other";
@@ -427,6 +464,9 @@ export function join() {
           }
           state._lastMsgDate = dateStr;
         }
+        // 频道体系：非当前频道消息入缓存，不渲染
+        let txtCh = data.channel || "general";
+        if (txtCh !== state.currentChannel) { pushToChannelCache(txtCh, data); bumpChannelUnread(txtCh); return; }
         addChatMessage(data.name, data.message, data.tag, data.tagColor, data.color, data.timestamp, data.reply, data.tagBorder, data.id, data.atAll, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
         if (data.atAll && data.name !== state.username) {

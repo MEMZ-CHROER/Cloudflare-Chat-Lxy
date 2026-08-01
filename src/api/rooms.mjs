@@ -97,8 +97,10 @@ export async function handleRooms(path, request, env) {
         }
         let hLimit = new URL(request.url).searchParams.get("limit") || 50;
         let hBefore = new URL(request.url).searchParams.get("before") || "";
+        let hChannel = new URL(request.url).searchParams.get("channel") || "";
         let hUrl = "https://dummy-url/messages?limit=" + hLimit;
         if (hBefore) hUrl += "&before=" + encodeURIComponent(hBefore);
+        if (hChannel) hUrl += "&channel=" + encodeURIComponent(hChannel);
         let hResp = await roomObject.fetch(new URL(hUrl));
         let hData = await hResp.json();
         let filtered = (Array.isArray(hData) ? hData : []).filter(m => m.type !== "file");

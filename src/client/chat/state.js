@@ -49,6 +49,12 @@ export const state = {
   titleInterval: null,
 
   customEmoji: null, // {name: dataURL, ...} — loaded on startChat
+
+  // 频道体系
+  currentChannel: "general",
+  channels: [{name: "general", type: "text"}, {name: "announcement", type: "announcement"}],
+  channelCache: {},   // channel -> 非当前频道消息数组（切换时渲染）
+  channelUnread: {},  // channel -> 未读计数
 };
 
 export function loadBlockedUsers() {

@@ -45,6 +45,7 @@ import CHAT_GAME_CARDS from "./client/chat/game-cards.js";
 import CHAT_GAME_BOARD from "./client/chat/game-board.js";
 import CHAT_GAME_ACTION from "./client/chat/game-action.js";
 import CHAT_GAME_ARCADE from "./client/chat/game-arcade.js";
+import CHAT_CHANNELS from "./client/chat/channels.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -111,6 +112,7 @@ const CHAT_MODULES = {
   "chat/game-board.js": CHAT_GAME_BOARD,
   "chat/game-action.js": CHAT_GAME_ACTION,
   "chat/game-arcade.js": CHAT_GAME_ARCADE,
+  "chat/channels.js": CHAT_CHANNELS,
 };
 
 const ADMIN_MODULES = {
