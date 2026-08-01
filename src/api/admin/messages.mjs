@@ -35,7 +35,8 @@ export async function handleAdminMessages(path, request, env, url) {
       try {
         let roomObject = env.rooms.get(id);
         let doUrl = "https://dummy-url/blacklist/" + blAction;
-        if (action === "add" || action === "remove") {
+        // 🔒 安全修复（A8）：黑名单 add/remove 判断变量写错（action 恒为 "blacklist"），导致 ?name= 从不拼接、功能失效
+        if (blAction === "add" || blAction === "remove") {
           const userName = url.searchParams.get("name");
           if (!userName) return new Response("请提供用户名（?name=xxx）。", { status: 400 });
           doUrl += "?name=" + encodeURIComponent(userName);

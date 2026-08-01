@@ -136,6 +136,24 @@ export async function handleAdminRooms(path, request, env, url) {
         let fileName = data.fileName || "download";
         let fileType = data.fileType || "application/octet-stream";
         let dataUri = data.data || "";
+        // 🔒 安全修复（A9）：FileBucket 化的大文件消息只含 fid，按 fid 回查 filebucket DO 拉取内容
+        if (!dataUri && data.fid && env.filebucket) {
+          try {
+            let bucketId = env.filebucket.idFromName("primary");
+            let bucket = env.filebucket.get(bucketId);
+            let bResp = await bucket.fetch("https://dummy-url/download?fid=" + encodeURIComponent(data.fid));
+            if (bResp.ok) {
+              let buf = await bResp.arrayBuffer();
+              return new Response(buf, {
+                status: 200,
+                headers: {
+                  "Content-Type": fileType,
+                  "Content-Disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(fileName)
+                }
+              });
+            }
+          } catch (e) {}
+        }
         let base64Match = dataUri.match(/^data:[^;]+;base64,(.+)$/);
         if (base64Match) {
           let raw = Uint8Array.from(atob(base64Match[1]), c => c.charCodeAt(0));

@@ -1,5 +1,27 @@
 // 任务系统 + 管理员任务 CRUD
 
+// 🔒 安全修复（E6）：BigInt 解析，防余额大数精度丢失
+function toBigInt(val) {
+  if (val == null) return 0n;
+  try {
+    let s = String(val).trim().toLowerCase();
+    if (s.includes('e')) {
+      let [base, exp] = s.split('e');
+      let e = parseInt(exp, 10);
+      if (e < 0) return 0n;
+      let dot = base.indexOf('.');
+      if (dot === -1) s = base + '0'.repeat(e);
+      else {
+        let digits = base.replace('.', '');
+        let fracLen = base.length - 1 - dot;
+        let zeros = e - fracLen;
+        s = digits + (zeros > 0 ? '0'.repeat(zeros) : '');
+      }
+    }
+    return BigInt(s);
+  } catch { return 0n; }
+}
+
 export async function handleTasks(reg, request, url) {
   switch (url.pathname) {
     case "/tasks/list": {
@@ -70,10 +92,12 @@ export async function handleTasks(reg, request, url) {
       reg.taskClaims.get(name).delete(taskId);
       await reg.saveTaskCompletions();
       await reg.saveTaskClaims();
-      let pts = reg.userPoints.get(name) || 0;
-      reg.userPoints.set(name, pts + task.reward);
+      // 🔒 安全修复（E6）：积分/奖励用 BigInt 运算，防大数精度丢失
+      let pts = toBigInt(reg.userPoints.get(name));
+      let reward = toBigInt(task.reward);
+      reg.userPoints.set(name, String(pts + reward));
       await reg.savePoints();
-      return new Response(JSON.stringify({ok: true, reward: task.reward, total: pts + task.reward}), {
+      return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(pts + reward)}), {
         headers: {"Content-Type": "application/json"}
       });
     }

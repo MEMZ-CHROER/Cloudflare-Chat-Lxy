@@ -36,9 +36,21 @@ export async function handlePoints(path, request, env) {
     }
   }
   if (action === "all") {
-    // 需要管理员密钥
+    // 🔒 安全修复（A7）：复用与 /api/admin/* 一致的认证（env 密钥 + registry 轮换密钥），空 key 一律拒绝，杜绝平行口子
     let key = url.searchParams.get("key") || "";
-    if (key !== (env.ADMIN_SECRET_KEY || "") && key !== (env.ADMIN_KEY || "")) {
+    let permission = null;
+    if (key && key === (env.ADMIN_SECRET_KEY || "")) permission = "super";
+    if (!permission && key && key === (env.ADMIN_KEY || "")) permission = "admin";
+    if (!permission && key) {
+      try {
+        let rid = env.registry.idFromName("global");
+        let rStub = env.registry.get(rid);
+        let aResp = await rStub.fetch("https://dummy-url/combined-auth?key=" + encodeURIComponent(key));
+        let aData = await aResp.json();
+        if (aData.level) permission = aData.level;
+      } catch (_) {}
+    }
+    if (!permission) {
       return new Response(JSON.stringify({error: "需要管理密钥"}), { status: 403, headers: {"Content-Type": "application/json"}});
     }
     try {

@@ -207,6 +207,8 @@ export class ChatRoom {
           let limit = parseInt(url.searchParams.get("limit")) || 50;
           if (limit > 200) limit = 200;
           let before = url.searchParams.get("before"); // 时间戳游标
+          // 🔒 安全修复（W19）：非法时间戳直接忽略游标，防 new Date(NaN).toISOString() 抛 500
+          if (before && isNaN(parseInt(before))) before = "";
           let entries;
           if (before) {
             let beforeKey = new Date(parseInt(before)).toISOString();
@@ -802,6 +804,19 @@ export class ChatRoom {
 
       if (data.type === "poll-create") {
         if (this._loadPolls) await this._loadPolls;
+        // 🔒 安全修复（W12）：清理超过24小时的过期轮询，防 polls 永久堆积
+        let cutoff = Date.now() - 24 * 3600 * 1000;
+        for (let [pid, p] of this.polls) {
+          if (p.timestamp < cutoff) this.polls.delete(pid);
+        }
+        // 🔒 安全修复（W12）：创建限频（每用户10秒1个），防刷屏创建投票
+        if (!this.lastPollCreate) this.lastPollCreate = new Map();
+        let lastPC = this.lastPollCreate.get(session.name) || 0;
+        if (Date.now() - lastPC < 10000) {
+          webSocket.send(JSON.stringify({error: "创建投票太频繁，请稍后再试"}));
+          return;
+        }
+        this.lastPollCreate.set(session.name, Date.now());
         let question = "" + data.question;
         let options = data.options;
         if (!question || !Array.isArray(options) || options.length < 2 || options.length > 10) {
@@ -811,6 +826,13 @@ export class ChatRoom {
         if (question.length > 200) {
           webSocket.send(JSON.stringify({error: "问题过长"}));
           return;
+        }
+        // 🔒 安全修复（W12）：单选项长度限制（防超长选项撑爆存储）
+        for (let opt of options) {
+          if (("" + opt).length > 100) {
+            webSocket.send(JSON.stringify({error: "选项过长（最多100字）"}));
+            return;
+          }
         }
         // 🔒 安全修复（W7）：投票问题与选项过敏感词过滤，防绕过审查
         if (this.containsProfanity(question)) {
@@ -1049,6 +1071,23 @@ export class ChatRoom {
         if (this._loadReactions) await this._loadReactions;
         let rKey = "" + data.msgTimestamp;
         if (!rKey) { webSocket.send(JSON.stringify({error: "缺少消息时间戳"})); return; }
+        // 🔒 安全修复（W5）：rKey 必须是数字时间戳（防伪造任意键无限增长 + 原型污染面）
+        if (!/^\d{10,14}$/.test(rKey)) {
+          webSocket.send(JSON.stringify({error: "无效的消息时间戳"}));
+          return;
+        }
+        // 🔒 安全修复（W5）：反应限频（每用户2秒1次）+ 反应总数上限（防存储/内存 DoS）
+        if (!this.lastReaction) this.lastReaction = new Map();
+        let lastReact = this.lastReaction.get(session.name) || 0;
+        if (Date.now() - lastReact < 2000) {
+          webSocket.send(JSON.stringify({error: "操作太频繁，请稍后再试"}));
+          return;
+        }
+        this.lastReaction.set(session.name, Date.now());
+        if (this.reactions && Object.keys(this.reactions).length > 2000) {
+          webSocket.send(JSON.stringify({error: "反应数量已达上限"}));
+          return;
+        }
         // 防止原型污染：阻止 __proto__、constructor、prototype 作为键
         let emoji = ("" + data.emoji).trim();
         if (!emoji || emoji === "__proto__" || emoji === "constructor" || emoji === "prototype") {
@@ -1153,6 +1192,11 @@ export class ChatRoom {
       if (await handleManage(this, session, data, webSocket)) return;
 
       let msgColor = data.color;
+      // 🔒 安全修复（W20）：消息颜色仅允许预设色名或 hex，防 style.color 注入骚扰
+      if (msgColor) {
+        const SAFE_COLOR_RE = /^(red|blue|green|purple|pink|cyan|gray|grey|orange|yellow|teal|indigo|brown|lime|deeporange|rose|crimson|coral|gold|amber|forest|seagreen|turquoise|steel|royalblue|mediumpurple|darkviolet|chocolate|olive|firebrick|slateblue|darkcyan|mediumseagreen|indianred|cadetblue|#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?)$/;
+        if (!SAFE_COLOR_RE.test(String(msgColor))) msgColor = "";
+      }
       let replyData = data.reply;
       let atAll = data.atAll;
       data = { name: session.name, message: "" + data.message };

@@ -16,6 +16,16 @@ import { handleAdminEmoji } from "./admin/emoji.mjs";
 import { handleAdminRedeem } from "./admin/redeem.mjs";
 import { handleAdminLog } from "./admin/log.mjs";
 
+// 🔒 安全修复（A10）：常量时间字符串比较，降低远程时序测信道风险
+function safeEqual(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
 // 操作日志助手
 async function logAdminAction(env, operator, action, target, detail) {
   try {
@@ -34,9 +44,9 @@ export async function handleAdmin(path, request, env) {
   const requestKey = url.searchParams.get("key");
 
   async function getAdminPermission(k, e) {
-    // 🔒 安全修复：未配置管理密钥时直接拒绝，绝不用默认弱密钥("del"/"mod")兜底
-    if (k === e.ADMIN_SECRET_KEY) return "super";
-    if (k === e.ADMIN_KEY) return "admin";
+    // 🔒 安全修复：未配置管理密钥时直接拒绝，绝不用默认弱密钥("del"/"mod")兜底；空 key 一律拒绝
+    if (k && safeEqual(k, e.ADMIN_SECRET_KEY)) return "super";
+    if (k && safeEqual(k, e.ADMIN_KEY)) return "admin";
     try {
       let rid = e.registry.idFromName("global");
       let stub = e.registry.get(rid);

@@ -31,6 +31,11 @@ export async function handleArchive(apiPath, request, env) {
     if (!permission) {
       return new Response(JSON.stringify({error: "密钥无效"}), {status: 403, headers: {"Content-Type": "application/json"}});
     }
+    // 🔒 安全修复（A6）：限制上传体积，防耗尽存档 DO 存储
+    let contentLength = parseInt(request.headers.get("Content-Length") || "0");
+    if (contentLength > 50 * 1024 * 1024) {
+      return new Response(JSON.stringify({error: "存档文件过大（最大50MB）"}), {status: 413, headers: {"Content-Type": "application/json"}});
+    }
 
     let name = new URL(request.url).searchParams.get("name");
     let description = new URL(request.url).searchParams.get("description") || "";
@@ -63,13 +68,10 @@ export async function handleArchive(apiPath, request, env) {
   }
 
   if (subPath[0] === "delete") {
-    // 删除需要管理员密钥
+    // 🔒 安全修复（A6）：删除存档仅限超管密钥（普通管理员无权删除，防恶意删历史存档）
     let key = request.headers.get("X-Admin-Key") || new URL(request.url).searchParams.get("key") || "";
-    let permission = null;
-    if (key === env.ADMIN_SECRET_KEY) permission = "super";
-    if (!permission && key === env.ADMIN_KEY) permission = "admin";
-    if (!permission) {
-      return new Response(JSON.stringify({error: "需要管理密钥"}), {status: 403, headers: {"Content-Type": "application/json"}});
+    if (!key || key !== (env.ADMIN_SECRET_KEY || "")) {
+      return new Response(JSON.stringify({error: "仅超管可删除存档"}), {status: 403, headers: {"Content-Type": "application/json"}});
     }
     let name = new URL(request.url).searchParams.get("name");
     if (!name) return new Response(JSON.stringify({error: "请提供版本名称"}), {status: 400, headers: {"Content-Type": "application/json"}});

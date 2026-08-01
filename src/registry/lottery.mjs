@@ -1,5 +1,27 @@
 // 抽奖系统
 
+// 🔒 安全修复（E6）：BigInt 解析，防余额大数精度丢失
+function toBigInt(val) {
+  if (val == null) return 0n;
+  try {
+    let s = String(val).trim().toLowerCase();
+    if (s.includes('e')) {
+      let [base, exp] = s.split('e');
+      let e = parseInt(exp, 10);
+      if (e < 0) return 0n;
+      let dot = base.indexOf('.');
+      if (dot === -1) s = base + '0'.repeat(e);
+      else {
+        let digits = base.replace('.', '');
+        let fracLen = base.length - 1 - dot;
+        let zeros = e - fracLen;
+        s = digits + (zeros > 0 ? '0'.repeat(zeros) : '');
+      }
+    }
+    return BigInt(s);
+  } catch { return 0n; }
+}
+
 export async function handleLottery(reg, request, url) {
   switch (url.pathname) {
     case "/lottery/pools": {
@@ -30,9 +52,11 @@ export async function handleLottery(reg, request, url) {
       let pool = reg.lotteryPools.get(poolId);
       if (!pool) return new Response(JSON.stringify({error: "奖池不存在"}), {status: 404});
       if (!pool.enabled) return new Response(JSON.stringify({error: "奖池已关闭"}), {status: 400});
-      let pts = reg.userPoints.get(name) || 0;
-      if (pts < pool.cost) return new Response(JSON.stringify({error: "积分不足，需要 " + pool.cost + " 积分"}), {status: 400});
-      reg.userPoints.set(name, pts - pool.cost);
+      // 🔒 安全修复（E6）：积分/费用用 BigInt 运算，防大数精度丢失
+      let pts = toBigInt(reg.userPoints.get(name));
+      let cost = toBigInt(pool.cost);
+      if (pts < cost) return new Response(JSON.stringify({error: "积分不足，需要 " + pool.cost + " 积分"}), {status: 400});
+      reg.userPoints.set(name, String(pts - cost));
       let savePromises = [reg.savePoints()];
       let prizePool = [];
       for (let [prizeId, prize] of pool.prizes) {

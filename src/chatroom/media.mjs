@@ -1,9 +1,22 @@
 // 图片/文件消息处理 — 从 chatroom.mjs 提取
 export async function handleMedia(room, session, data, webSocket) {
   if (data.type === "image") {
+    // 🔒 安全修复（W4）：上传限频（每用户10秒1次），防大文件广播放大/存储耗尽
+    if (!room.lastUpload) room.lastUpload = new Map();
+    let lastUp = room.lastUpload.get(session.name) || 0;
+    if (Date.now() - lastUp < 10000) {
+      webSocket.send(JSON.stringify({error: "上传太频繁，请稍后再试"}));
+      return true;
+    }
+    room.lastUpload.set(session.name, Date.now());
     let imageData = "" + data.data;
-    // 🔒 安全修复：图片消息拒绝 svg+xml/javascript 等可注入类型
-    if (/^(javascript|vbscript):/i.test(imageData) || /^data:image\/svg\+xml/i.test(imageData)) {
+    // 🔒 安全修复（W18）：图片必须是 data:image/* 数据，拒绝外链 URL（防观看者 IP 追踪/钓鱼跳转）
+    if (!/^data:image\//i.test(imageData)) {
+      webSocket.send(JSON.stringify({error: "图片内容类型不合法"}));
+      return true;
+    }
+    // 🔒 安全修复：图片消息拒绝 svg+xml 等可注入类型
+    if (/^data:image\/svg\+xml/i.test(imageData)) {
       webSocket.send(JSON.stringify({error: "图片内容类型不合法"}));
       return true;
     }
@@ -48,13 +61,25 @@ export async function handleMedia(room, session, data, webSocket) {
   }
 
   if (data.type === "file") {
+    // 🔒 安全修复（W4）：上传限频（每用户10秒1次），防大文件广播放大/存储耗尽
+    if (!room.lastUpload) room.lastUpload = new Map();
+    let lastUpF = room.lastUpload.get(session.name) || 0;
+    if (Date.now() - lastUpF < 10000) {
+      webSocket.send(JSON.stringify({error: "上传太频繁，请稍后再试"}));
+      return true;
+    }
+    room.lastUpload.set(session.name, Date.now());
     let fileData = "" + data.data;
     let fileName = "" + (data.fileName || "unknown");
     let fileType = "" + (data.fileType || "application/octet-stream");
     let fileSize = parseInt(data.fileSize) || 0;
-    // 🔒 安全修复：拒绝可执行协议注入（javascript:/vbscript:/data:text/html/data:image/svg+xml），
-    // 防止文件消息被用作存储型XSS（客户端 a.href=data 直接赋值）
-    if (/^(javascript|vbscript):/i.test(fileData) || /^data:text\/html/i.test(fileData) || /^data:image\/svg\+xml/i.test(fileData)) {
+    // 🔒 安全修复（W18）：文件必须是 data: 数据，拒绝外链 URL（防追踪/钓鱼跳转）
+    if (!/^data:/i.test(fileData)) {
+      webSocket.send(JSON.stringify({error: "文件内容类型不合法"}));
+      return true;
+    }
+    // 🔒 安全修复：拒绝可执行/可注入类型（data:text/html、data:image/svg+xml）
+    if (/^data:text\/html/i.test(fileData) || /^data:image\/svg\+xml/i.test(fileData)) {
       webSocket.send(JSON.stringify({error: "文件内容类型不合法"}));
       return true;
     }

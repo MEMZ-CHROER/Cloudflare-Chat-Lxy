@@ -27,6 +27,17 @@ function toBigInt(val) {
   } catch { return 0n; }
 }
 
+// 🔒 安全修复（E5）：积分写端点仅允许管理方调用（带有效管理密钥 auth）
+function adminAuthorized(reg, auth) {
+  if (!auth) return false;
+  if (reg.adminKey && auth === reg.adminKey) return true;
+  if (reg.env) {
+    if (reg.env.ADMIN_SECRET_KEY && auth === reg.env.ADMIN_SECRET_KEY) return true;
+    if (reg.env.ADMIN_KEY && auth === reg.env.ADMIN_KEY) return true;
+  }
+  return false;
+}
+
 export async function handlePoints(reg, request, url) {
   switch (url.pathname) {
     case "/points/get": {
@@ -41,6 +52,8 @@ export async function handlePoints(reg, request, url) {
     }
 
     case "/points/set": {
+      // 🔒 安全修复（E5）：仅管理方（带有效密钥 auth）可调用
+      if (!adminAuthorized(reg, url.searchParams.get("auth") || "")) return new Response("无权操作", { status: 403 });
       let name = url.searchParams.get("name");
       let raw = url.searchParams.get("amount");
       if (!name) return new Response("请提供用户名", { status: 400 });
@@ -53,6 +66,8 @@ export async function handlePoints(reg, request, url) {
     }
 
     case "/points/add": {
+      // 🔒 安全修复（E5）：仅管理方（带有效密钥 auth）可调用
+      if (!adminAuthorized(reg, url.searchParams.get("auth") || "")) return new Response("无权操作", { status: 403 });
       let name = url.searchParams.get("name");
       let raw = url.searchParams.get("amount");
       if (!name) return new Response("请提供用户名", { status: 400 });
@@ -98,6 +113,8 @@ export async function handlePoints(reg, request, url) {
     }
 
     case "/points/batch": {
+      // 🔒 安全修复（E5）：仅管理方（带有效密钥 auth）可调用
+      if (!adminAuthorized(reg, url.searchParams.get("auth") || "")) return new Response("无权操作", { status: 403 });
       let names = url.searchParams.get("names");
       let raw = url.searchParams.get("amount");
       let action = url.searchParams.get("action") || "add";

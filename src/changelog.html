@@ -122,6 +122,17 @@ body {
     <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-fix">安全</span>管理后台越权收窄 — 销毁房间/删用户/兑换码铸币/审计日志/IP详情仅限超管密钥</span></div>
     <div class="feature-item"><span class="icon">🌐</span><span class="text"><span class="tag tag-fix">安全</span>URL 预览 SSRF 加固 — IPv6/映射地址拦截、DNS 解析校验、重定向逐跳校验</span></div>
     <div class="feature-item"><span class="icon">📋</span><span class="text"><span class="tag tag-fix">安全</span>管理操作审计日志接线 — 写操作自动记录，日志仅超管可查/清空；密钥禁止设为空值</span></div>
+    <div class="feature-item"><span class="icon">📦</span><span class="text"><span class="tag tag-fix">安全</span>版本存档加固 — 删除仅限超管，上传限制50MB防耗尽存储</span></div>
+    <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-fix">安全</span>积分表接口统一认证 — 消除平行密钥口子，空密钥拒绝，支持轮换密钥</span></div>
+    <div class="feature-item"><span class="icon">🚫</span><span class="text"><span class="tag tag-fix">修复</span>房间黑名单功能修复 — add/remove 判断变量错误导致无法禁止踢人</span></div>
+    <div class="feature-item"><span class="icon">📎</span><span class="text"><span class="tag tag-fix">修复</span>管理端大文件下载 — FileBucket 化文件按 fid 回查拉取，不再提示无效</span></div>
+    <div class="feature-item"><span class="icon">⏱️</span><span class="text"><span class="tag tag-fix">安全</span>管理密钥常量时间比较 + 注册表层积分写端点纵深校验</span></div>
+    <div class="feature-item"><span class="icon">🔢</span><span class="text"><span class="tag tag-fix">安全</span>商城/任务/抽奖余额运算统一 BigInt — 防大数精度丢失</span></div>
+    <div class="feature-item"><span class="icon">📤</span><span class="text"><span class="tag tag-fix">安全</span>文件/图片上传限频 — 每用户10秒1次，防大文件广播放大DoS</span></div>
+    <div class="feature-item"><span class="icon">❤️</span><span class="text"><span class="tag tag-fix">安全</span>表情反应加固 — 校验真实时间戳 + 限频 + 总量上限，防伪造键DoS</span></div>
+    <div class="feature-item"><span class="icon">🗳️</span><span class="text"><span class="tag tag-fix">安全</span>投票加固 — 选项限长、创建限频、过期轮询自动清理</span></div>
+    <div class="feature-item"><span class="icon">🖼️</span><span class="text"><span class="tag tag-fix">安全</span>图片/文件强制 data: 数据 — 拒绝外链URL防追踪钓鱼；消息颜色白名单</span></div>
+    <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span>历史消息分页非法时间戳不再500</span></div>
   </div>
 </div>
 

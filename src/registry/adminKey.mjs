@@ -1,5 +1,15 @@
 // 管理密钥 + combined-auth + 用户库存查询
 
+// 🔒 安全修复（A10）：常量时间字符串比较
+function safeEqual(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
 export async function handleAdmin(reg, request, url) {
   switch (url.pathname) {
     case "/admin-key/get": {
@@ -28,7 +38,7 @@ export async function handleAdmin(reg, request, url) {
     case "/combined-auth": {
       let input = url.searchParams.get("key");
       if (!input) return new Response(JSON.stringify({level: null}));
-      if (input === reg.adminKey) {
+      if (safeEqual(input, reg.adminKey)) {
         return new Response(JSON.stringify({level: "admin"}), {
           headers: {"Content-Type": "application/json"}
         });

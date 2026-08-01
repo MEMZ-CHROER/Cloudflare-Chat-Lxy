@@ -18,7 +18,9 @@ export async function handleAdminPoints(path, request, env, url) {
       if (!name) return new Response("请提供用户名", { status: 400 });
       let amount = url.searchParams.get("amount");
       if (!amount) return new Response("请提供积分数量", { status: 400 });
-      let r = await registryStub.fetch(new URL("https://dummy-url/points/" + action + "?name=" + encodeURIComponent(name) + "&amount=" + encodeURIComponent(amount)));
+      // 🔒 安全修复（E5）：附带管理密钥作为 registry 内部校验凭证
+      let auth = encodeURIComponent(url.searchParams.get("key") || "");
+      let r = await registryStub.fetch(new URL("https://dummy-url/points/" + action + "?name=" + encodeURIComponent(name) + "&amount=" + encodeURIComponent(amount) + "&auth=" + auth));
       return new Response(await r.text(), { status: r.status });
     }
     if (action === "all") {
@@ -31,7 +33,9 @@ export async function handleAdminPoints(path, request, env, url) {
       let batchAction = url.searchParams.get("action") || "add";
       if (!names) return new Response("请提供用户名列表", { status: 400 });
       if (!amount) return new Response("请提供积分数量", { status: 400 });
-      let r = await registryStub.fetch(new URL("https://dummy-url/points/batch?names=" + encodeURIComponent(names) + "&amount=" + encodeURIComponent(amount) + "&action=" + encodeURIComponent(batchAction)));
+      // 🔒 安全修复（E5）：附带管理密钥作为 registry 内部校验凭证
+      let auth = encodeURIComponent(url.searchParams.get("key") || "");
+      let r = await registryStub.fetch(new URL("https://dummy-url/points/batch?names=" + encodeURIComponent(names) + "&amount=" + encodeURIComponent(amount) + "&action=" + encodeURIComponent(batchAction) + "&auth=" + auth));
       return new Response(await r.text(), { status: r.status });
     }
     return new Response("未找到该操作", { status: 404 });

@@ -1,5 +1,27 @@
 // 商城系统 + 管理员商城 CRUD
 
+// 🔒 安全修复（E6）：BigInt 解析，防余额大数精度丢失
+function toBigInt(val) {
+  if (val == null) return 0n;
+  try {
+    let s = String(val).trim().toLowerCase();
+    if (s.includes('e')) {
+      let [base, exp] = s.split('e');
+      let e = parseInt(exp, 10);
+      if (e < 0) return 0n;
+      let dot = base.indexOf('.');
+      if (dot === -1) s = base + '0'.repeat(e);
+      else {
+        let digits = base.replace('.', '');
+        let fracLen = base.length - 1 - dot;
+        let zeros = e - fracLen;
+        s = digits + (zeros > 0 ? '0'.repeat(zeros) : '');
+      }
+    }
+    return BigInt(s);
+  } catch { return 0n; }
+}
+
 export async function handleShop(reg, request, url) {
   switch (url.pathname) {
     case "/shop/items": {
@@ -52,12 +74,14 @@ export async function handleShop(reg, request, url) {
       let item = reg.shopItems.get(itemId);
       if (!item) return new Response(JSON.stringify({error: "商品不存在"}), {status: 404});
       if (item.enabled === false) return new Response(JSON.stringify({error: "商品已下架"}), {status: 400});
-      let pts = reg.userPoints.get(name) || 0;
-      if (pts < item.price) return new Response(JSON.stringify({error: "积分不足，需要 " + item.price + " 积分，当前 " + pts + " 积分"}), {status: 400});
+      // 🔒 安全修复（E6）：余额/价格用 BigInt 运算，防大数精度丢失
+      let pts = toBigInt(reg.userPoints.get(name));
+      let price = toBigInt(item.price);
+      if (pts < price) return new Response(JSON.stringify({error: "积分不足，需要 " + item.price + " 积分，当前 " + String(pts) + " 积分"}), {status: 400});
       if (!reg.userInventory.has(name)) reg.userInventory.set(name, new Map());
       let inv = reg.userInventory.get(name);
       if (inv.has(itemId)) return new Response(JSON.stringify({error: "已拥有此商品"}), {status: 400});
-      reg.userPoints.set(name, pts - item.price);
+      reg.userPoints.set(name, String(pts - price));
       await reg.savePoints();
       inv.set(itemId, {purchasedAt: Date.now(), equipped: false});
       await reg.saveUserInventory();
