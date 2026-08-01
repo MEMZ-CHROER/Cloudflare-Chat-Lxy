@@ -4,7 +4,7 @@ import { escapeHtml } from './renderers.js';
 import { startNameChooser } from './auth.js';
 import { startRoomList } from './rooms.js';
 import { cancelReply, hideLightbox, galleryPrev, galleryNext, exportChatLog } from './ui.js';
-import { hideUserMenu, handleMenuAction, showUserMenu } from './menu.js';
+import { hideUserMenu, handleMenuAction, showUserMenu, hideProfile } from './menu.js';
 import { sendDM, closeDM } from './dm.js';
 import { toggleSearch, doSearch, searchPrev, searchNext } from './search.js';
 import { showHighlightsPanel } from './highlights.js';
@@ -37,6 +37,8 @@ for (let [k, v] of Object.entries(lazyMods)) window[k] = lazyMod(v[0], v[1]);
 
 window.toggleSearch = toggleSearch;
 window.closeDM = closeDM;
+window.sendDM = sendDM;
+window.hideProfile = hideProfile;
 window.exportChatLog = exportChatLog;
 window.openSettings = openSettings;
 window.closeSettings = closeSettings;

@@ -129,6 +129,7 @@ body {
   <div class="version-body open">
     <div class="feature-item"><span class="icon">✍️</span><span class="text"><span class="tag tag-feature">新增</span>个人签名 — 用户可设置一行签名（复用个人简介 bio），消息用户名旁展示小字签名，悬停显示完整签名，懒加载缓存每用户只请求一次</span></div>
     <div class="feature-item"><span class="icon">🔇</span><span class="text"><span class="tag tag-feature">新增</span>禁言系统 — 管理员对用户禁言（1m/10m/1h/永久），被禁言者发言/发图/发文件被拦并提示剩余时间；入口在用户主页与聊天室用户菜单，支持查看禁言状态与解禁</span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>聊天室用户主页弹窗关不掉 — 关闭按钮/背景点击的内联 onclick 调 hideProfile，但该函数未挂到 window（ES module 导出不可全局访问），点×无反应；补挂 window.hideProfile 修复，同时补挂漏掉的 window.sendDM（私信发送按钮同病）</span></div>
   </div>
 </div>
 
