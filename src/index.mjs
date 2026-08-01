@@ -210,33 +210,33 @@ export default {
         let mod = CHAT_MODULES[modPath];
         if (!mod) mod = ADMIN_MODULES[modPath];
         if (mod) {
-          return new Response(mod, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "public, max-age=3600"}});
+          return new Response(mod, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "public, max-age=60"}});
         }
         if (modPath === "chat.js") {
-          return new Response(CHAT_JS, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff"}});
+          return new Response(CHAT_JS, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Content-Type-Options": "nosniff"}});
         }
         if (modPath === "admin.js") {
-          return new Response(ADMIN_JS, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff"}});
+          return new Response(ADMIN_JS, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Content-Type-Options": "nosniff"}});
         }
         if (modPath === "chat/style.css") {
-          return new Response(CHAT_STYLE, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+          return new Response(CHAT_STYLE, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=60"}});
         }
         if (modPath === "chat/game-style.css") {
-          return new Response(CHAT_GAME_STYLE, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+          return new Response(CHAT_GAME_STYLE, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=60"}});
         }
         if (modPath === "styles/all-styles.css") {
-          return new Response(ALL_STYLES, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+          return new Response(ALL_STYLES, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=60"}});
         }
         if (modPath === "styles/acrylic-theme.css") {
-          return new Response(ACRYLIC_THEME, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+          return new Response(ACRYLIC_THEME, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "public, max-age=60"}});
         }
         if (modPath === "theme-switch.js") {
-          return new Response(THEME_SWITCH_JS, {headers: {"Content-Type": "application/javascript;charset=UTF-8", "Cache-Control": "public, max-age=86400"}});
+          return new Response(THEME_SWITCH_JS, {headers: {"Content-Type": "application/javascript;charset=UTF-8", "Cache-Control": "public, max-age=60"}});
         }
       }
 
       if (!path[0]) {
-        return new Response(HTML, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+        return new Response(HTML, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
       }
 
       if (path[0] === "manifest.json") {
@@ -262,7 +262,7 @@ export default {
             <rect width="512" height="512" rx="64" fill="#4a6cf7"/>
             <text x="256" y="340" font-size="280" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif">C</text>
           </svg>`,
-          {headers: {"Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400"}}
+          {headers: {"Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=60"}}
         );
       }
 
@@ -286,40 +286,40 @@ self.addEventListener("fetch",e=>{e.respondWith(fetch(e.request).catch(()=>cache
           return handleApi(path.slice(1), request, env);
 
         case "admin":
-          return new Response(ADMIN, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ADMIN, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "tasks":
-          return new Response(TASKS, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(TASKS, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "changelog":
-          return new Response(CHANGELOG, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(CHANGELOG, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "help":
-          return new Response(HELP, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(HELP, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "about":
-          return new Response(ABOUT, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ABOUT, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "leaderboard":
-          return new Response(LEADERBOARD, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(LEADERBOARD, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "user":
-          return new Response(USERPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(USERPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "rooms":
-          return new Response(ROOMSPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ROOMSPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "online":
-          return new Response(ONLINEPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ONLINEPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "stats":
-          return new Response(STATSPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(STATSPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "archive":
-          return new Response(ARCHIVE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ARCHIVE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "redeem":
-          return new Response(REDEEM, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=86400", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(REDEEM, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=60", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         default:
           return new Response("未找到", {status: 404});
