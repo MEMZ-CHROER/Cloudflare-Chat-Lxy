@@ -352,7 +352,9 @@ async function handleApi(apiPath, request, env) {
         if (!authData.authenticated) {
           return new Response(JSON.stringify({error: "请先登录"}), {status: 403, headers: {"Content-Type": "application/json"}});
         }
-        let r = await stub.fetch("https://dummy-url/points/checkin?name=" + encodeURIComponent(name));
+        // 🔒 安全修复（E4）：携带来源 IP 供签到按 IP 限频
+        let ip = request.headers.get("CF-Connecting-IP") || "";
+        let r = await stub.fetch("https://dummy-url/points/checkin?name=" + encodeURIComponent(name) + "&ip=" + encodeURIComponent(ip));
         return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
       }
       return new Response("未找到", {status: 404});

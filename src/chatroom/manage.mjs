@@ -64,7 +64,11 @@ export async function handleManage(room, session, data, webSocket) {
 
   if (data.type === "get-scheduled") {
     if (room._loadScheduled) await room._loadScheduled;
-    let list = (room.scheduledMessages || []).map(s => ({id: s.id, name: s.name, message: s.message.slice(0, 80), time: s.time, createdAt: s.createdAt}));
+    // 🔒 安全修复（W6）：非管理员只能查看自己创建的定时消息，防窥探他人定时内容
+    let isAdmin = session.tag === "red" || session.tag === "cyan";
+    let list = (room.scheduledMessages || [])
+      .filter(s => isAdmin || s.name === session.name)
+      .map(s => ({id: s.id, name: s.name, message: s.message.slice(0, 80), time: s.time, createdAt: s.createdAt}));
     webSocket.send(JSON.stringify({type: "scheduled-list", list}));
     return true;
   }

@@ -18,6 +18,8 @@ export async function handleAdmin(reg, request, url) {
 
     case "/admin-key/reset": {
       let defaultKey = url.searchParams.get("default") || "";
+      // 🔒 安全修复（A5）：禁止将管理员密钥设为空值（否则空 key 可能绕过认证获得管理员权限）
+      if (!defaultKey) return new Response("默认密钥不能为空，请提供非空值", { status: 400 });
       reg.adminKey = defaultKey;
       await reg.saveAdminKey();
       return new Response("普通管理员密钥已重置为默认值", { status: 200 });

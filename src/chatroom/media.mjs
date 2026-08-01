@@ -108,11 +108,19 @@ export async function handleMedia(room, session, data, webSocket) {
       webSocket.send(JSON.stringify({error: "字符画过长，请精简"}));
       return true;
     }
+    // 🔒 安全修复（W9）：不再伪装 BOT 身份广播，改用发送者本人身份（防冒充官方机器人钓鱼）
+    // 🔒 安全修复（W7）：字符画内容过敏感词过滤
+    if (room.containsProfanity(art)) {
+      webSocket.send(JSON.stringify({error: "内容包含违规词汇，已拦截"}));
+      return true;
+    }
     data = {
-      name: "BOT", type: "zifu", message: art,
-      timestamp: Math.max(Date.now(), room.lastTimestamp + 1),
-      tag: "BOT", tagColor: "cyan", tagBorder: "gold"
+      name: session.name, type: "zifu", message: art,
+      timestamp: Math.max(Date.now(), room.lastTimestamp + 1)
     };
+    if (session.tag) data.tag = session.tag;
+    if (session.tagColor) data.tagColor = session.tagColor;
+    if (session.tagBorder) data.tagBorder = session.tagBorder;
     room.lastTimestamp = data.timestamp;
     data.id = ++room.msgCounter;
     room.messages.set(data.id, data);

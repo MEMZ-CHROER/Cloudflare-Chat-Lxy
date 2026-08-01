@@ -1,0 +1,252 @@
+================================================================================
+ Cloudflare Chat 安全审计报告
+ 日期：2026-08-01
+ 审计对象：I:\Cloudflare-Dsl-Chat（与主仓库代码一致）
+ 方法：3 个并行审计 agent，分别覆盖「积分经济系统 / WS 聊天室系统 / admin+文件预览」
+ 状态：全部漏洞均经过代码级验证，区分【已确认可利用】与【疑似】
+================================================================================
+
+
+════════════════════════════════════════════════════════════════════════════
+ 一、积分经济系统（经济面）
+════════════════════════════════════════════════════════════════════════════
+
+■ E1【严重】游戏胜负/奖金完全由客户端决定 → 无上限铸币（积分通胀）
+  文件：src/api/game.mjs:71-90；src/registry/points.mjs:147-182
+  佐证：src/client/chat/game-simple.js:110-125（骰子在浏览器算出 prize 发给服务端）、
+        src/client/chat/game-board.js:37（扫雷直接 gameApi("win",{win:3000})）、:94（2048 直接 win:5000）
+  类型：铸币 / 刷积分（缺失服务端游戏结果校验）
+  利用：免费注册拿 token → checkin 领 500 → game/bet 下注 400 → game/win 直接上报 win:10000，
+        服务端只校验 win ≤ wager*25、win ≤ 10000、30 秒冷却、每日净赢 ≤10000，从不校验真实结果。
+        净赚 +9600，再注册新号重复，总铸币无上限（每日上限按用户名且仅内存存储）。
+  影响：瞬间买光商城/抽干奖池/兑换任何 VIP 标签，经济系统崩溃。
+  修复：服务端生成结果并在结算时裁决（下注时定局），移除"客户端上报 win"；每日上限改全局/IP 并持久化。
+
+■ E2【高】游戏下注 TOCTOU + 扣款端点负余额钳制为 0 仍返回 200 → 零成本下注
+  文件：src/api/game.mjs:50-59；src/registry/points.mjs:55-67
+  类型：竞态条件 / 负余额绕过
+  利用：余额 100 时并行发两个 bet(wager=100)：两次 points/get 都读到 100 通过检查，
+        两次 points/add -100，第二次 result=-100 被 `if(result<0n) result=0n` 钳制为 0 且返回 200"扣除成功"。
+  影响：余额预检被完全绕过，扣款从不失败；放大 E1 的铸币杠杆。
+  修复：扣款不足返回 4xx 而非钳制 0；下注与扣款在同一次 DO 请求内原子完成。
+
+■ E3【高】红包创建/领取无认证、无频率/连接限制 → 多小号抢空红包 + 游客直接赚分
+  文件：src/registry/redpacket.mjs:28-76（create）、78-126（grab）；src/chatroom.mjs:1036-1107
+  类型：越权 / 冒名（认证缺失）+ 名即身份滥用
+  利用：游客用脚本建立大量不同未注册名 WS 会话，逐一 redpacket/grab；grab 只按名去重，
+        不校验 token/房间/IP，抢光所有份额；抢到的积分落在未注册名上再免费注册变现。
+        另：红包数据从不持久化（仅内存），DO 重启红包消失但创建者积分已扣。
+  影响：定向掠夺任意红包；grab 是全站唯一不对游客设防的赚分渠道。
+  修复：grab/create 校验 user 与 token 匹配；grab 加每 IP 限频与并发限制；校验 rp.room 与所在房间一致；红包持久化。
+
+■ E4【中】免费无摩擦注册 + 每日签到 500 分 → 批量小号铸币（放大 E1）
+  文件：src/registry/users.mjs:37-51；src/registry/points.mjs:120-136；src/index.mjs:342-359
+  类型：反作弊缺失（多账户挖矿）
+  利用：脚本循环 register → login → checkin → game mint，每账号免费 500 启动金 + 最高 9600 游戏铸币。
+  修复：注册加验证码/邮箱/每 IP 限频；签到按 IP 或设备指纹去重。
+
+■ E5【疑似/纵深防御】注册表层积分变更端点（/points/set|add|batch|transfer）无鉴权
+  文件：src/registry/points.mjs:43-53、55-67、97-118、69-85
+  现状：公开路由核验未发现可直接触达的入口（都经 /api/admin/points 密钥门禁或 /api/points/transfer token 门禁）。
+  建议：在所有 stub.fetch 调用方核验无用户输入直接拼接；注册表层加"调用方身份"校验。
+
+■ E6【低】余额字符串与 Number 混算导致大数精度丢失
+  文件：src/registry/shop.mjs:60、src/registry/tasks.mjs:74、src/registry/lottery.mjs:35
+  现状：需先经 E1 铸币数千万次才可达 2^53，实际低危。
+  修复：统一 BigInt 运算。
+
+
+════════════════════════════════════════════════════════════════════════════
+ 二、WebSocket 聊天室系统（交互面）
+════════════════════════════════════════════════════════════════════════════
+
+■ W1【高危】密码保护房间的完整聊天记录/文件/在线成员未授权读取
+  文件：src/chatroom.mjs:92-116（密码仅在 /websocket 校验）；
+        src/api/rooms.mjs:88-107（PUBLIC_ROOM_ENDPOINTS 含 messages/export/files/file-data/users/get-announcement/get-pinned/history，全无密码校验）
+  利用：匿名 GET /api/rooms/list 得私密房名 → 不带密码 GET /api/room/<名>/export（含完整 base64 文件/图片）等。
+  影响：密码形同虚设，任何匿名者读取私密房全部历史与文件。
+  修复：对除 /websocket 外的所有数据端点统一做密码校验；私有房间不列在公开 /api/rooms/list。
+
+■ W2【高危】普通文本消息完全无频率限制 → 存储写入 DoS + 全房间广播洪水
+  文件：src/chatroom.mjs:1111-1239（每条 storage.put 永久持久化 + broadcast）
+  利用：单条连接每秒数百条 {message}，无间隔限制；消息从未自动清理。
+  影响：storage 无限增长（计费/容量耗尽）；全房间被洪水淹没；一小时可制造数百万条记录。
+  修复：按 IP/连接令牌桶限频；限制单房总消息数并自动裁剪；合并写。
+
+■ W3【高危】/ai 命令无频率限制 → 外部付费 AI API 成本/配额耗尽
+  文件：src/chatroom.mjs:1178-1228
+  利用：循环发 {message:"/ai 你好"}，每次触发真实外部 LLM API 调用（max_tokens:2000），无频率/每日配额。
+  修复：/ai 做按用户+IP 限频与每日上限，并要求登录。
+
+■ W4【高危】大文件/图片上传 → 全房间带宽 DoS + FileBucket 存储耗尽 + DO 内存增长
+  文件：src/chatroom/media.mjs:3-103；src/filebucket.mjs:18-43；src/chatroom.mjs:27,82
+  利用：发送 {type:"file", data:"<27MB base64>", fileName}，完整 base64 广播给每个客户端 + 写入 FileBucket + 常驻 room.messages Map。
+  修复：上传按用户限频+每日配额；广播仅发元信息，下载走 FileBucket 按需拉取；room.messages 设上限/LRU。
+
+■ W5【高危】reaction 对伪造时间戳不校验 + 全量对象重写 → 存储/内存 DoS + 原型污染
+  文件：src/chatroom.mjs:1010-1034（rKey 未校验消息存在；每次 storage.put("reactions", 整对象)；this.reactions[rKey] 未拦截 __proto__）
+  利用：循环发 {type:"reaction", msgTimestamp:"1","2","3"...} 任意伪造键无限增长；发 msgTimestamp:"__proto__" 污染 Object.prototype。
+  修复：校验 msgTimestamp 对应真实消息；限制反应总数/每消息反应数；rKey 与 emoji 拦截 __proto__/constructor/prototype。
+
+■ W6【中高】schedule-cancel 无所有权校验可删他人定时消息 + get-scheduled 泄露全部定时内容
+  文件：src/chatroom.mjs:917-929；src/chatroom/manage.mjs:65-70
+  利用：发 get-scheduled 拿全部 id 列表 → 发 schedule-cancel 任意删除。
+  修复：仅允许取消本人创建的定时消息（记录 name 校验）或要求管理员权限。
+
+■ W7【中高】敏感词过滤被 schedule/relay/poll/zifu/whisper 全面绕过
+  文件：containsProfanity 仅在主文本路径 chatroom.mjs:1129-1134 与编辑 manage.mjs:53-56 生效；
+        schedule 881-915、alarm 1299-1325、relay 931-978、poll-create 798-830、zifu media.mjs:105-122、whisper 751-789、reaction 全跳过。
+  修复：统一 assertClean(text) 在所有携带文本的消息类型及 alarm() 广播路径调用。
+
+■ W8【中】敏感词过滤的 Unicode 同形字/全角绕过
+  文件：src/chatroom.mjs:1264-1297（先 replace(/[^a-z一-鿿]/gi,"") 剔除分隔符后无法匹配）
+  利用：ｃｎｍ（全角）、CΠM（希腊字母）、cñm 均绕过 cnm/wqnmlgb 等词根。
+  修复：全角→半角、Unicode NFKC 归一化，扩充同形字表。
+
+■ W9【中】zifu 消息可伪造 BOT 身份广播（冒充官方机器人钓鱼）
+  文件：src/chatroom/media.mjs:105-122（硬编码 name:"BOT"、tag:"BOT"、金色边框）
+  利用：任意用户发 {type:"zifu", message} 即发布"官方 BOT"消息，可发虚假中奖/诱导链接，且无敏感词过滤。
+  修复：不要硬编码 BOT 身份，改回发送者本人，或对 zifu 加管理员权限限制。
+
+■ W10【中】typing 无服务端频率限制 → 广播洪水
+  文件：src/chatroom.mjs:791-794（每次 typing 都 broadcast）
+  修复：服务端对 typing 节流（每连接 1-2 秒一次），超频丢弃。
+
+■ W11【中】连接无任何限制 + 未命名连接内存无限增长 → 连接耗尽 DoS
+  文件：src/chatroom.mjs:461-549（无每 IP 连接数限制）；1327-1352（未命名 session 的 blockedMessages 无限累积）
+  利用：单 IP 开成百上千条连接且永不发名字，每条把房间每条广播累积进 blockedMessages 无限增长。
+  修复：限制每 IP 并发连接数（3-5）；未命名连接 10 秒限时关闭；blockedMessages 设上限。
+
+■ W12【中】poll-create 选项无长度限制、轮询永不清理、无频率限制 → 存储 DoS
+  文件：src/chatroom.mjs:798-830（option 仅 ""+text 无长度上限；storage.put("polls", 整表) 每次重写）
+  修复：限制单选项长度与总数；定时清理过期轮询；创建限频。
+
+■ W13【中】红包抢取无 IP/设备绑定 → 单人多连接独占全部份额
+  文件：src/chatroom.mjs:1037-1107；src/registry/redpacket.mjs:78-126（仅 rp.grabs[user] 按名去重）
+  修复：grab 增加按 IP 去重/限频，或绑定唯一会话/房间成员身份。
+
+■ W14【中】atAll 无任何权限校验 → 任意用户可 @全体 骚扰
+  文件：src/chatroom.mjs:1113-1121（if(atAll) 无检查）
+  修复：atAll 仅限管理员 tag 或加频率限制。
+
+■ W15【中】踢人限频/特效限频可被"重连改名"绕过
+  文件：src/chatroom.mjs:674-685（lastKick 按 name 计）；manage.mjs:93-104（lastEffect 按 name 计）
+  利用：每次踢人/特效用新名字重连（连接无上限），限频即重置；黑名单/全局拉黑按名查换名即绕过。
+  修复：限频键改为 IP 或连接级，并加连接频率限制。
+
+■ W16【中】投票同 IP 限票/限频可被 IP 轮换绕过
+  文件：src/chatroom.mjs:853-866（votedIps 与 3s 限频按 session.ip）
+  利用：代理/Cloudflare Worker 出口轮换 IP + 不同名字反复投票。
+  修复：增加设备级绑定、投票上限与异常检测。
+
+■ W17【低】同名检测存在 join 竞态窗口（whisper 可双投递）
+  文件：src/chatroom.mjs:590-658（设置 name 后先 await user-init 再执行 name-taken 检查，async 可交错）
+  利用：两连接同时以同名加入，在 user-init 的 await 期间都持有该名，第三方 whisper 双投递截获。
+  修复：name-taken 检查提前到设置名字后、任何 await 之前。
+
+■ W18【低】图片/文件 data 不校验为合法 data: URI → 外链跟踪/钓鱼
+  文件：src/chatroom/media.mjs:3-9,50-60（仅拦 javascript:/vbscript:/data:text/html/data:image/svg+xml，https:// 全放行）
+  利用：发 {type:"image", data:"https://attacker.com/track.png"} 使观看者浏览器向攻击者发请求暴露 IP；文件同理跳转外链。
+  修复：强制 data 必须是 data:image/* 或白名单类型，禁止外链 URL。
+
+■ W19【低】/messages?before=<非数字> 触发 500
+  文件：src/chatroom.mjs:209-213（new Date(parseInt(before)) 对 NaN 抛 RangeError）
+  修复：校验 before 为有效时间戳。
+
+■ W20【低】data.color 可被用于客户端样式骚扰
+  文件：src/chatroom.mjs:1111-1119；src/client/chat/renderers.js:303（bubble.style.color = msgColor 未校验）
+  利用：发 color:"transparent" 使消息不可见。
+  修复：校验 msgColor 白名单。
+
+
+════════════════════════════════════════════════════════════════════════════
+ 三、admin + 文件/预览/存档（权限面）
+════════════════════════════════════════════════════════════════════════════
+
+■ A1【高危】普通管理员（ADMIN_KEY）可执行多项超管（ADMIN_SECRET_KEY）专属操作
+  文件：src/api/admin.mjs:55（adminAllowedPaths 白名单）
+  类型：水平/垂直越权、权限模型与 UI 不一致
+  详情：前端 admin.html:37-53 标记 nav-super 的超管功能，服务端却放给普通 admin：
+        - destroy-room → 永久销毁任意房间（清记录+踢连接+删注册表）
+        - delete-user → 永久删除任意用户（账号/标签/积分/背包/IP/黑名单）
+        - redeem → 无限铸币（生成兑换码凭空发积分）+ list 可看全部未使用兑换码明文
+        - log → 读取并清空审计日志
+        - kick-protect、global-blacklist → 超管功能
+        - room-users-detail → 返回含 ip 字段的用户详情，普通管理员可看任意用户真实 IP
+  修复：这些路由从 adminAllowedPaths 移除，仅限 super。
+
+■ A2【高危】房间密码保护完全可绕过——受保护房间完整聊天记录与文件内容公开泄露
+  文件：src/api/rooms.mjs:88-101（PUBLIC_ROOM_ENDPOINTS）+ src/chatroom.mjs:170-272
+  （与 W1 同根因：密码只在 /websocket 校验，messages/files/file-data/export 全公开，export 含完整 base64）
+  修复：数据端点统一密码校验，或至少 export/file-data 校验 password 参数。
+
+■ A3【高危】URL 预览 SSRF 防护存在多个绕过
+  文件：src/api/preview.mjs:4-35（isPrivateIP/isBannedHost）、:61（fetch）
+  绕过 1：fetch 默认 redirect:"follow"，302 跳转到 http://169.254.169.254/ 或 http://127.0.0.1/ 即访问内网/元数据。
+  绕过 2：new URL("http://[::1]/").hostname 返回 "[::1]"（带方括号），代码比 hostname === '::1' 永不命中；
+          IPv4 映射 [::ffff:127.0.0.1] 被规范化为 "[::ffff:7f00:1]"，split('.') 长度 1 → isPrivateIP 返回 false。
+  绕过 3：DNS rebinding/公共域名解析到内网（localtest.me、*.nip.io、*.sslip.io）只看 hostname 字面量不解析 IP。
+  修复：redirect:"manual" 并对每次跳转重新校验；解析后 IP（含 IPv6）必须公网段；校验服务端实际解析的 IP。
+
+■ A4【中】管理操作日志形同虚设：从未写入 + 普通管理员可清空
+  文件：src/api/admin.mjs:20-30（logAdminAction 定义后全仓库从未调用）；src/api/admin/log.mjs:16-19（log/clear 仅需 admin）
+  修复：写操作（ban/points/destroy/delete/redeem 等）调用 logAdminAction；log/clear 仅限 super；日志不可被操作主体自清。
+
+■ A5【中】空管理密钥即"免密钥管理员"（条件性，需超管触发）
+  文件：src/registry/adminKey.mjs:29；src/api/admin.mjs:38-39
+  详情：env.ADMIN_KEY 未配置且超管调用 /api/admin/admin-key/reset 后 reg.adminKey === ""，此后任意 GET /api/admin/auth-check?key= 返回 level:"admin"。
+  修复：reset/set 禁止设置空值；combined-auth 对空 key 直接返回 null。
+
+■ A6【中】存档删除/上传仅校验 env 密钥且放行普通 admin，上传无大小限制
+  文件：src/api/archive.mjs:65-78（delete）、14-46（upload）
+  详情：delete 只校验 key===SECRET||key===ADMIN，普通管理员可删任意版本存档；upload 原样转发 body 无大小限制，可耗尽存档 DO 存储（无清理机制）。
+  修复：delete 仅限 super；upload/delete 统一 combined-auth；限制上传体积。
+
+■ A7【中】备用的 /api/points/all 使用独立且不一致的密钥校验
+  文件：src/api/points.mjs:39-42
+  详情：/api/points/all?key 直接比较 env.ADMIN_SECRET_KEY/ADMIN_KEY（|| "" 兜底），不查 registry 已轮换的 adminKey；任何人持任一 admin 密钥可拉全部用户积分表。
+  修复：复用 handleAdmin 认证，或移除 all 路由。
+
+■ A8【低/功能】房间级黑名单 add/remove 路由判断变量错误，功能失效
+  文件：src/api/admin/messages.mjs:25-50
+  详情：判断写成 if(action==="add"||action==="remove")，而 action 恒为 "blacklist"，blAction（真正的 add/remove）从未参与 → ?name= 从不拼接 → 房间 DO /blacklist/add 因缺 name 返回 400，前端"禁止踢人/移出黑名单"全部失败。
+  修复：改为 if(blAction==="add"||blAction==="remove")。
+
+■ A9【低/功能】大文件（入 FileBucket）在管理下载处无法下载
+  文件：src/api/admin/rooms.mjs:121-154
+  详情：bucket 化文件消息只含 fid 无 data，room-file-data 取 data.data 为空 → "文件数据无效"，管理端下载大文件功能失效。
+  修复：按 fid 回查 filebucket DO /download。
+
+■ A10【低/理论】密钥比较时序测信道 + key 走 query string
+  文件：src/api/admin.mjs:38-39 及全部 admin 路由
+  详情：均用 ===（无 == 类型混淆），但非常量时间比较（理论）；key 全程放 query string 进浏览器历史/访问日志。
+  修复：可换 crypto.subtle 常量时间比较；key 改走 X-Admin-Key 请求头（archive 已这么做）。
+
+
+════════════════════════════════════════════════════════════════════════════
+ 四、跨面汇总 —— 建议修复优先级
+════════════════════════════════════════════════════════════════════════════
+
+第一优先级（直接破坏核心安全/经济）：
+  E1 游戏客户端自报胜负 → 无限铸币
+  E3 红包无认证可抢空 + 游客赚分
+  W1/A2 密码房数据全量泄露
+  A1 admin 普通管理员越权超管操作
+  A3 preview SSRF 可绕过
+
+第二优先级（DoS / 成本耗尽）：
+  W2 消息无限频、W3 /ai 无限调用、W4 大文件放大、W5 reaction 原型污染、
+  W10 typing、W11 连接耗尽、W12 poll DoS、E2 下注 TOCTOU
+
+第三优先级（逻辑/越权/滥用）：
+  W6 schedule 越权、W7/W8 敏感词绕过、W9 zifu 伪造 BOT、W13 红包多连接、
+  W14 atAll、W15/W16 限频绕过、E4 批量小号、A4-A7 admin 权限收敛
+
+第四优先级（低危/功能）：
+  W17-W20、A8-A10、E5/E6
+
+════════════════════════════════════════════════════════════════════════════
+ 注：W1 与 A2 为同一根因（房间密码只在 /websocket 校验，HTTP 数据端点全公开）；
+     E3 与 W13 为同一根因（红包 grab 仅按名去重，无认证/限频）。
+     修复时应合并处理。
+════════════════════════════════════════════════════════════════════════════

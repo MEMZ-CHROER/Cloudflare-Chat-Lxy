@@ -44,6 +44,17 @@ export async function handleUsers(reg, request, url) {
       if (/[<>&"'\\]/.test(name)) return new Response(JSON.stringify({error: "用户名包含非法字符"}), {status: 400});
       /* 允许任意长度密码 */
       if (reg.registeredUsers.has(name)) return new Response(JSON.stringify({error: "用户名已被注册"}), {status: 409});
+      // 🔒 安全修复（E4）：每 IP 每日最多注册 3 个账号，防批量注册小号铸币
+      let rip = body.ip || "";
+      if (rip) {
+        if (!reg.registerByIp) reg.registerByIp = new Map();
+        let today = new Date().toISOString().slice(0, 10);
+        let rec = reg.registerByIp.get(rip);
+        if (!rec || rec.date !== today) rec = {date: today, count: 0};
+        if (rec.count >= 3) return new Response(JSON.stringify({error: "注册太频繁，请稍后再试"}), {status: 429});
+        rec.count++;
+        reg.registerByIp.set(rip, rec);
+      }
       let hash = await sha256(password);
       reg.registeredUsers.set(name, {passwordHash: hash, token: null, avatar: "", bio: ""});
       await reg.saveRegisteredUsers();

@@ -760,6 +760,11 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "消息过长（VIP最高 " + whisperMax + " 字）"}));
           return;
         }
+        // 🔒 安全修复（W7）：私信内容过敏感词过滤，防绕过审查
+        if (this.containsProfanity(whisperMsg)) {
+          webSocket.send(JSON.stringify({error: "私信包含违规词汇，已拦截"}));
+          return;
+        }
 
         let found = false;
         this.sessions.forEach((s, ws) => {
@@ -806,6 +811,17 @@ export class ChatRoom {
         if (question.length > 200) {
           webSocket.send(JSON.stringify({error: "问题过长"}));
           return;
+        }
+        // 🔒 安全修复（W7）：投票问题与选项过敏感词过滤，防绕过审查
+        if (this.containsProfanity(question)) {
+          webSocket.send(JSON.stringify({error: "投票问题包含违规词汇，已拦截"}));
+          return;
+        }
+        for (let opt of options) {
+          if (this.containsProfanity("" + opt)) {
+            webSocket.send(JSON.stringify({error: "投票选项包含违规词汇，已拦截"}));
+            return;
+          }
         }
         let pollId = "poll_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
         let poll = {
@@ -895,6 +911,11 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "消息过长"}));
           return;
         }
+        // 🔒 安全修复（W7）：定时消息同样过敏感词过滤，防绕过审查定时广播违规内容
+        if (this.containsProfanity(schedMsg)) {
+          webSocket.send(JSON.stringify({error: "定时消息包含违规词汇，已拦截"}));
+          return;
+        }
         if (!this.scheduledMessages) this.scheduledMessages = [];
         let schedEntry = {
           id: "sched_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
@@ -918,6 +939,13 @@ export class ChatRoom {
         let cancelId = data.id;
         if (!cancelId) { webSocket.send(JSON.stringify({error: "缺少定时消息ID"})); return; }
         if (this._loadScheduled) await this._loadScheduled;
+        let sched = (this.scheduledMessages || []).find(s => s.id === cancelId);
+        if (!sched) { webSocket.send(JSON.stringify({error: "定时消息不存在"})); return; }
+        // 🔒 安全修复（W6）：只能取消自己创建的定时消息（管理员可取消任意）
+        if (sched.name !== session.name && session.tag !== "red" && session.tag !== "cyan") {
+          webSocket.send(JSON.stringify({error: "只能取消自己创建的定时消息"}));
+          return;
+        }
         this.scheduledMessages = (this.scheduledMessages || []).filter(s => s.id !== cancelId);
         await this.storage.put("scheduledMessages", this.scheduledMessages);
         if (this.scheduledMessages.length > 0) {
@@ -932,6 +960,11 @@ export class ChatRoom {
         let topic = "" + (data.topic || "");
         if (!topic || topic.length > 100) {
           webSocket.send(JSON.stringify({error: "接龙主题不能为空且不超过100字"}));
+          return;
+        }
+        // 🔒 安全修复（W7）：接龙主题过敏感词过滤
+        if (this.containsProfanity(topic)) {
+          webSocket.send(JSON.stringify({error: "接龙主题包含违规词汇，已拦截"}));
           return;
         }
         if (this._loadRelays) await this._loadRelays;
@@ -971,6 +1004,11 @@ export class ChatRoom {
           return;
         }
         if (content.length > 200) { webSocket.send(JSON.stringify({error: "内容过长（最多200字）"})); return; }
+        // 🔒 安全修复（W7）：接龙内容过敏感词过滤
+        if (this.containsProfanity(content)) {
+          webSocket.send(JSON.stringify({error: "接龙内容包含违规词汇，已拦截"}));
+          return;
+        }
         relay.entries.push({number, user: session.name, content, timestamp: Date.now()});
         await this.storage.put("relays", [...this.relays]);
         this.broadcast({type: "relay-update", relayId, entry: {number, user: session.name, content, timestamp: Date.now()}, totalCount: relay.entries.length});
@@ -1015,6 +1053,11 @@ export class ChatRoom {
         let emoji = ("" + data.emoji).trim();
         if (!emoji || emoji === "__proto__" || emoji === "constructor" || emoji === "prototype") {
           webSocket.send(JSON.stringify({error: "无效的表情"}));
+          return;
+        }
+        // 🔒 安全修复（W7）：表情内容过敏感词过滤，防绕过审查
+        if (this.containsProfanity(emoji)) {
+          webSocket.send(JSON.stringify({error: "表情包含违规词汇，已拦截"}));
           return;
         }
         if (!this.reactions[rKey] || typeof this.reactions[rKey] !== "object") this.reactions[rKey] = {};
@@ -1073,9 +1116,10 @@ export class ChatRoom {
           } else if (data.action === "grab") {
             let rpId = data.id;
             if (!rpId) { webSocket.send(JSON.stringify({error: "缺少红包ID"})); return; }
+            // 🔒 安全修复（E3）：抢红包需注册用户，并校验所在房间 + 携带 IP 用于限频
             let r = await stub.fetch("https://dummy-url/redpacket/grab", {
               method: "POST",
-              body: JSON.stringify({id: rpId, user: session.name}),
+              body: JSON.stringify({id: rpId, user: session.name, room: this.roomName, ip: session.ip || ""}),
               headers: {"Content-Type": "application/json"}
             });
             let result = await r.json();
@@ -1262,7 +1306,12 @@ export class ChatRoom {
   }
 
   containsProfanity(text) {
-    const t = text.replace(/[^a-z一-鿿]/gi, "").toLowerCase();
+    // 🔒 安全修复（W8）：先做 Unicode NFKC 归一化 + 全角/拉丁变体转半角，防全角字母（ｃｎｍ）、变体字母（cñm）绕过敏感词
+    let s = String(text || "").normalize("NFKC");
+    s = s.replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
+    s = s.replace(/[àáâãäåÀÁÂÃÄÅ]/g, "a").replace(/[èéêëÈÉÊË]/g, "e").replace(/[ìíîïÌÍÎÏ]/g, "i")
+         .replace(/[òóôõöÒÓÔÕÖ]/g, "o").replace(/[ùúûüÙÚÛÜ]/g, "u").replace(/[ñÑ]/g, "n").replace(/çÇ/g, "c");
+    const t = s.replace(/[^a-z一-鿿]/gi, "").toLowerCase();
     const roots = [
       "草泥马", "草你妈", "操你妈", "操你妈", "肏你妈",
       "傻逼", "傻比", "煞笔", "沙比", "撒比",

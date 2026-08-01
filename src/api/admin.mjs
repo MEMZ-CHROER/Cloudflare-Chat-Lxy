@@ -52,7 +52,10 @@ export async function handleAdmin(path, request, env) {
     return new Response("未经授权。密钥不匹配或未设置。", { status: 401 });
   }
 
-  const adminAllowedPaths = ["clear-room", "destroy-room", "kick-user", "global-blacklist", "auth-check", "room-users", "room-users-detail", "blacklist", "room-files", "room-file-data", "room-messages", "points", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "redeem", "kick-protect", "delete-user", "log"];
+  // 🔒 安全修复（A1）：普通管理员（ADMIN_KEY）仅允许日常运维功能；
+  // destroy-room（销毁房间）、delete-user（删用户）、redeem（兑换码铸币）、log（审计日志）、
+  // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
+  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "points", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -114,6 +117,13 @@ export async function handleAdmin(path, request, env) {
   if (!result && path[1] === "log")
     result = await handleAdminLog(path, request, env, url);
 
-  if (result) return result;
+  if (result) {
+    // 🔒 安全修复（A4）：记录管理操作日志（此前 logAdminAction 从未被调用，审计形同虚设）
+    if (result.status && result.status < 300) {
+      let target = url.searchParams.get("name") || url.searchParams.get("room") || url.searchParams.get("ip") || "";
+      await logAdminAction(env, permission === "super" ? "super" : "admin", path[1], target, url.pathname + url.search);
+    }
+    return result;
+  }
   return new Response("未找到管理操作。", { status: 404 });
 }

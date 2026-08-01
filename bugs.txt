@@ -1,0 +1,108 @@
+================================================================================
+ Cloudflare Chat 未修复漏洞清单（bugs.txt）
+ 生成日期：2026-08-01
+ 说明：2026-08-01 三面安全审计共发现 36 项；本次已修复 E1-E4、W1/A2、W6-W9、A1、A3-A5。
+      以下为尚未修复的漏洞（含本次已修复列表，供对照）。
+================================================================================
+
+【本次已修复】(2026-08-01)
+  E1  游戏客户端自报胜负 → 服务端定局，下注即结算
+  E2  下注 TOCTOU / 扣款钳制 0 → 原子结算 + 扣款不足拒绝
+  E3  红包无认证抢空 → 仅注册用户 + 房间校验 + 每IP限频
+  E4  批量小号注册/签到 → 每IP注册上限 + 签到限频
+  W1/A2 密码房数据端点公开 → 历史/文件/导出强制密码校验
+  W6  schedule-cancel 越权删他人定时消息 + get-scheduled 泄露 → 仅本人/管理员
+  W7  敏感词绕过（定时/接龙/投票/私信/字符画/表情）→ 统一入口过滤
+  W8  敏感词全角/变体绕过 → Unicode NFKC 归一化
+  W9  字符画伪装 BOT → 使用发送者本人身份
+  A1  普通 admin 越权超管操作 → adminAllowedPaths 收窄
+  A3  preview SSRF（重定向/IPv6/DNS rebinding）→ 逐跳校验 + IPv6拦截 + DoH解析
+  A4  审计日志从未写入 + 普通 admin 可清 → 写操作自动记录 + 仅超管
+  A5  空管理密钥免密钥管理员 → 禁止空值
+
+--------------------------------------------------------------------------------
+【未修复漏洞】
+--------------------------------------------------------------------------------
+
+【高危 - DoS / 资源耗尽】
+
+W2  [高] 普通文本消息无限频 → 存储写入 DoS + 全房间广播洪水
+    文件: src/chatroom.mjs（主消息路径，每条 storage.put 永久持久化）
+    描述: 单连接每秒数百条消息，无间隔限制，消息永不自动清理。
+
+W3  [高] /ai 命令无限调用 → 外部付费 AI API 成本/配额耗尽
+    文件: src/chatroom.mjs（/ai 分支，max_tokens:2000 真实外部调用）
+    描述: 循环发 /ai 无频率/每日配额。
+
+W4  [高] 大文件/图片上传放大 → 全房间带宽 DoS + 存储耗尽 + DO 内存增长
+    文件: src/chatroom/media.mjs、src/filebucket.mjs
+    描述: 27MB base64 广播给每个客户端 + 写 FileBucket + 常驻 room.messages。
+
+W5  [高] reaction 伪造键 + 原型污染 → 存储/内存 DoS
+    文件: src/chatroom.mjs（reaction 分支）
+    描述: 伪造 msgTimestamp 无限建键、整对象重写 O(n²)；需校验消息存在 + 限制数量。
+
+【中危】
+
+W10 [中] typing 无服务端限频 → 广播洪水
+    文件: src/chatroom.mjs（typing 分支）
+
+W11 [中] 连接无任何限制 + 未命名连接内存无限增长 → 连接耗尽 DoS
+    文件: src/chatroom.mjs（handleSession / broadcast）
+    描述: 单 IP 可开无数连接，未命名连接把每条广播累积进 blockedMessages。
+
+W12 [中] poll-create 选项无长度限制、轮询永不清理 → 存储 DoS
+    文件: src/chatroom.mjs（poll-create）
+
+W14 [中] atAll 无任何权限校验 → 任意用户可 @全体 骚扰
+    文件: src/chatroom.mjs（主消息路径 atAll）
+
+W15 [中] 踢人/特效限频可被"重连改名"绕过（限频键为 session.name）
+    文件: src/chatroom.mjs（kick 限频）、src/chatroom/manage.mjs（effect 限频）
+
+W16 [中] 投票同 IP 限票可被 IP 轮换绕过
+    文件: src/chatroom.mjs（poll-vote）
+
+E5  [中/纵深] 注册表层积分端点 /points/set|add|batch|transfer 无鉴权
+    文件: src/registry/points.mjs
+    描述: 目前公开路由无法直达，但缺调用方身份校验（纵深防御缺口）。
+
+A6  [中] 存档删除/上传仅校验 env 密钥且放行普通 admin、上传无大小限制
+    文件: src/api/archive.mjs
+
+A7  [中] /api/points/all 平行密钥口子，可拉取全部用户积分表
+    文件: src/api/points.mjs
+
+【低危 / 功能缺陷】
+
+W17 [低] 同名检测 join 竞态窗口（whisper 可双投递）
+    文件: src/chatroom.mjs（name-taken 在 await 后检查）
+
+W18 [低] 图片/文件 data 不校验为 data: URI → 外链跟踪/钓鱼
+    文件: src/chatroom/media.mjs
+
+W19 [低] /messages?before=<非数字> 触发 500
+    文件: src/chatroom.mjs
+
+W20 [低] data.color 未校验 → 客户端样式骚扰
+    文件: src/chatroom.mjs、src/client/chat/renderers.js
+
+E6  [低] 余额字符串与 Number 混算大数精度丢失
+    文件: src/registry/shop.mjs、tasks.mjs、lottery.mjs
+
+A8  [低/功能] 房间级黑名单 add/remove 判断变量错误，功能失效
+    文件: src/api/admin/messages.mjs（action vs blAction）
+
+A9  [低/功能] 大文件（FileBucket 化）管理端下载失效
+    文件: src/api/admin/rooms.mjs
+
+A10 [低/理论] 管理密钥非常量时间比较 + key 走 query string
+    文件: src/api/admin.mjs
+
+--------------------------------------------------------------------------------
+【建议修复优先级】
+  1. W3（/ai 无限调用烧钱）、W2/W4/W11（DoS 资源耗尽）— 系统级限频/配额
+  2. W5（原型污染）、W14（atAll）、W15（限频键改 IP/连接级）
+  3. W10/W12/W16/W17、A6/A7、E5 — 限频与认证收敛
+  4. W18-W20、E6、A8-A10 — 低危/功能
+================================================================================

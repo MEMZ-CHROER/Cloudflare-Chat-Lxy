@@ -98,7 +98,10 @@ export async function exportChatLog() {
   let fmt = confirm("确定导出为TXT格式？\n取消将导出为JSON格式") ? "txt" : "json";
   try {
     showInfo("正在导出聊天记录...");
-    let r = await fetch("/api/room/" + encodeURIComponent(state.roomname) + "/export?format=" + fmt);
+    // 🔒 安全修复（W1/A2）：密码房间导出需携带密码
+    let exportUrl = "/api/room/" + encodeURIComponent(state.roomname) + "/export?format=" + fmt;
+    if (state.roomPassword) exportUrl += "&password=" + encodeURIComponent(state.roomPassword);
+    let r = await fetch(exportUrl);
     if (!r.ok) { showError("导出失败"); return; }
     let blob = await r.blob();
     let url = URL.createObjectURL(blob);

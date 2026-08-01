@@ -39,6 +39,10 @@ export async function handleRedPacket(reg, request, url) {
         if (count > 100) return new Response(JSON.stringify({error: "最多100份"}), {status: 400});
         if (total > 100000) return new Response(JSON.stringify({error: "单次红包最多10万积分"}), {status: 400});
 
+        // 🔒 安全修复（E3）：仅注册用户可发红包（防游客批量铸币）
+        if (!reg.registeredUsers || !reg.registeredUsers.has(creator)) {
+          return new Response(JSON.stringify({error: "请注册后再发红包"}), {status: 400});
+        }
         // 检查余额
         let current = toBigInt(reg.userPoints.get(creator));
         if (current < total) return new Response(JSON.stringify({error: "积分不足"}), {status: 400});
@@ -79,11 +83,26 @@ export async function handleRedPacket(reg, request, url) {
       if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
       try {
         let body = await request.json();
-        let { id, user } = body;
+        let { id, user, room, ip } = body;
         if (!id || !user) return new Response(JSON.stringify({error: "参数不完整"}), {status: 400});
         if (!reg.redPackets) reg.redPackets = new Map();
         let rp = reg.redPackets.get(id);
         if (!rp) return new Response(JSON.stringify({error: "红包不存在或已过期"}), {status: 404});
+        // 🔒 安全修复（E3）：仅注册用户可抢红包（堵死游客批量小号抢分）；校验所在房间一致
+        if (!reg.registeredUsers || !reg.registeredUsers.has(user)) {
+          return new Response(JSON.stringify({error: "请注册后再抢红包"}), {status: 400});
+        }
+        if (rp.room && room && rp.room !== room) {
+          return new Response(JSON.stringify({error: "红包仅限所在房间领取"}), {status: 400});
+        }
+        // 🔒 安全修复（E3）：每 IP 限频（3秒1次），防脚本多连接连抢
+        let nowG = Date.now();
+        if (!reg.lastRpGrabByIp) reg.lastRpGrabByIp = new Map();
+        let gkey = ip || user;
+        if (nowG - (reg.lastRpGrabByIp.get(gkey) || 0) < 3000) {
+          return new Response(JSON.stringify({error: "抢红包太频繁，请稍后再试"}), {status: 400});
+        }
+        reg.lastRpGrabByIp.set(gkey, nowG);
         if (rp.remainingCount <= 0) return new Response(JSON.stringify({error: "红包已被抢完"}), {status: 400});
         if (rp.grabs[user]) return new Response(JSON.stringify({error: "你已经抢过这个红包了"}), {status: 400});
         if (user === rp.creator) return new Response(JSON.stringify({error: "不能抢自己的红包"}), {status: 400});

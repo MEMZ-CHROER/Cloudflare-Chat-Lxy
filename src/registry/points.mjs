@@ -60,7 +60,10 @@ export async function handlePoints(reg, request, url) {
       let amount = toBigInt(raw);
       let current = toBigInt(reg.userPoints.get(name));
       let result = current + amount;
-      if (result < 0n) result = 0n;
+      // 🔒 安全修复（E2）：扣款导致余额不足时直接拒绝，绝不钳制为 0（防零成本下注/绕过余额检查）
+      if (result < 0n) {
+        return new Response("积分不足，扣除失败，当前 " + current, { status: 400 });
+      }
       reg.userPoints.set(name, String(result));
       await reg.savePoints();
       return new Response("已为 " + name + " " + (amount >= 0n ? "增加" : "扣除") + " " + (amount >= 0n ? String(amount) : String(-amount)) + " 积分，当前 " + result, { status: 200 });
@@ -119,11 +122,21 @@ export async function handlePoints(reg, request, url) {
 
     case "/points/checkin": {
       let name = url.searchParams.get("name");
+      let ip = url.searchParams.get("ip") || "";
       if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
       let user = reg.registeredUsers.get(name);
       if (!user) return new Response(JSON.stringify({error: "请先注册后再签到"}), {status: 400});
       let today = new Date().toISOString().slice(0, 10);
       if (user.lastCheckin === today) return new Response(JSON.stringify({error: "今天已签到，明天再来吧"}), {status: 400});
+      // 🔒 安全修复（E4）：每 IP 每日最多签到 3 次，防批量小号签到刷积分
+      if (ip) {
+        if (!reg.checkinByIp) reg.checkinByIp = new Map();
+        let rec = reg.checkinByIp.get(ip);
+        if (!rec || rec.date !== today) rec = {date: today, count: 0};
+        if (rec.count >= 3) return new Response(JSON.stringify({error: "今日签到次数已达上限"}), {status: 429});
+        rec.count++;
+        reg.checkinByIp.set(ip, rec);
+      }
       let reward = 500n;
       user.lastCheckin = today;
       let current = toBigInt(reg.userPoints.get(name));
@@ -136,49 +149,75 @@ export async function handlePoints(reg, request, url) {
     }
 
     case "/game/bet": {
+      // 🔒 安全修复（E1/E2）：服务端定局 + 原子结算
+      // 下注即定胜负：余额检查、扣款、生成服务端随机结果、发放奖励在同一次 DO 调用内原子完成，
+      // 彻底杜绝"客户端上报 win 铸币"与"查余额→扣款跨请求 TOCTOU"。
       let name = url.searchParams.get("name");
       let wager = parseInt(url.searchParams.get("wager")) || 0;
       if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
       if (!reg.gameBets) reg.gameBets = new Map();
-      reg.gameBets.set(name, {wager, ts: Date.now()});
-      return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
-    }
-
-    case "/game/win": {
-      let name = url.searchParams.get("name");
-      let win = parseInt(url.searchParams.get("win")) || 0;
-      if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
-      if (!reg.gameBets) reg.gameBets = new Map();
       if (!reg.gameLastWin) reg.gameLastWin = new Map();
       if (!reg.gameDailyWin) reg.gameDailyWin = new Map();
-      let bet = reg.gameBets.get(name);
+      if (wager < 1) return new Response(JSON.stringify({error: "赌注无效"}), {status: 400});
       let now = Date.now();
-      // 1) 必须有未结算下注，且 5 分钟内有效（防凭空 win / 重放）
-      if (!bet || now - bet.ts > 300000) {
-        return new Response(JSON.stringify({error: "请先下注后再结算"}), {status: 400});
-      }
-      // 2) win 不得超过下注的 25 倍，且单局上限 10000（防杠杆刷分）
-      if (win > bet.wager * 25 || win > 10000) {
-        return new Response(JSON.stringify({error: "该局赢取金额超出允许范围"}), {status: 400});
-      }
-      // 3) 每 30 秒限一次结算（防高频刷分）
+      // 冷却：每 30 秒一局
       let lastWin = reg.gameLastWin.get(name) || 0;
       if (now - lastWin < 30000) {
         return new Response(JSON.stringify({error: "操作过于频繁，请稍后再试"}), {status: 400});
       }
-      // 4) 每日净赢上限 10000（win - wager 累计）
+      // 原子检查并扣除赌注（不足拒绝，不钳制为 0）
+      let current = toBigInt(reg.userPoints.get(name));
+      if (current < BigInt(wager)) {
+        return new Response(JSON.stringify({error: "积分不足，无法下注"}), {status: 400});
+      }
+      reg.userPoints.set(name, String(current - BigInt(wager)));
+      // 服务端定局：约 45% 概率赢，奖励为下注 1~25 倍随机（单局上限 10000）
+      let won = Math.random() < 0.45;
+      let prize = won ? Math.min(Math.floor(wager * (1 + Math.random() * 24)), 10000) : 0;
+      // 每日净赢上限 10000（prize - wager 累计），超出则截断至额度内（至少保本）
       let today = new Date().toISOString().slice(0, 10);
       let daily = reg.gameDailyWin.get(name);
       if (!daily || daily.date !== today) daily = {date: today, total: 0};
-      let net = win - bet.wager;
-      if (daily.total + net > 10000) {
-        return new Response(JSON.stringify({error: "今日游戏赢取已达上限"}), {status: 400});
+      let awarded = 0;
+      if (prize > 0) {
+        let cap = 10000 - daily.total + wager; // 剩余净赢额度 + 本金
+        if (prize > cap) prize = Math.max(wager, cap);
+        if (prize > 0) {
+          awarded = prize;
+          daily.total += (prize - wager);
+          reg.gameDailyWin.set(name, daily);
+        }
       }
-      daily.total += net;
-      reg.gameDailyWin.set(name, daily);
+      if (awarded > 0) {
+        reg.userPoints.set(name, String(toBigInt(reg.userPoints.get(name)) + BigInt(awarded)));
+      }
       reg.gameLastWin.set(name, now);
-      reg.gameBets.delete(name);
-      return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
+      reg.gameBets.set(name, {wager, ts: now, prize: awarded});
+      await reg.savePoints();
+      return new Response(JSON.stringify({
+        ok: true,
+        deducted: wager,
+        won: awarded > 0,
+        prize: awarded,
+        balance: String(toBigInt(reg.userPoints.get(name)))
+      }), {headers: {"Content-Type": "application/json"}});
+    }
+
+    case "/game/win": {
+      // 🔒 安全修复（E1）：win 改为幂等查询，不再接受客户端金额、不再发奖
+      // 奖励已在下注时由服务端结算，此端点仅返回本局结果与当前余额（供前端刷新显示）
+      let name = url.searchParams.get("name");
+      if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      let bet = reg.gameBets && reg.gameBets.get(name);
+      let prize = bet ? bet.prize || 0 : 0;
+      let bal = toBigInt(reg.userPoints.get(name));
+      return new Response(JSON.stringify({
+        ok: true,
+        won: prize > 0,
+        prize: prize,
+        awarded: prize,
+        balance: String(bal)
+      }), {headers: {"Content-Type": "application/json"}});
     }
 
     default:

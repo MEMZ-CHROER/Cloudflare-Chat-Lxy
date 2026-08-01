@@ -46,45 +46,26 @@ export async function handleGame(apiPath, request, env) {
       }
 
       if (gameAction === "bet") {
-        // 🔒 安全修复：下注前先查余额，余额不足直接拒绝
-        // （防止 points/add 余额钳制为0导致的零成本下注 + 凭空赢积分铸币）
-        let balUrl = "https://dummy-url/points/get?name=" + encodeURIComponent(name);
-        let balResp = await stub.fetch(new URL(balUrl));
-        let balData = await balResp.json();
-        if (BigInt(balData.points || 0) < BigInt(wager)) {
-          return new Response(JSON.stringify({error: "积分不足，无法下注"}), {status: 400, headers: {"Content-Type": "application/json"}});
+        // 🔒 安全修复（E1/E2）：服务端定局，下注即结算
+        // 余额检查、扣款、服务端随机结果与发奖在同一次 registry 调用内原子完成，
+        // 客户端上报的 win 不再影响任何金额（杜绝铸币 + TOCTOU）
+        let betUrl = "https://dummy-url/game/bet?name=" + encodeURIComponent(name) + "&wager=" + wager;
+        let r = await stub.fetch(new URL(betUrl));
+        let data = await r.json();
+        if (!r.ok || !data.ok) {
+          return new Response(JSON.stringify({error: data.error || "下注失败"}), {status: 400, headers: {"Content-Type": "application/json"}});
         }
-        // 下注：扣除赌注
-        let deductUrl = "https://dummy-url/points/add?name=" + encodeURIComponent(name) + "&amount=" + (-wager);
-        let r = await stub.fetch(new URL(deductUrl));
-        if (!r.ok) {
-          let text = await r.text();
-          return new Response(JSON.stringify({error: text}), {status: 400});
-        }
-        // 记录未结算下注，供 win 结算校验（防凭空 win / 重放）
-        await stub.fetch(new URL("https://dummy-url/game/bet?name=" + encodeURIComponent(name) + "&wager=" + wager));
-        return new Response(JSON.stringify({ok: true, action: "bet", deducted: wager, balance: balData.points}), {
+        return new Response(JSON.stringify({ok: true, action: "bet", deducted: data.deducted, won: data.won, prize: data.prize, balance: data.balance}), {
           headers: {"Content-Type": "application/json"}
         });
       }
 
       if (gameAction === "win") {
-        // 先校验：必须有未结算下注、win 在合理范围、频率与每日上限
-        let winCheck = await stub.fetch(new URL("https://dummy-url/game/win?name=" + encodeURIComponent(name) + "&win=" + win));
-        let winResult = await winCheck.json();
-        if (!winResult.ok) {
-          return new Response(JSON.stringify({error: winResult.error || "结算校验失败"}), {status: 400});
-        }
-        // 获胜：奖励积分
-        if (win > 0) {
-          let awardUrl = "https://dummy-url/points/add?name=" + encodeURIComponent(name) + "&amount=" + win;
-          await stub.fetch(new URL(awardUrl));
-        }
-        // 查询余额
-        let balUrl = "https://dummy-url/points/get?name=" + encodeURIComponent(name);
-        let balResp = await stub.fetch(new URL(balUrl));
-        let balData = await balResp.json();
-        return new Response(JSON.stringify({ok: true, action: "win", awarded: win, balance: balData.points}), {
+        // 🔒 安全修复（E1）：win 为幂等查询，奖励已在下注时结算，这里仅返回结果与余额供前端刷新
+        let winUrl = "https://dummy-url/game/win?name=" + encodeURIComponent(name);
+        let r = await stub.fetch(new URL(winUrl));
+        let data = await r.json();
+        return new Response(JSON.stringify({ok: true, action: "win", won: data.won, awarded: data.prize || 0, balance: data.balance}), {
           headers: {"Content-Type": "application/json"}
         });
       }

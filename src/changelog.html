@@ -112,6 +112,16 @@ body {
     <div class="feature-item"><span class="icon">🤫</span><span class="text"><span class="tag tag-fix">安全</span>私信窃听/冒名漏洞修复 — 同一名字仅允许一个在线会话，冒名者无法截获他人私信</span></div>
     <div class="feature-item"><span class="icon">🗳️</span><span class="text"><span class="tag tag-fix">安全</span>投票刷票修复 — 同一IP每场投票限1票 + 限频，防批量连接换名刷票/冒名封投票权</span></div>
     <div class="feature-item"><span class="icon">🧧</span><span class="text"><span class="tag tag-fix">安全</span>红包负数修复 — 任意模式要求每个至少1积分，抢红包金额兜底为正，防 0/负数红包</span></div>
+    <div class="feature-item"><span class="icon">🎲</span><span class="text"><span class="tag tag-fix">安全</span>游戏服务端定局 — 下注即由服务端随机结算胜负，客户端无法上报赢取金额铸币；下注/扣款原子化，杜绝竞态双花</span></div>
+    <div class="feature-item"><span class="icon">🧧</span><span class="text"><span class="tag tag-fix">安全</span>红包加认证 — 仅注册用户可发/抢红包，校验所在房间一致 + 每IP限频，堵死游客小号抢空红包</span></div>
+    <div class="feature-item"><span class="icon">👥</span><span class="text"><span class="tag tag-fix">安全</span>注册/签到反作弊 — 每IP每日注册上限与签到限频，防批量小号签到+铸币</span></div>
+    <div class="feature-item"><span class="icon">🔐</span><span class="text"><span class="tag tag-fix">安全</span>密码房间数据保护 — 历史/文件/导出/公告等数据端点强制密码校验，私密房内容不再裸奔</span></div>
+    <div class="feature-item"><span class="icon">⏰</span><span class="text"><span class="tag tag-fix">安全</span>定时消息越权修复 — 只能取消自己的定时消息（管理员除外），非管理员看不到他人定时内容</span></div>
+    <div class="feature-item"><span class="icon">🧼</span><span class="text"><span class="tag tag-fix">安全</span>敏感词统一拦截 — 定时/接龙/投票/私信/字符画/表情全部过敏感词 + Unicode归一化防全角绕过</span></div>
+    <div class="feature-item"><span class="icon">🤖</span><span class="text"><span class="tag tag-fix">安全</span>字符画不再伪装 BOT — 广播使用发送者本人身份，防冒充官方机器人钓鱼</span></div>
+    <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-fix">安全</span>管理后台越权收窄 — 销毁房间/删用户/兑换码铸币/审计日志/IP详情仅限超管密钥</span></div>
+    <div class="feature-item"><span class="icon">🌐</span><span class="text"><span class="tag tag-fix">安全</span>URL 预览 SSRF 加固 — IPv6/映射地址拦截、DNS 解析校验、重定向逐跳校验</span></div>
+    <div class="feature-item"><span class="icon">📋</span><span class="text"><span class="tag tag-fix">安全</span>管理操作审计日志接线 — 写操作自动记录，日志仅超管可查/清空；密钥禁止设为空值</span></div>
   </div>
 </div>
 

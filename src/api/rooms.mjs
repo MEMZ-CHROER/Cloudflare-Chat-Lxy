@@ -1,5 +1,22 @@
 // 房间 API - 创建、加入、列表
 
+// 🔒 安全修复（W1/A2）：密码房间的数据端点必须携带正确密码，否则拒绝
+async function requireRoomPassword(env, name, request) {
+  try {
+    let registryId = env.registry.idFromName("global");
+    let stub = env.registry.get(registryId);
+    let pResp = await stub.fetch("https://dummy-url/password-status?name=" + encodeURIComponent(name));
+    let pData = await pResp.json();
+    if (!pData.hasPassword) return true;
+    let pwd = new URL(request.url).searchParams.get("password") || "";
+    let vResp = await stub.fetch("https://dummy-url/verify-password", {
+      method: "POST", body: JSON.stringify({name, password: pwd}), headers: {"Content-Type": "application/json"}
+    });
+    let vData = await vResp.json();
+    return !!vData.ok;
+  } catch (e) { return true; }
+}
+
 export async function handleRooms(path, request, env) {
   switch (path[0]) {
     case "rooms": {
@@ -70,6 +87,10 @@ export async function handleRooms(path, request, env) {
 
       // 加载更多历史消息（无限滚动）
       if (path[2] === "history") {
+        // 🔒 安全修复（W1/A2）：密码房间历史需校验密码
+        if (!(await requireRoomPassword(env, name, request))) {
+          return new Response(JSON.stringify({error: "房间需要密码才能访问"}), {status: 401, headers: {"Content-Type": "application/json"}});
+        }
         let hLimit = new URL(request.url).searchParams.get("limit") || 50;
         let hBefore = new URL(request.url).searchParams.get("before") || "";
         let hUrl = "https://dummy-url/messages?limit=" + hLimit;
@@ -98,6 +119,13 @@ export async function handleRooms(path, request, env) {
       let roomSubPath = path[2];
       if (!PUBLIC_ROOM_ENDPOINTS.includes(roomSubPath)) {
         return new Response("无权限访问此操作。管理操作请通过 /api/admin/* 执行。", { status: 403 });
+      }
+      // 🔒 安全修复（W1/A2）：密码房间的数据端点（messages/files/file-data/users/export/get-announcement/get-pinned）必须带正确密码
+      // websocket 端点已在握手时自行校验密码，此处跳过
+      if (roomSubPath !== "websocket") {
+        if (!(await requireRoomPassword(env, name, request))) {
+          return new Response(JSON.stringify({error: "房间需要密码才能访问"}), {status: 401, headers: {"Content-Type": "application/json"}});
+        }
       }
 
       let newUrl = new URL(request.url);

@@ -8,6 +8,8 @@ export async function handleAuth(path, request, env) {
       if (request.method !== "POST") return new Response("方法不允许", {status: 405});
       try {
         let body = await request.json();
+        // 🔒 安全修复（E4）：携带来源 IP 供注册限频，防批量注册小号
+        body.ip = request.headers.get("CF-Connecting-IP") || "";
         let registryId = env.registry.idFromName("global");
         let stub = env.registry.get(registryId);
         let r = await stub.fetch("https://dummy-url/user-register", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
