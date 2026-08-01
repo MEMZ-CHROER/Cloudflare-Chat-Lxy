@@ -1247,6 +1247,7 @@ export class ChatRoom {
 
       if (await handleManage(this, session, data, webSocket)) return;
 
+      if (this._loadChannels) await this._loadChannels; // 确保频道列表已加载（防热重启后自定义公告频道只读失效）
       let msgChannel = session.channel || "general";
       // 频道体系：公告频道只读，仅管理员（red/cyan）可发言
       let curChan = this.channels.find(c => c.name === msgChannel);

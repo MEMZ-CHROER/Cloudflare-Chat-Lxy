@@ -1,6 +1,7 @@
 // 图片/文件消息处理 — 从 chatroom.mjs 提取
 export async function handleMedia(room, session, data, webSocket) {
   // 频道体系：公告频道只读，仅管理员可发图片/文件/字符画
+  if (room._loadChannels) await room._loadChannels;
   let msgChannel = session.channel || "general";
   let curChan = room.channels ? room.channels.find(c => c.name === msgChannel) : null;
   if (curChan && curChan.type === "announcement" && session.tag !== "red" && session.tag !== "cyan") {

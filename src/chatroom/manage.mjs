@@ -3,6 +3,7 @@
 export async function handleManage(room, session, data, webSocket) {
   // ====== 频道体系：切换频道 ======
   if (data.type === "switch-channel") {
+    if (room._loadChannels) await room._loadChannels; // 确保频道列表已加载（防 DO 重启后丢失）
     let target = "" + (data.channel || "");
     if (!room.channels || !room.channels.some(c => c.name === target)) {
       webSocket.send(JSON.stringify({error: "频道不存在"}));
@@ -29,6 +30,7 @@ export async function handleManage(room, session, data, webSocket) {
 
   // ====== 频道体系：管理员增删频道 ======
   if (data.type === "channel") {
+    if (room._loadChannels) await room._loadChannels; // 确保频道列表已加载
     let action = data.action;
     let name = "" + (data.name || "");
     if (session.tag !== "red" && session.tag !== "cyan") {
