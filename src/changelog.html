@@ -133,6 +133,7 @@ body {
     <div class="feature-item"><span class="icon">🙈</span><span class="text"><span class="tag tag-fix">修复</span>透明壁纸下浮层露馅 — 永久隐藏游戏中心浮层(#game-overlay)与移动端底部栏(#mobile-bottom-bar)及其子元素，避免半透明磨砂在透明壁纸下透出背后内容</span></div>
     <div class="feature-item"><span class="icon">💥</span><span class="text"><span class="tag tag-feature">新增</span>/destroy 销毁房间命令 — 聊天框输入 /destroy <销毁口令> 立即销毁当前房间（清空全部消息/数据，不可撤销）；口令由 DESTROY_KEY 环境变量配置，仅对此命令生效不授予其他权限；仿 /rollback 由服务端透传处理，销毁后全员自动离开房间，已加入 /help 命令列表</span></div>
     <div class="feature-item"><span class="icon">⚡</span><span class="text"><span class="tag tag-fix">修复</span>前端更新不生效 — 静态资源缓存头从 max-age=60 改为 no-cache, must-revalidate，CDN/浏览器不再缓存旧版 JS/CSS/HTML，部署新功能后刷新即可生效（此前 /destroy 等命令因缓存拿到旧前端而"未知命令"）</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-fix">修复</span>销毁房间后续问题 — 销毁通知改为消息机制({type:"destroyed"})全员直接跳首页，不再依赖 CloseEvent.reason（浏览器兼容性）；销毁标记持久化到 storage + fetch 层提前拦截，已销毁房间重连直接以 destroyed 关闭，杜绝 1011"服务器内部错误"与房间复活</span></div>
   </div>
 </div>
 

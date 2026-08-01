@@ -49,6 +49,13 @@ export function join() {
   ws.addEventListener("message", event => {
     let data = JSON.parse(event.data);
 
+    // 💥 房间销毁通知：服务端销毁房间时全员收到，直接跳首页（不依赖 CloseEvent.reason）
+    if (data.type === "destroyed") {
+      addChatMessage(null, t("* 房间已销毁，正在离开..."));
+      setTimeout(() => document.location.href = "/", 500);
+      return;
+    }
+
     // 频道体系：频道列表 / 切换历史
     if (data.type === "channels") {
       state.channels = data.channels || state.channels;

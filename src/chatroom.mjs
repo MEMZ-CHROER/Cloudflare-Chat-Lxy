@@ -40,6 +40,10 @@ export class ChatRoom {
     });
 
     this.destroyed = false;
+    // 🔒 销毁标记持久化：DO 重启后仍保持"已销毁"，防止房间复活导致重连异常
+    this._loadDestroyed = this.storage.get("__destroyed__").then(v => {
+      if (v === "1") this.destroyed = true;
+    });
     this.pinnedMessage = null;
     this._loadPinned = this.storage.get("pinnedMessage").then(data => {
       if (data) {
@@ -101,6 +105,14 @@ export class ChatRoom {
         case "/websocket": {
           if (request.headers.get("Upgrade") != "websocket") {
             return new Response("需要 WebSocket", {status: 400});
+          }
+          // 💥 房间已销毁：升级后立即以 destroyed 关闭（前端识别跳首页），避免 handleSession 异常 1011
+          if (this._loadDestroyed) await this._loadDestroyed;
+          if (this.destroyed) {
+            let dPair = new WebSocketPair();
+            dPair[1].accept();
+            dPair[1].close(1000, "destroyed");
+            return new Response(null, { status: 101, webSocket: dPair[0] });
           }
           let ip = request.headers.get("CF-Connecting-IP");
           // 检查房间密码
@@ -380,9 +392,10 @@ export class ChatRoom {
         case "/do-destroy": {
           // 一键销毁房间：清空消息、断开所有连接
           this.destroyed = true;
+          try { await this.storage.put("__destroyed__", "1"); } catch (e) {}
           await this.clearAllMessages();
           this.sessions.forEach((session, webSocket) => {
-            try { webSocket.close(1000, "房间已销毁"); } catch (e) {}
+            try { webSocket.close(1000, "destroyed"); } catch (e) {}
           });
           this.sessions.clear();
           // registry 删除由管理 API 层直接处理
@@ -478,9 +491,10 @@ export class ChatRoom {
   }
 
   async handleSession(webSocket, ip) {
-    // 房间已销毁，拒绝新连接
+    // 房间已销毁，拒绝新连接（reason 用 destroyed，前端识别后跳首页避免无限重连）
+    if (this._loadDestroyed) await this._loadDestroyed;
     if (this.destroyed) {
-      webSocket.close(1000, "房间已销毁");
+      webSocket.close(1000, "destroyed");
       return;
     }
     this.state.acceptWebSocket(webSocket);
@@ -1376,7 +1390,13 @@ export class ChatRoom {
         try { webSocket.send(JSON.stringify({system: "正在销毁房间，所有数据将永久删除..."})); } catch (_) {}
         try {
           this.destroyed = true;
+          try { await this.storage.put("__destroyed__", "1"); } catch (e) {}
           await this.clearAllMessages();
+          // 先广播销毁通知（前端收到直接跳首页，不依赖 CloseEvent.reason，兼容各浏览器）
+          let destroyNotice = JSON.stringify({type: "destroyed"});
+          this.sessions.forEach((s, ws) => {
+            try { ws.send(destroyNotice); } catch (e) {}
+          });
           this.sessions.forEach((s, ws) => {
             try { ws.close(1000, "destroyed"); } catch (e) {}
           });
