@@ -166,6 +166,17 @@ body::after {
   color: #fff;
   font-weight: 600;
 }
+/* 公告频道高亮 — 琥珀金醒目显示（📢） */
+.channel-item.announcement {
+  color: #f5a623;
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid rgba(245, 166, 35, 0.45);
+  font-weight: 600;
+}
+.channel-item.announcement.active {
+  background: #f5a623;
+  color: #fff;
+}
 .channel-badge {
   background: #e74c3c;
   color: #fff;

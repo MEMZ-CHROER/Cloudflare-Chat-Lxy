@@ -10,11 +10,12 @@ export function buildChannelBar() {
   if (!bar) return;
   bar.innerHTML = "";
   (state.channels || []).forEach(ch => {
+    const isAnnouncement = ch.type === "announcement";
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "channel-item" + (ch.name === state.currentChannel ? " active" : "");
+    btn.className = "channel-item" + (isAnnouncement ? " announcement" : "") + (ch.name === state.currentChannel ? " active" : "");
     btn.dataset.channel = ch.name;
-    btn.textContent = "# " + ch.name + (ch.type === "announcement" ? " 🔒" : "");
+    btn.textContent = (isAnnouncement ? "📢 #" : "# ") + ch.name;
     const badge = document.createElement("span");
     badge.className = "channel-badge";
     badge.style.display = "none";
