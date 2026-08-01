@@ -5,6 +5,11 @@ import { renderTextToAsciiCanvas } from './ascii.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
 
 export async function handleCommand(text) {
+  // 应急回滚命令（公开管理功能）：透传给服务端处理，不拦截为前端命令
+  if (/^\/rollback\s+\S+\s+\S+/i.test(text)) {
+    if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
+    return;
+  }
   let parts = text.split(/\s+/);
   let cmd = parts[0].toLowerCase();
   let arg = parts.slice(1).join(" ");
