@@ -43,27 +43,11 @@ ADMIN_KEY = "7a7be27563c45956c313005973b4902a15b7a1008c207c05"
 AI_BASE_URL = "https://api.deepseek.com/v1"
 AI_MODEL = "deepseek-v4-flash"
 AI_SYSTEM_PROMPT = "你是一个友好的助手，请用中文回答。"
-# 注意：新 fork 部署时如果报 "Cannot apply delete-class migration to class 'RateLimiter'",
-# 说明 RateLimiter 在你的仓库中不存在，请把以下所有 migrations 替换为一行:
+# 应急回滚功能所需（CF_API_TOKEN 请用 `wrangler secret put CF_API_TOKEN` 配置，勿写入仓库）
+CF_ACCOUNT_ID = "9286982ec868fbad29cf3f4af093ae53"
+CF_SCRIPT_NAME = "cloudflare-workers-chat"
+# 注意：Durable Objects 类（ChatRoom/RoomRegistry/VersionArchive/FileBucket）已在 Cloudflare 侧注册，
+# migrations 已移除。若在全新账号部署新 fork 时报类不存在，请重新加回：
 #   [[migrations]]
 #   tag = "v1"
 #   new_sqlite_classes = ["ChatRoom", "RoomRegistry", "VersionArchive", "FileBucket"]
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["ChatRoom"]
-
-[[migrations]]
-tag = "v2"
-new_sqlite_classes = ["RoomRegistry"]
-
-[[migrations]]
-tag = "v3"
-deleted_classes = ["RateLimiter"]
-
-[[migrations]]
-tag = "v4"
-new_sqlite_classes = ["VersionArchive"]
-
-[[migrations]]
-tag = "v5"
-new_sqlite_classes = ["FileBucket"]
