@@ -122,6 +122,21 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.25</span>
+    <span class="version-date">2026-08-01</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🎤</span><span class="text"><span class="tag tag-feature">新增</span>语音消息 — 聊天框新增录音按钮，点击开始/停止录制（MediaRecorder + Opus），上限 60 秒/8MB，录音态红色脉冲动画；语音气泡内嵌音频播放器 + 时长显示；服务端校验 data:audio/* 类型与公告频道只读，存 FileBucket 分布式存储（7 天过期），历史语音降级为 [语音 Xs] 文本标记</span></div>
+    <div class="feature-item"><span class="icon">🐙</span><span class="text"><span class="tag tag-feature">新增</span>/gh 仓库卡片 — 聊天框输入 /gh &lt;owner&gt;/&lt;repo&gt; 或 /gh &lt;GitHub仓库URL&gt; 查询 GitHub 仓库并广播可点击跳转的仓库卡片（仓库名/描述/⭐星数/🍴fork/语言/头像）；仿 /rollback 服务端透传处理，支持 GITHUB_TOKEN（5000次/小时）规避 Workers 出口 IP 匿名限流，同一仓库 1 小时缓存；已加入 /help 命令列表</span></div>
+    <div class="feature-item"><span class="icon">📅</span><span class="text"><span class="tag tag-feature">新增</span>消息日期分组 — 聊天记录跨天自动插入「—— 2026/8/1 ——」日期分隔线；统一覆盖文本/图片/文件/语音/仓库卡片全部消息类型及历史加载，切换频道/加载历史后重新计数，长会话不再一锅粥</span></div>
+    <div class="feature-item"><span class="icon">😊</span><span class="text"><span class="tag tag-feature">说明</span>消息表情回应（已内置完整实现）— 消息操作菜单可对任意消息添加 👍❤️😂😮🎉🔥👀💯 表情回应，气泡下方实时显示计数 chip，点击可切换回应/取消；后端持久化存储 + 加入房间时回放已有回应</span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>语音消息上传报错 — media.mjs 中 msgChannel 声明在 if 块内（let 块级作用域），image/file/zifu/voice 各媒体分支访问不到导致"消息处理错误"；提升到函数顶层声明，四类媒体消息全部恢复正常</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.24</span>
     <span class="version-date">2026-08-01</span>
     <span class="version-arrow open">▶</span>

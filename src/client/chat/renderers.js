@@ -130,6 +130,23 @@ export function formatTime(ts) {
   return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
 }
 
+// —— 日期分组：跨天插入日期分隔线（统一适用于文本/图片/文件/历史加载）——
+let _lastMsgDate = null;
+export function resetMsgDate() { _lastMsgDate = null; }
+function maybeDateDivider(ts) {
+  if (!ts) return;
+  let d = new Date(ts);
+  let dateStr = d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();
+  if (_lastMsgDate && _lastMsgDate !== dateStr) {
+    let div = document.createElement("div");
+    div.className = "date-divider";
+    div.style.cssText = "text-align:center;font-size:11px;color:var(--text-secondary);padding:6px 0 4px;user-select:none;border-bottom:1px solid var(--border);margin:4px 0 6px;";
+    div.textContent = "—— " + dateStr + " ——";
+    state.chatlog.appendChild(div);
+  }
+  _lastMsgDate = dateStr;
+}
+
 export function escapeHtml(str) {
   let div = document.createElement("div");
   div.textContent = str;
@@ -264,6 +281,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     return;
   }
   let isSelf = name === state.username;
+  maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let wrapper = document.createElement("p");
   wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
   if (timestamp) wrapper.dataset.timestamp = timestamp;
@@ -401,6 +419,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
 
 export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar) {
   if (!name) return;
+  maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let isSelf = name === state.username;
   let wrapper = document.createElement("p");
   wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
@@ -495,8 +514,195 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
   state.chatlog.scrollBy(0, 1e8);
 }
 
+export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar) {
+  if (!name) return;
+  maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
+  let isSelf = name === state.username;
+  let wrapper = document.createElement("p");
+  wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
+  if (timestamp) wrapper.dataset.timestamp = timestamp;
+  wrapper.dataset.msgName = name || "";
+  if (msgId) wrapper.dataset.msgId = msgId;
+  let header = document.createElement("span");
+  header.className = "msg-header";
+  if (tag) {
+    let badge = createColoredTag(tag, tagColor, tagBorder, isSelf);
+    header.appendChild(badge);
+    let cleanTag = tag.replace(/\[\w+\]/g, "");
+    let vb = createVipBadge(getVipLevel(cleanTag));
+    if (vb) header.appendChild(vb);
+  }
+  if (avatar) {
+    let av = document.createElement("img");
+    av.className = "msg-avatar";
+    av.src = avatar;
+    av.alt = "";
+    av.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+    wrapper.appendChild(av);
+  }
+  if (!isSelf) {
+    let nameSpan = document.createElement("span");
+    nameSpan.className = "username";
+    nameSpan.textContent = name;
+    nameSpan.style.cursor = "pointer";
+    nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+    header.appendChild(nameSpan);
+    attachSignature(nameSpan, name); // 个人签名
+  }
+  wrapper.appendChild(header);
+  if (reply) {
+    let quote = document.createElement("div");
+    quote.className = "reply-quote";
+    quote.style.cursor = "pointer";
+    let replyLabel = document.createTextNode("回复 @" + (reply.name || "") + ": ");
+    quote.appendChild(replyLabel);
+    let replyContent = document.createElement("span");
+    replyContent.textContent = reply.text || "";
+    quote.appendChild(replyContent);
+    quote.title = t("点击跳转到原文");
+    quote.addEventListener("click", (e) => {
+      e.stopPropagation();
+      let msgEls = state.chatlog.querySelectorAll(".chat-msg");
+      for (let el of msgEls) {
+        let nameEl = el.querySelector(".username");
+        if (nameEl && nameEl.textContent === reply.name) {
+          let bubble = el.querySelector(".bubble");
+          if (bubble && bubble.textContent.includes(reply.text || "")) {
+            el.scrollIntoView({behavior: "smooth", block: "center"});
+            el.classList.add("msg-ref-highlight");
+            setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000);
+            return;
+          }
+        }
+      }
+      showError(t("未找到引用的原始消息（可能已被清除）"));
+    });
+    wrapper.appendChild(quote);
+  }
+  let bubble = document.createElement("span");
+  bubble.className = "bubble voice-bubble";
+  if (!data) {
+    bubble.innerHTML = '<span class="voice-msg"><span class="voice-icon">🎤</span><span class="voice-duration">' + (duration || "") + 's</span> <span style="color:#999;font-size:85%">[语音已过期]</span></span>';
+  } else {
+    let voiceWrap = document.createElement("span");
+    voiceWrap.className = "voice-msg";
+    let icon = document.createElement("span");
+    icon.className = "voice-icon";
+    icon.textContent = "🎤";
+    voiceWrap.appendChild(icon);
+    let audio = document.createElement("audio");
+    audio.controls = true;
+    audio.preload = "metadata";
+    audio.src = data;
+    audio.style.cssText = "height:32px;max-width:200px;vertical-align:middle;";
+    voiceWrap.appendChild(audio);
+    if (duration) {
+      let durSpan = document.createElement("span");
+      durSpan.className = "voice-duration";
+      durSpan.textContent = duration + "s";
+      voiceWrap.appendChild(durSpan);
+    }
+    bubble.appendChild(voiceWrap);
+  }
+  wrapper.appendChild(bubble);
+  buildActionMenu(wrapper, {
+    name, text: t("[语音]"), timestamp, msgId, tag, tagColor, tagBorder,
+    isSelf,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    hasWs: !!state.currentWebSocket,
+    roomname: state.roomname
+  });
+  if (timestamp) {
+    let timeSpan = document.createElement("span");
+    timeSpan.className = "msg-time";
+    timeSpan.textContent = formatTime(timestamp);
+    wrapper.appendChild(timeSpan);
+  }
+  trimChatlog();
+  state.chatlog.appendChild(wrapper);
+  state.chatlog.scrollBy(0, 1e8);
+}
+
+export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, msgId, avatar) {
+  if (!name) return;
+  maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
+  let isSelf = name === state.username;
+  let wrapper = document.createElement("p");
+  wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
+  if (timestamp) wrapper.dataset.timestamp = timestamp;
+  wrapper.dataset.msgName = name || "";
+  if (msgId) wrapper.dataset.msgId = msgId;
+  let header = document.createElement("span");
+  header.className = "msg-header";
+  if (tag) {
+    let badge = createColoredTag(tag, tagColor, tagBorder, isSelf);
+    header.appendChild(badge);
+    let cleanTag = tag.replace(/\[\w+\]/g, "");
+    let vb = createVipBadge(getVipLevel(cleanTag));
+    if (vb) header.appendChild(vb);
+  }
+  if (avatar) {
+    let av = document.createElement("img");
+    av.className = "msg-avatar";
+    av.src = avatar;
+    av.alt = "";
+    av.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+    wrapper.appendChild(av);
+  }
+  if (!isSelf) {
+    let nameSpan = document.createElement("span");
+    nameSpan.className = "username";
+    nameSpan.textContent = name;
+    nameSpan.style.cursor = "pointer";
+    nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+    header.appendChild(nameSpan);
+    attachSignature(nameSpan, name); // 个人签名
+  }
+  wrapper.appendChild(header);
+  let bubble = document.createElement("span");
+  bubble.className = "bubble gh-card";
+  bubble.style.cssText = "display:block;padding:0;overflow:hidden;cursor:pointer;max-width:360px;";
+  let inner = document.createElement("span");
+  inner.style.cssText = "display:block;";
+  let repo = data && data.repo || "";
+  inner.innerHTML =
+    '<span style="display:flex;align-items:center;gap:8px;padding:10px 12px;">' +
+      (data && data.avatar ? '<img src="' + data.avatar.replace(/"/g, '&quot;') + '" alt="" style="width:32px;height:32px;border-radius:6px;flex:0 0 32px;">' : '<span style="width:32px;height:32px;border-radius:6px;background:#24292e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 32px;">🐙</span>') +
+      '<span style="display:block;overflow:hidden;">' +
+        '<span style="display:block;font-weight:700;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(repo) + '</span>' +
+        (data && data.language ? '<span style="display:block;font-size:11px;color:var(--text-secondary);">' + escapeHtml(data.language) + '</span>' : '') +
+      '</span>' +
+      '<span style="margin-left:auto;flex:0 0 auto;font-size:12px;color:var(--text-secondary);white-space:nowrap;">⭐ ' + (data && data.stars || 0) + (data && data.forks ? ' · 🍴 ' + data.forks : '') + '</span>' +
+    '</span>' +
+    (data && data.description ? '<span style="display:block;padding:0 12px 10px;font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + escapeHtml(data.description) + '</span>' : '') +
+    '<span style="display:block;padding:6px 12px;font-size:11px;color:var(--primary);border-top:1px solid var(--border);">🔗 ' + escapeHtml(data && data.repoUrl || "") + '</span>';
+  bubble.appendChild(inner);
+  bubble.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (data && data.repoUrl) window.open(data.repoUrl, "_blank", "noopener");
+  });
+  wrapper.appendChild(bubble);
+  buildActionMenu(wrapper, {
+    name, text: "[" + repo + "] ", timestamp, msgId, tag, tagColor, tagBorder,
+    isSelf,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    hasWs: !!state.currentWebSocket,
+    roomname: state.roomname
+  });
+  if (timestamp) {
+    let timeSpan = document.createElement("span");
+    timeSpan.className = "msg-time";
+    timeSpan.textContent = formatTime(timestamp);
+    wrapper.appendChild(timeSpan);
+  }
+  trimChatlog();
+  state.chatlog.appendChild(wrapper);
+  state.chatlog.scrollBy(0, 1e8);
+}
+
 export function addChatFile(name, data, fileName, fileSize, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar) {
   if (!name) return;
+  maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let isSelf = name === state.username;
   let wrapper = document.createElement("p");
   wrapper.className = "chat-msg" + (isSelf ? " self" : " other");

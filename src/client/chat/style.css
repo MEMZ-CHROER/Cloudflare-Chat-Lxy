@@ -926,6 +926,7 @@ body::after {
 
 /* Input toolbar buttons */
 #emoji-btn,
+#voice-btn,
 #image-btn,
 #file-btn,
 #files-btn,
@@ -964,6 +965,22 @@ body::after {
   width: 36px;
   padding: 0;
   font-size: 16px;
+}
+
+#voice-btn {
+  right: 194px;
+  font-size: 18px;
+}
+
+#voice-btn.recording {
+  color: #fff;
+  background: #e74c3c;
+  animation: voice-pulse 1s infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
 }
 
 #image-btn {
@@ -2555,6 +2572,14 @@ body.dark .poll-option {
     height: 40px;
     line-height: 40px;
     font-size: 15px;
+  }
+
+  #voice-btn {
+    right: 130px;
+    bottom: 54px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 16px;
   }
 
   #image-btn {

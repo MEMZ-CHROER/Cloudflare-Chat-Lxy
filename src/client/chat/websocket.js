@@ -1,6 +1,6 @@
 // WebSocket 连接 + 消息调度
 import { state, t } from './state.js';
-import { addChatMessage, addChatImage, addChatFile, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag, attachSignature } from './renderers.js';
+import { addChatMessage, addChatImage, addChatFile, addChatVoice, addChatGhCard, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag, attachSignature, resetMsgDate } from './renderers.js';
 import { modifyOwnTag, playMsgSound, showTyping, flashTitle, checkAtMention, updateTitleUnread } from './ui.js';
 import { showUserMenu } from './menu.js';
 import { addToDMCache, updateDmBadge } from './dm.js';
@@ -68,6 +68,7 @@ export function join() {
       if (data.channel !== state.currentChannel) return;
       state.chatlog.innerHTML = '<div id="spacer"></div>';
       state.lastSeenTimestamp = 0;
+      resetMsgDate(); // 日期分组重新计数
       (data.messages || []).forEach(m => renderChannelMessage(m));
       state.chatlog.scrollBy(0, 1e8);
       state.channelUnread[data.channel] = 0;
@@ -246,6 +247,26 @@ export function join() {
         addChatFile(data.name, data.data, data.fileName, data.fileSize, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.reply, data.id, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
         checkAtMention(data.fileName || "", data.name);
+        if (data.name !== state.username) playMsgSound();
+        if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
+      }
+    } else if (data.type === "voice") {
+      if (state.blockedUsers.has(data.name)) return;
+      let voiceCh = data.channel || "general";
+      if (voiceCh !== state.currentChannel) { pushToChannelCache(voiceCh, data); bumpChannelUnread(voiceCh); return; }
+      if (data.timestamp > state.lastSeenTimestamp) {
+        addChatVoice(data.name, data.data, data.duration, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.reply, data.id, data.avatar);
+        state.lastSeenTimestamp = data.timestamp;
+        if (data.name !== state.username) playMsgSound();
+        if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
+      }
+    } else if (data.type === "gh-card") {
+      if (state.blockedUsers.has(data.name)) return;
+      let ghCh = data.channel || "general";
+      if (ghCh !== state.currentChannel) { pushToChannelCache(ghCh, data); bumpChannelUnread(ghCh); return; }
+      if (data.timestamp > state.lastSeenTimestamp) {
+        addChatGhCard(data.name, data, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.id, data.avatar);
+        state.lastSeenTimestamp = data.timestamp;
         if (data.name !== state.username) playMsgSound();
         if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
       }
@@ -482,17 +503,7 @@ export function join() {
           state.chatlog.appendChild(div);
         }
         checkKeywords(data.message, data.name);
-        if (data.timestamp) {
-          let d = new Date(data.timestamp);
-          let dateStr = d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();
-          if (state._lastMsgDate && state._lastMsgDate !== dateStr) {
-            let div = document.createElement("div");
-            div.style.cssText = "text-align:center;font-size:11px;color:var(--text-secondary);padding:6px 0 4px;user-select:none;border-bottom:1px solid var(--border);margin:4px 0 6px;";
-            div.textContent = "—— " + dateStr + " ——";
-            state.chatlog.appendChild(div);
-          }
-          state._lastMsgDate = dateStr;
-        }
+        // 日期分组由 renderers.addChatMessage 统一处理
         // 频道体系：非当前频道消息入缓存，不渲染
         let txtCh = data.channel || "general";
         if (txtCh !== state.currentChannel) { pushToChannelCache(txtCh, data); bumpChannelUnread(txtCh); return; }

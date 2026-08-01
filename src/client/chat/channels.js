@@ -1,6 +1,6 @@
 // 频道体系 — 频道栏 UI + 切换 + 非当前频道消息缓存
 import { state } from './state.js';
-import { addChatMessage } from './renderers.js';
+import { addChatMessage, resetMsgDate } from './renderers.js';
 
 const MAX_CACHE = 150;
 
@@ -63,6 +63,7 @@ export function switchChannel(name) {
   // 清空当前消息区，渲染缓存或等历史
   state.chatlog.innerHTML = '<div id="spacer"></div>';
   state.lastSeenTimestamp = 0;
+  resetMsgDate(); // 日期分组重新计数
   if (state.channelCache[name] && state.channelCache[name].length) {
     state.channelCache[name].forEach(m => renderChannelMessage(m));
     state.chatlog.scrollBy(0, 1e8);
@@ -77,13 +78,17 @@ export function switchChannel(name) {
   }
 }
 
-// 渲染一条频道消息（文本/图片/文件统一走 addChatMessage，图片文件降级为文本标记）
+// 渲染一条频道消息（文本/图片/文件/语音统一走 addChatMessage，媒体降级为文本标记）
 export function renderChannelMessage(msg) {
   if (!msg) return;
   if (msg.type === "image") {
     addChatMessage(msg.name, "[图片]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
   } else if (msg.type === "file") {
     addChatMessage(msg.name, "[文件] " + (msg.fileName || ""), msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+  } else if (msg.type === "voice") {
+    addChatMessage(msg.name, "[语音 " + (msg.duration || "") + "s]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+  } else if (msg.type === "gh-card") {
+    addChatMessage(msg.name, "[🐙 " + (msg.repo || "") + "]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
   } else {
     addChatMessage(msg.name, msg.message, msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
   }

@@ -257,7 +257,10 @@ export class ChatRoom {
                   tagBorder: msg.tagBorder || "",
                   color: msg.color,
                   fileName: msg.fileName,
-                  fileSize: msg.fileSize
+                  fileSize: msg.fileSize,
+                  duration: msg.duration,
+                  fid: msg.fid,
+                  repo: msg.repo
                 });
                 if (msgs.length >= limit) break;
               }
@@ -277,7 +280,7 @@ export class ChatRoom {
           for (let [key, val] of entries) {
             try {
               let msg = JSON.parse(val);
-              if (msg && (msg.type === undefined || msg.type === "text" || msg.type === "image" || msg.type === "file" || msg.type === "zifu") && (!channel || (msg.channel || "general") === channel)) {
+              if (msg && (msg.type === undefined || msg.type === "text" || msg.type === "image" || msg.type === "file" || msg.type === "zifu" || msg.type === "voice" || msg.type === "gh-card") && (!channel || (msg.channel || "general") === channel)) {
                 msgs.push(msg);
               }
             } catch (e) {}
@@ -1292,6 +1295,41 @@ export class ChatRoom {
         webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
         return;
       }
+      // 🐙 /gh 仓库卡片（旧版前端兼容）：部分旧前端会直接发 {type:"gh-card"}，此处校验后广播
+      if (data.type === "gh-card") {
+        let ghRepo = "" + (data.repo || "");
+        let ghUrl = "" + (data.repoUrl || "");
+        if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(ghRepo)) {
+          webSocket.send(JSON.stringify({error: "无效的仓库名称"}));
+          return;
+        }
+        if (!/^https:\/\/github\.com\//i.test(ghUrl)) {
+          webSocket.send(JSON.stringify({error: "无效的仓库地址"}));
+          return;
+        }
+        let ghDesc = ("" + (data.description || "")).slice(0, 300);
+        let ghStars = parseInt(data.stars) || 0;
+        let ghForks = parseInt(data.forks) || 0;
+        let ghLang = ("" + (data.language || "")).slice(0, 30);
+        let ghOwnerAvatar = ("" + (data.ownerAvatar || "")).slice(0, 300);
+        let ghCard = {
+          name: session.name, type: "gh-card", channel: msgChannel,
+          repo: ghRepo, repoUrl: ghUrl, description: ghDesc,
+          stars: ghStars, forks: ghForks, language: ghLang,
+          ownerAvatar: ghOwnerAvatar,
+          timestamp: Math.max(Date.now(), this.lastTimestamp + 1)
+        };
+        if (session.tag) ghCard.tag = session.tag;
+        if (session.tagColor) ghCard.tagColor = session.tagColor;
+        if (session.tagBorder) ghCard.tagBorder = session.tagBorder;
+        if (session.avatar) ghCard.avatar = session.avatar;
+        this.lastTimestamp = ghCard.timestamp;
+        ghCard.id = ++this.msgCounter;
+        this.messages.set(ghCard.id, ghCard);
+        this.broadcastToChannel(msgChannel, JSON.stringify(ghCard));
+        await this.storage.put(new Date(ghCard.timestamp).toISOString(), JSON.stringify(ghCard));
+        return;
+      }
       let msgColor = data.color;
       // 🔒 安全修复（W20）：消息颜色仅允许预设色名或 hex，防 style.color 注入骚扰
       if (msgColor) {
@@ -1408,6 +1446,80 @@ export class ChatRoom {
           } catch (e) {}
         } catch (e) {
           try { webSocket.send(JSON.stringify({error: "销毁房间失败: " + (e && e.message || String(e))})); } catch (_) {}
+        }
+        return;
+      }
+
+      // 🐙 /gh 仓库卡片命令（公开功能，仿 /rollback 服务端透传）：/gh <owner>/<repo> 或 /gh <仓库URL>
+      // 服务端查 GitHub API 获取仓库信息，广播一个可点击跳转的仓库卡片（带缓存缓解限流）
+      let ghMatch = data.message.match(/^\/gh\s+(\S+)/i);
+      if (ghMatch) {
+        let ghInput = ghMatch[1].trim();
+        // 支持 https://github.com/owner/repo、github.com/owner/repo、owner/repo
+        let ghUrlMatch = ghInput.match(/^(?:https?:\/\/)?(?:www\.)?github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/?(?:\?.*)?$/i);
+        let repoPath = ghInput;
+        if (ghUrlMatch) repoPath = ghUrlMatch[1] + "/" + ghUrlMatch[2];
+        if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/i.test(repoPath)) {
+          webSocket.send(JSON.stringify({error: "用法: /gh <owner>/<repo> 或 /gh <GitHub仓库URL>"}));
+          return;
+        }
+        webSocket.send(JSON.stringify({system: "正在查询 GitHub 仓库 " + repoPath + " ..."}));
+        try {
+          // 🐙 缓存查询结果（同一仓库 1 小时内不重复请求 GitHub API，缓解无 token 限流）
+          let ghCacheKey = "ghcache:" + repoPath.toLowerCase();
+          let cached = await this.storage.get(ghCacheKey);
+          let ghData = null;
+          if (cached) {
+            try { ghData = JSON.parse(cached); } catch (e) { ghData = null; }
+          }
+          if (!ghData) {
+            // 优先用 GITHUB_TOKEN（5000次/小时），无 token 时匿名查询（Workers 出口 IP 共享限流 60/h，可能被耗尽）
+            let ghHeaders = {"User-Agent": "CloudChat/1.0", "Accept": "application/vnd.github+json"};
+            if (this.env.GITHUB_TOKEN) ghHeaders["Authorization"] = "Bearer " + this.env.GITHUB_TOKEN;
+            let ghResp = await fetch("https://api.github.com/repos/" + repoPath, {headers: ghHeaders});
+            if (ghResp.status === 404) {
+              webSocket.send(JSON.stringify({error: "仓库不存在: " + repoPath}));
+              return;
+            }
+            if (ghResp.status === 403) {
+              webSocket.send(JSON.stringify({error: "GitHub API 限流，请稍后再试"}));
+              return;
+            }
+            let gh = await ghResp.json();
+            if (!gh || !gh.full_name) {
+              webSocket.send(JSON.stringify({error: "无法获取仓库信息"}));
+              return;
+            }
+            ghData = {
+              repo: gh.full_name,
+              repoUrl: gh.html_url || ("https://github.com/" + repoPath),
+              description: (gh.description || "").slice(0, 300),
+              stars: gh.stargazers_count || 0,
+              forks: gh.forks_count || 0,
+              language: gh.language || "",
+              ownerAvatar: (gh.owner && gh.owner.avatar_url) || ""
+            };
+            // 缓存 1 小时（DO storage put 的 expirationTtl 单位为秒）
+            try { await this.storage.put(ghCacheKey, JSON.stringify(ghData), {expirationTtl: 3600}); } catch (e) {}
+          }
+          let ghCard = {
+            name: session.name, type: "gh-card", channel: session.channel || "general",
+            repo: ghData.repo, repoUrl: ghData.repoUrl, description: ghData.description,
+            stars: ghData.stars, forks: ghData.forks, language: ghData.language,
+            ownerAvatar: ghData.ownerAvatar,
+            timestamp: Math.max(Date.now(), this.lastTimestamp + 1)
+          };
+          if (session.tag) ghCard.tag = session.tag;
+          if (session.tagColor) ghCard.tagColor = session.tagColor;
+          if (session.tagBorder) ghCard.tagBorder = session.tagBorder;
+          if (session.avatar) ghCard.avatar = session.avatar;
+          this.lastTimestamp = ghCard.timestamp;
+          ghCard.id = ++this.msgCounter;
+          this.messages.set(ghCard.id, ghCard);
+          this.broadcastToChannel(session.channel || "general", JSON.stringify(ghCard));
+          await this.storage.put(new Date(ghCard.timestamp).toISOString(), JSON.stringify(ghCard));
+        } catch (e) {
+          webSocket.send(JSON.stringify({error: "查询 GitHub 失败: " + (e && e.message || String(e))}));
         }
         return;
       }

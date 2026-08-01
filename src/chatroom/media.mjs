@@ -1,9 +1,10 @@
 // 图片/文件消息处理 — 从 chatroom.mjs 提取
 export async function handleMedia(room, session, data, webSocket) {
-  // 频道体系：公告频道只读，仅管理员可发图片/文件/字符画（仅对媒体类型校验，避免拦截 switch-channel/typing 等）
-  if (data.type === "image" || data.type === "file" || data.type === "zifu") {
+  // 频道体系：公告频道只读，仅管理员可发图片/文件/字符画/语音（仅对媒体类型校验，避免拦截 switch-channel/typing 等）
+  // 注意：msgChannel 必须声明在函数顶层（let 块级作用域，各媒体分支需共享访问）
+  let msgChannel = session.channel || "general";
+  if (data.type === "image" || data.type === "file" || data.type === "zifu" || data.type === "voice") {
     if (room._loadChannels) await room._loadChannels;
-    let msgChannel = session.channel || "general";
     let curChan = room.channels ? room.channels.find(c => c.name === msgChannel) : null;
     if (curChan && curChan.type === "announcement" && !room.isAdminSession(session)) {
       webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
@@ -134,6 +135,70 @@ export async function handleMedia(room, session, data, webSocket) {
     storageData.fileBucket = true;
     storageData.fid = fid;
     await room.storage.put(new Date(broadcastData.timestamp).toISOString(), JSON.stringify(storageData));
+    return true;
+  }
+
+  if (data.type === "voice") {
+    // 语音消息：限制类型 audio/*，走 FileBucket 存储，不走主 DO 存储（体积较大）
+    if (!room.lastUpload) room.lastUpload = new Map();
+    let lastUpV = room.lastUpload.get(session.name) || 0;
+    if (Date.now() - lastUpV < 10000) {
+      webSocket.send(JSON.stringify({error: "上传太频繁，请稍后再试"}));
+      return true;
+    }
+    room.lastUpload.set(session.name, Date.now());
+    let voiceData = "" + data.data;
+    let duration = parseInt(data.duration) || 0;
+    // 🔒 安全修复：语音必须是 data:audio/* 数据，拒绝外链/可注入类型
+    if (!/^data:audio\//i.test(voiceData)) {
+      webSocket.send(JSON.stringify({error: "语音内容类型不合法"}));
+      return true;
+    }
+    if (/^data:audio\/svg\+xml/i.test(voiceData)) {
+      webSocket.send(JSON.stringify({error: "语音内容类型不合法"}));
+      return true;
+    }
+    // 上限 8MB / 60 秒
+    let voiceMax = 8 * 1024 * 1024;
+    if (voiceData.length > voiceMax) {
+      webSocket.send(JSON.stringify({error: "语音过大（上限 8MB，请分段发送）"}));
+      return true;
+    }
+    if (duration > 60 || duration < 1) {
+      webSocket.send(JSON.stringify({error: "语音时长需在 1-60 秒之间"}));
+      return true;
+    }
+    let voiceReply = data.reply;
+    let broadcastVoice = {
+      name: session.name, type: "voice", data: voiceData, channel: msgChannel, duration,
+      timestamp: Math.max(Date.now(), room.lastTimestamp + 1)
+    };
+    if (session.tag) broadcastVoice.tag = session.tag;
+    if (session.tagColor) broadcastVoice.tagColor = session.tagColor;
+    if (session.tagBorder) broadcastVoice.tagBorder = session.tagBorder;
+    if (session.avatar) broadcastVoice.avatar = session.avatar;
+    if (voiceReply) broadcastVoice.reply = voiceReply;
+    room.lastTimestamp = broadcastVoice.timestamp;
+    broadcastVoice.id = ++room.msgCounter;
+    room.messages.set(broadcastVoice.id, broadcastVoice);
+    room.broadcastToChannel(msgChannel, JSON.stringify(broadcastVoice));
+    // 存 FileBucket + 元信息（大 base64 不占主 DO）
+    let fid = "voice_" + broadcastVoice.timestamp + "_" + session.name;
+    try {
+      if (room.env.filebucket) {
+        let bucketId = room.env.filebucket.idFromName("primary");
+        let bucket = room.env.filebucket.get(bucketId);
+        let binary = Uint8Array.from(atob(voiceData.split(",")[1] || voiceData), c => c.charCodeAt(0));
+        await bucket.fetch("https://dummy-url/upload?fid=" + encodeURIComponent(fid), {
+          method: "POST", body: binary
+        });
+      }
+    } catch (e) { /* bucket 存储失败不影响消息发送 */ }
+    let storageVoice = { ...broadcastVoice };
+    delete storageVoice.data;
+    storageVoice.fileBucket = true;
+    storageVoice.fid = fid;
+    await room.storage.put(new Date(broadcastVoice.timestamp).toISOString(), JSON.stringify(storageVoice));
     return true;
   }
 

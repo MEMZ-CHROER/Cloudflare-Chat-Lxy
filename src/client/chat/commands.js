@@ -16,13 +16,18 @@ export async function handleCommand(text) {
     if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
     return;
   }
+  // 🐙 GitHub 仓库卡片命令（公开功能）：透传给服务端处理，不拦截为前端命令
+  if (/^\/gh\s+\S+/i.test(text)) {
+    if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
+    return;
+  }
   let parts = text.split(/\s+/);
   let cmd = parts[0].toLowerCase();
   let arg = parts.slice(1).join(" ");
 
   switch (cmd) {
     case "/help":
-      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
+      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
       break;
 
     case "/kick": {
