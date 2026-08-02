@@ -2,6 +2,7 @@ import HTML from "./chat.html";
 import ADMIN from "./admin.html";
 import TASKS from "./tasks.html";
 import CHANGELOG from "./changelog.html";
+import FAVICON_B64 from "./favicon-data.mjs";
 import HELP from "./help.html";
 import ABOUT from "./about.html";
 import LEADERBOARD from "./leaderboard.html";
@@ -269,7 +270,9 @@ export default {
       }
 
       if (path[0] === "favicon.ico") {
-        return new Response(null, {status: 204});
+        // 聊天室图标（32x32 ICO，base64 由 favicon-data.mjs 内嵌）：替代原 204 空响应
+        let bytes = Uint8Array.from(atob(FAVICON_B64), c => c.charCodeAt(0));
+        return new Response(bytes, {headers: {"Content-Type": "image/x-icon", "Cache-Control": "no-cache, must-revalidate"}});
       }
 
       if (path[0] === "sw.js") {
