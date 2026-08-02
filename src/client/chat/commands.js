@@ -27,7 +27,7 @@ export async function handleCommand(text) {
 
   switch (cmd) {
     case "/help":
-      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
+      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
       break;
 
     case "/kick": {
@@ -45,8 +45,8 @@ export async function handleCommand(text) {
     case "/bkick": {
       let names = (arg || "").split(/[,，\s]+/).filter(Boolean);
       if (names.length < 1) { showError(t("用法: /batch-kick <用户名1>,<用户名2>,...")); break; }
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       let adminKeyK = "";
-      if (!adminKeyK) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       if (!confirm("确定要踢出 " + names.length + t(" 个用户: ") + names.join(", ") + " ?")) break;
       let results = [];
       for (let n of names) {
@@ -144,6 +144,27 @@ export async function handleCommand(text) {
       break;
     }
 
+    case "/ledger":
+    case "/流水": {
+      if (!state.username) { showError(t("请先登录后查看积分流水")); break; }
+      try {
+        let r = await fetch("/api/points/ledger?name=" + encodeURIComponent(state.username));
+        let data = await r.json();
+        if (!Array.isArray(data)) { addChatMessage(null, "* " + ((data && data.error) || t("获取流水失败"))); break; }
+        if (data.length === 0) { addChatMessage(null, "* " + t("暂无积分流水记录")); break; }
+        addChatMessage(null, "* 💰 " + state.username + t(" 的积分流水（最近 ") + data.length + t(" 条）:"));
+        data.slice().reverse().forEach(item => {
+          let d = item.ts ? new Date(item.ts).toLocaleString() : "";
+          let num = Number(item.delta) || 0;
+          let sign = num >= 0 ? "+" : "";
+          let typeMap = {checkin: "签到", transfer: "转账", game: "游戏", shop: "商城", task: "任务", redeem: "兑换码", lottery: "抽奖", redpacket: "红包", admin: "管理"};
+          let desc = item.desc || (typeMap[item.type] || item.type || "");
+          addChatMessage(null, "*   [" + d + "] " + sign + num.toLocaleString() + "  " + desc);
+        });
+      } catch (e) { addChatMessage(null, "* " + t("获取流水失败: ") + e.message); }
+      break;
+    }
+
     case "/pay": {
       let target = parts[1];
       let amount = parseInt(parts[2], 10);
@@ -203,7 +224,7 @@ export async function handleCommand(text) {
       try {
         let r = await fetch("/api/admin/clear-room/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKey));
         addChatMessage(null, "* " + await r.text() + t(" 即将刷新聊天室..."));
-        setTimeout(() => document.location.reload(), 200);
+        // 服务端 clearAllMessages 会广播 room-cleared，websocket.js 收到后自动刷新，此处不再重复 reload 防双刷
       } catch (e) { addChatMessage(null, t("* 操作失败: ") + e.message); }
       break;
     }
@@ -219,7 +240,8 @@ export async function handleCommand(text) {
       let checkinName = state.username || localStorage.getItem("chat_user") || "";
       if (!checkinName) { showError(t("请先设置用户名")); break; }
       try {
-        let r = await fetch("/api/checkin", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: checkinName})});
+        let token = localStorage.getItem("chat_token") || "";
+        let r = await fetch("/api/checkin", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: checkinName, token})});
         let data = await r.json();
         if (data.ok) {
           addChatMessage(null, "* ✅ " + checkinName + t(" 签到成功！获得 ") + Number(data.reward).toLocaleString() + t(" 积分，当前共 ") + Number(data.total).toLocaleString() + t(" 积分"));

@@ -120,7 +120,8 @@ export async function handleRooms(path, request, env) {
         "file-data",        // 文件内容（只读）
         "get-announcement", // 公告（只读）
         "get-pinned",       // 置顶消息（只读）
-        "export"            // 导出聊天记录（前端公开按钮）
+        "export",           // 导出聊天记录（前端公开按钮）
+        "search"            // 历史搜索（只读，密码房需密码）
       ];
       let roomSubPath = path[2];
       if (!PUBLIC_ROOM_ENDPOINTS.includes(roomSubPath)) {

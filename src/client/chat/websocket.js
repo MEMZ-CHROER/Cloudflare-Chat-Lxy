@@ -1,6 +1,6 @@
 // WebSocket 连接 + 消息调度
 import { state, t } from './state.js';
-import { addChatMessage, addChatImage, addChatFile, addChatVoice, addChatGhCard, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag, attachSignature, resetMsgDate } from './renderers.js';
+import { addChatMessage, addChatImage, addChatFile, addChatVoice, addChatGhCard, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag, attachSignature, resetMsgDate, refreshReplyCounts } from './renderers.js';
 import { modifyOwnTag, playMsgSound, showTyping, flashTitle, checkAtMention, updateTitleUnread } from './ui.js';
 import { showUserMenu } from './menu.js';
 import { addToDMCache, updateDmBadge } from './dm.js';
@@ -70,6 +70,7 @@ export function join() {
       state.lastSeenTimestamp = 0;
       resetMsgDate(); // 日期分组重新计数
       (data.messages || []).forEach(m => renderChannelMessage(m));
+      refreshReplyCounts();
       state.chatlog.scrollBy(0, 1e8);
       state.channelUnread[data.channel] = 0;
       updateChannelBadges();
@@ -93,6 +94,34 @@ export function join() {
         if (state.unreadCount < 10) state.unreadCount += 3;
         updateTitleUnread();
         playMsgSound();
+      }
+      return;
+    }
+
+    // 📌 在线@红点：被 @ 即时提醒（roster 红点 + 标题闪烁）
+    if (data.type === "at-mention") {
+      if (!state.atMentions) state.atMentions = {};
+      state.atMentions[data.from] = (state.atMentions[data.from] || 0) + 1;
+      markRosterAtBadge(data.from);
+      if (data.from !== state.username) flashTitle("@" + data.from + t(" 提到了你"));
+      return;
+    }
+
+    // 📌 在线@红点：上线时补显离线期间的 @ 提醒
+    if (data.type === "at-unread") {
+      if (!state.atMentions) state.atMentions = {};
+      let atList = data.mentions || [];
+      atList.forEach(m => {
+        let f = m.from || "?";
+        state.atMentions[f] = (state.atMentions[f] || 0) + 1;
+        markRosterAtBadge(f);
+      });
+      if (atList.length > 0) {
+        playMsgSound();
+        flashTitle("📌 离线时有 " + atList.length + t(" 条 @ 提醒"));
+        let banner = document.getElementById("announcement-banner");
+        let textEl = document.getElementById("announcement-text");
+        if (banner && textEl) { textEl.textContent = "📌 你离线时有 " + atList.length + t(" 条 @ 提醒"); banner.style.display = "flex"; }
       }
       return;
     }
@@ -153,7 +182,8 @@ export function join() {
     } else if (data.type === "schedule-cancel-confirm") {
       addChatMessage(null, t("* 定时消息已取消"));
     } else if (data.type === "poll") {
-      renderPoll(data);
+      let pollCh = data.channel || "general";
+      if (pollCh === state.currentChannel) renderPoll(data);
     } else if (data.type === "poll-update") {
       let pollEl = state.chatlog.querySelector('[data-poll-id="' + data.pollId + '"]');
       if (pollEl) {
@@ -236,6 +266,7 @@ export function join() {
       if (data.timestamp > state.lastSeenTimestamp) {
         addChatImage(data.name, data.data, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.reply, data.id, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
+        refreshReplyCounts();
         if (data.name !== state.username) playMsgSound();
         if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
       }
@@ -246,6 +277,7 @@ export function join() {
       if (data.timestamp > state.lastSeenTimestamp) {
         addChatFile(data.name, data.data, data.fileName, data.fileSize, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.reply, data.id, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
+        refreshReplyCounts();
         checkAtMention(data.fileName || "", data.name);
         if (data.name !== state.username) playMsgSound();
         if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
@@ -257,6 +289,7 @@ export function join() {
       if (data.timestamp > state.lastSeenTimestamp) {
         addChatVoice(data.name, data.data, data.duration, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.reply, data.id, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
+        refreshReplyCounts();
         if (data.name !== state.username) playMsgSound();
         if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
       }
@@ -267,6 +300,7 @@ export function join() {
       if (data.timestamp > state.lastSeenTimestamp) {
         addChatGhCard(data.name, data, data.tag, data.tagColor, data.timestamp, data.tagBorder, data.id, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
+        refreshReplyCounts();
         if (data.name !== state.username) playMsgSound();
         if (data.name && data.name !== state.username && document.hidden) { state.unreadCount++; updateTitleUnread(); }
       }
@@ -289,6 +323,21 @@ export function join() {
         } else if (data.channel) {
           // 跨频道缓存也标记撤回
           updateCachedMessage(data.channel, data.timestamp, m => { m.recalled = true; m.message = "消息已撤回"; });
+        }
+      }
+    } else if (data.type === "deleted") {
+      if (data.timestamp) {
+        let delEl = state.chatlog.querySelector('[data-timestamp="' + data.timestamp + '"]');
+        if (delEl) {
+          let bubble = delEl.querySelector(".bubble");
+          if (bubble) bubble.textContent = t("消息已删除");
+          delEl.querySelectorAll(".msg-actions, .reply-count-badge, .read-indicator").forEach(b => b.remove());
+          delEl.classList.add("recalled");
+          delEl.dataset.deleted = "1";
+          refreshReplyCounts();
+        } else if (data.channel) {
+          // 跨频道缓存也标记删除
+          updateCachedMessage(data.channel, data.timestamp, m => { m.deleted = true; m.message = "消息已删除"; });
         }
       }
     } else if (data.type === "edit") {
@@ -509,6 +558,7 @@ export function join() {
         if (txtCh !== state.currentChannel) { pushToChannelCache(txtCh, data); bumpChannelUnread(txtCh); return; }
         addChatMessage(data.name, data.message, data.tag, data.tagColor, data.color, data.timestamp, data.reply, data.tagBorder, data.id, data.atAll, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
+        refreshReplyCounts();
         if (data.atAll && data.name !== state.username) {
           let banner = document.getElementById("announcement-banner");
           let textEl = document.getElementById("announcement-text");
@@ -532,6 +582,28 @@ export function join() {
     if (event.reason === "kicked") { addChatMessage(null, t("* 你已被踢出房间，即将刷新页面...")); setTimeout(() => document.location.reload(), 200); return; }
     if (event.reason === "destroyed") { addChatMessage(null, t("* 房间已销毁，正在离开...")); setTimeout(() => document.location.href = "/", 500); return; }
     rejoin();
+  });
+}
+
+// 📌 在线@红点：给 roster 中指定用户名的元素加 🔔 徽章
+function markRosterAtBadge(name) {
+  if (!state.roster) return;
+  state.roster.querySelectorAll("[data-name]").forEach(el => {
+    if ((el.dataset.name || el.innerText) === name) {
+      if (!el.querySelector(".at-badge")) {
+        let b = document.createElement("span");
+        b.className = "at-badge";
+        b.textContent = "🔔";
+        b.title = t("有人 @ 了你");
+        b.style.cssText = "margin-left:4px;font-size:11px;cursor:pointer;";
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (state.atMentions && state.atMentions[name]) delete state.atMentions[name];
+          b.remove();
+        });
+        el.appendChild(b);
+      }
+    }
   });
 }
 

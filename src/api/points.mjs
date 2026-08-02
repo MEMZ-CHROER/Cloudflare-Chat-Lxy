@@ -36,23 +36,9 @@ export async function handlePoints(path, request, env) {
     }
   }
   if (action === "all") {
-    // 🔒 安全修复（A7）：复用与 /api/admin/* 一致的认证（env 密钥 + registry 轮换密钥），空 key 一律拒绝，杜绝平行口子
-    let key = url.searchParams.get("key") || "";
-    let permission = null;
-    if (key && key === (env.ADMIN_SECRET_KEY || "")) permission = "super";
-    if (!permission && key && key === (env.ADMIN_KEY || "")) permission = "admin";
-    if (!permission && key) {
-      try {
-        let rid = env.registry.idFromName("global");
-        let rStub = env.registry.get(rid);
-        let aResp = await rStub.fetch("https://dummy-url/combined-auth?key=" + encodeURIComponent(key));
-        let aData = await aResp.json();
-        if (aData.level) permission = aData.level;
-      } catch (_) {}
-    }
-    if (!permission) {
-      return new Response(JSON.stringify({error: "需要管理密钥"}), { status: 403, headers: {"Content-Type": "application/json"}});
-    }
+    // 积分排行榜（公开只读）：供房间列表积分徽章 / 商城 / 任务 / leaderboard / stats 展示。
+    // 说明：v1.21 曾收紧为需管理密钥，导致前端所有积分展示回归（updatePointsDisplay/shop/tasks/leaderboard/stats 全 403）。
+    // 积分是游戏经济数据、排行榜页面本就公开，故恢复公开只读；所有积分写操作仍走 registry 密钥校验（见 transfer 分支）。
     try {
       let registryId = env.registry.idFromName("global");
       let stub = env.registry.get(registryId);
@@ -60,6 +46,20 @@ export async function handlePoints(path, request, env) {
       return new Response(await r.text(), { status: 200, headers: {"Content-Type": "application/json"} });
     } catch (error) {
       return new Response("获取积分失败: " + error.message, { status: 500 });
+    }
+  }
+  if (action === "ledger") {
+    // 💰 积分流水账本（公开只读）：透传 registry 查询该用户流水
+    let name = url.searchParams.get("name");
+    let limit = url.searchParams.get("limit") || 50;
+    if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400, headers: {"Content-Type": "application/json"}});
+    try {
+      let registryId = env.registry.idFromName("global");
+      let stub = env.registry.get(registryId);
+      let r = await stub.fetch(new URL("https://dummy-url/points/ledger?name=" + encodeURIComponent(name) + "&limit=" + limit));
+      return new Response(await r.text(), {status: 200, headers: {"Content-Type": "application/json"}});
+    } catch (error) {
+      return new Response(JSON.stringify({error: "获取流水失败: " + error.message}), {status: 500, headers: {"Content-Type": "application/json"}});
     }
   }
   return new Response("未找到该操作", { status: 404 });

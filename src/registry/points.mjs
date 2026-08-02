@@ -60,8 +60,10 @@ export async function handlePoints(reg, request, url) {
       if (!raw) return new Response("请提供有效积分", { status: 400 });
       let amount = toBigInt(raw);
       if (amount < 0n) amount = 0n;
+      let oldBal = toBigInt(reg.userPoints.get(name));
       reg.userPoints.set(name, String(amount));
       await reg.savePoints();
+      await reg.addLedger(name, amount - oldBal, "admin", "管理员设置积分");
       return new Response("已设置 " + name + " 的积分为 " + amount, { status: 200 });
     }
 
@@ -81,6 +83,7 @@ export async function handlePoints(reg, request, url) {
       }
       reg.userPoints.set(name, String(result));
       await reg.savePoints();
+      await reg.addLedger(name, amount, "admin", amount >= 0n ? "管理员加分" : "管理员扣分");
       return new Response("已为 " + name + " " + (amount >= 0n ? "增加" : "扣除") + " " + (amount >= 0n ? String(amount) : String(-amount)) + " 积分，当前 " + result, { status: 200 });
     }
 
@@ -99,6 +102,8 @@ export async function handlePoints(reg, request, url) {
       let receiverBal = toBigInt(reg.userPoints.get(receiver));
       reg.userPoints.set(receiver, String(receiverBal + amount));
       await reg.savePoints();
+      await reg.addLedger(sender, -amount, "transfer", "转账给 " + receiver);
+      await reg.addLedger(receiver, amount, "transfer", "收到 " + sender + " 转账");
       return new Response(sender + " 向 " + receiver + " 转账 " + amount + " 积分成功，剩余 " + (senderBal - amount), { status: 200 });
     }
 
@@ -110,6 +115,15 @@ export async function handlePoints(reg, request, url) {
       return new Response(JSON.stringify(result), {
         headers: {"Content-Type": "application/json"}
       });
+    }
+
+    case "/points/ledger": {
+      // 💰 积分流水账本（公开只读）：返回该用户最近 N 条收支明细
+      let name = url.searchParams.get("name");
+      let limit = parseInt(url.searchParams.get("limit")) || 50;
+      if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      let arr = await reg.getLedger(name, limit);
+      return new Response(JSON.stringify(arr), {headers: {"Content-Type": "application/json"}});
     }
 
     case "/points/batch": {
@@ -160,6 +174,7 @@ export async function handlePoints(reg, request, url) {
       let result = current + reward;
       reg.userPoints.set(name, String(result));
       await Promise.all([reg.saveRegisteredUsers(), reg.savePoints()]);
+      await reg.addLedger(name, reward, "checkin", "每日签到");
       return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(result), message: "签到成功！获得 " + reward + " 积分"}), {
         headers: {"Content-Type": "application/json"}
       });
@@ -211,6 +226,8 @@ export async function handlePoints(reg, request, url) {
       reg.gameLastWin.set(name, now);
       reg.gameBets.set(name, {wager, ts: now, prize: awarded});
       await reg.savePoints();
+      await reg.addLedger(name, -wager, "game", "游戏下注");
+      if (awarded > 0) await reg.addLedger(name, awarded, "game", "游戏获胜");
       return new Response(JSON.stringify({
         ok: true,
         deducted: wager,

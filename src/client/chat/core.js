@@ -73,7 +73,7 @@ export function startChat() {
       state.chatInput.value = "";
       if (text.startsWith("/")) { handleCommand(text); return; }
       let msg = {message: text, color: state.selectedColor, channel: state.currentChannel};
-      if (state.replyTarget) { msg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
+      if (state.replyTarget) { msg.reply = {name: state.replyTarget, text: state.replyText || "", id: state.replyId || ""}; cancelReply(); }
       if (/@(all|everyone|全体)/i.test(text)) msg.atAll = true;
       state.currentWebSocket.send(JSON.stringify(msg));
       localStorage.removeItem("chat_draft");
@@ -161,9 +161,25 @@ export function startChat() {
     let base64 = canvas.toDataURL("image/jpeg", 0.7);
     img.close();
     let imgMsg = {type: "image", data: base64, channel: state.currentChannel};
-    if (state.replyTarget) { imgMsg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
+    if (state.replyTarget) { imgMsg.reply = {name: state.replyTarget, text: state.replyText || "", id: state.replyId || ""}; cancelReply(); }
     state.currentWebSocket.send(JSON.stringify(imgMsg));
     hideUploadProgress();
+  }
+
+  // 🤖 AI 快捷按钮：一键在输入框插入 /ai 命令并聚焦
+  let aiBtn = document.querySelector("#ai-btn");
+  if (aiBtn) {
+    aiBtn.addEventListener("click", () => {
+      if (!state.chatInput) return;
+      state.chatInput.focus();
+      let cur = state.chatInput.value || "";
+      if (cur.trim().startsWith("/ai")) {
+        state.chatInput.setSelectionRange(state.chatInput.value.length, state.chatInput.value.length);
+      } else {
+        state.chatInput.value = "/ai ";
+        state.chatInput.setSelectionRange(4, 4);
+      }
+    });
   }
 
   let imagePicker = document.querySelector("#image-picker");
@@ -205,7 +221,7 @@ export function startChat() {
       reader.onload = () => {
         if (state.currentWebSocket) {
           let voiceMsg = {type: "voice", data: reader.result, duration, channel: state.currentChannel};
-          if (state.replyTarget) { voiceMsg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
+          if (state.replyTarget) { voiceMsg.reply = {name: state.replyTarget, text: state.replyText || "", id: state.replyId || ""}; cancelReply(); }
           state.currentWebSocket.send(JSON.stringify(voiceMsg));
         }
       };
@@ -326,7 +342,7 @@ export function startChat() {
     reader.onload = () => {
       showUploadProgress(100, t("正在上传..."));
       let fileMsg = {type: "file", data: reader.result, fileName: file.name, fileType: file.type || "application/octet-stream", fileSize: file.size, channel: state.currentChannel};
-      if (state.replyTarget) { fileMsg.reply = {name: state.replyTarget, text: state.replyText || ""}; cancelReply(); }
+      if (state.replyTarget) { fileMsg.reply = {name: state.replyTarget, text: state.replyText || "", id: state.replyId || ""}; cancelReply(); }
       state.currentWebSocket.send(JSON.stringify(fileMsg));
       hideUploadProgress();
       filePicker.value = "";
@@ -516,13 +532,13 @@ export function startChat() {
             import('./favorites.js').then(m => m.toggleFavoritesPanel());
             break;
           case "highlights":
-            import('./highlights.js').then(m => m.showHighlights());
+            import('./highlights.js').then(m => m.showHighlightsPanel());
             break;
           case "room-info":
-            import('./roominfo.js').then(m => m.showRoomInfo(state.roomname));
+            import('./roominfo.js').then(m => m.toggleRoomInfo());
             break;
           case "scheduler":
-            document.querySelector("#sched-btn").click();
+            document.querySelector("#schedule-btn").click();
             break;
           case "changelog":
             window.open("/changelog", "_blank");

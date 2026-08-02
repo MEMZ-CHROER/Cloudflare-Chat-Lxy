@@ -3,13 +3,11 @@ import { state, t } from './state.js';
 import { escapeHtml } from './renderers.js';
 import { startNameChooser } from './auth.js';
 import { startRoomList } from './rooms.js';
-import { cancelReply, hideLightbox, galleryPrev, galleryNext, exportChatLog } from './ui.js';
+import { cancelReply, hideLightbox, galleryPrev, galleryNext, exportChatLog, updateTitleUnread } from './ui.js';
 import { hideUserMenu, handleMenuAction, showUserMenu, hideProfile } from './menu.js';
 import { sendDM, closeDM } from './dm.js';
 import { toggleSearch, doSearch, searchPrev, searchNext } from './search.js';
-import { showHighlightsPanel } from './highlights.js';
 import { toggleFavoritesPanel } from './favorites.js';
-import { toggleRoomInfo } from './roominfo.js';
 import { openSettings, closeSettings, initSettings, isSafeMediaUrl } from './settings.js';
 import { openMusic, closeMusic, initMusic } from './music.js';
 import { showSuccess, showInfo, showError } from './state.js';
@@ -90,6 +88,9 @@ document.getElementById("fav-close")?.addEventListener("click", toggleFavoritesP
 // 房间信息 - moved to more-menu
 // 精华消息 - moved to more-menu
 // 定时消息管理 - moved to more-menu
+
+// 跨频道未读数也更新浏览器标题（channels.bumpChannelUnread 依赖）
+window.updateTitleUnread = updateTitleUnread;
 
 window._showScheduledList = function(list) {
   if (!list || list.length === 0) { showInfo(t("当前没有定时消息")); return; }

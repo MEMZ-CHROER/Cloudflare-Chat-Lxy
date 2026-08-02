@@ -1,6 +1,6 @@
 // 频道体系 — 频道栏 UI + 切换 + 非当前频道消息缓存
 import { state } from './state.js';
-import { addChatMessage, resetMsgDate } from './renderers.js';
+import { addChatMessage, resetMsgDate, refreshReplyCounts } from './renderers.js';
 
 const MAX_CACHE = 150;
 
@@ -66,6 +66,7 @@ export function switchChannel(name) {
   resetMsgDate(); // 日期分组重新计数
   if (state.channelCache[name] && state.channelCache[name].length) {
     state.channelCache[name].forEach(m => renderChannelMessage(m));
+    refreshReplyCounts();
     state.chatlog.scrollBy(0, 1e8);
   } else {
     const ld = document.createElement("p");
@@ -89,6 +90,8 @@ export function renderChannelMessage(msg) {
     addChatMessage(msg.name, "[语音 " + (msg.duration || "") + "s]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
   } else if (msg.type === "gh-card") {
     addChatMessage(msg.name, "[🐙 " + (msg.repo || "") + "]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+  } else if (msg.type === "deleted") {
+    addChatMessage(msg.name, "[消息已删除]", msg.tag, msg.tagColor, msg.color, msg.timestamp, null, msg.tagBorder, msg.id);
   } else {
     addChatMessage(msg.name, msg.message, msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
   }

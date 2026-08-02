@@ -58,8 +58,8 @@ export function handleMenuAction(action) {
     }
     case "kick": {
       if (target === state.username) { showError(t("不能踢出自己")); return; }
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
       let k = "";
-      if (!k) { showError(t("请先登录管理后台才能踢出用户")); return; }
       if (!confirm(t("确定要踢出「") + target + t("」吗？"))) return;
       fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target) + "&caller=" + encodeURIComponent(state.username))
         .then(r => r.text()).then(t => addChatMessage(null, "* " + t));
@@ -87,8 +87,8 @@ export function handleMenuAction(action) {
       break;
     }
     case "ban": {
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
       let k = "";
-      if (!k) { showError(t("请先登录管理后台才能封禁用户")); return; }
       if (!confirm(t("确定要永久封禁「") + target + t("」吗？（将同时封禁IP）"))) return;
       fetch("/api/admin/global-kick?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target));
       fetch("/api/admin/ban/add?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target))
@@ -96,8 +96,8 @@ export function handleMenuAction(action) {
       break;
     }
     case "banip": {
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
       let k = "";
-      if (!k) { showError(t("请先登录管理后台才能封禁IP")); return; }
       if (!confirm(t("确定要封禁「") + target + t("」的IP吗？"))) return;
       fetch("/api/admin/user-ips?key=" + encodeURIComponent(k))
         .then(r => r.json())
@@ -137,8 +137,8 @@ export function handleMenuAction(action) {
       break;
     }
     case "tag": {
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
       let k = "";
-      if (!k) { showError(t("请先登录管理后台才能修改标签")); return; }
       let newTag = prompt("输入「" + target + t("」的新标签（留空取消）:"));
       if (!newTag || !newTag.trim()) return;
       let newColor = prompt("标签颜色（留空默认）: red/blue/green/purple/pink/cyan/gray/orange");
@@ -148,8 +148,8 @@ export function handleMenuAction(action) {
       break;
     }
     case "batch-kick": {
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
       let k = "";
-      if (!k) { showError(t("请先登录管理后台才能批量踢出")); return; }
       let names = prompt("输入要批量踢出的用户名，用逗号分隔：");
       if (!names || !names.trim()) return;
       let nameList = names.split(/[,，\s]+/).filter(Boolean);

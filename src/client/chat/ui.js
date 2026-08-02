@@ -20,9 +20,10 @@ export async function modifyOwnTag(currentTag, currentColor) {
   } catch (e) { showError(t("修改标签失败: ") + e.message); }
 }
 
-export function startReply(name, text) {
+export function startReply(name, text, msgId) {
   state.replyTarget = name;
   state.replyText = text;
+  state.replyId = msgId || null;
   let bar = document.getElementById("reply-bar");
   bar.innerHTML = "";
   let nameSpan = document.createElement("span");
@@ -41,6 +42,7 @@ export function startReply(name, text) {
 export function cancelReply() {
   state.replyTarget = null;
   state.replyText = null;
+  state.replyId = null;
   document.getElementById("reply-bar").style.display = "none";
 }
 
@@ -84,6 +86,13 @@ export async function recallMessage(timestamp) {
     if (r.ok) showSuccess(t("消息已撤回"));
     else showError(t("撤回失败: ") + text);
   } catch (e) { showError(t("撤回失败: ") + e.message); }
+}
+
+// 🗑️ 永久删除消息（本人任意时间 / 管理员可删任意单条），走 WS 由服务端校验权限
+export function deleteMessage(timestamp) {
+  if (!timestamp || !state.currentWebSocket) return;
+  if (!confirm(t("确定删除这条消息吗？删除后所有用户不可见，且不可恢复。"))) return;
+  state.currentWebSocket.send(JSON.stringify({type: "delete-message", timestamp}));
 }
 
 export function sendTyping() {

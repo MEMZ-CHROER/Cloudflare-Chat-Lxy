@@ -84,6 +84,7 @@ export async function handleShop(reg, request, url) {
       if (inv.has(itemId)) return new Response(JSON.stringify({error: "已拥有此商品"}), {status: 400});
       reg.userPoints.set(name, String(pts - price));
       await reg.savePoints();
+      await reg.addLedger(name, -price, "shop", "购买商品 #" + itemId);
       inv.set(itemId, {purchasedAt: Date.now(), equipped: false});
       await reg.saveUserInventory();
       return new Response(JSON.stringify({ok: true, name, itemId}), {

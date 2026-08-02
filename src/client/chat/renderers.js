@@ -1,7 +1,7 @@
 // 消息渲染 - addChatMessage, addChatImage, addChatFile, 投票, markdown 等
 import { state, t, getUserBio } from './state.js';
 import { TAG_COLORS, getVipLevel, createVipBadge } from './vip.js';
-import { modifyOwnTag, startReply, recallMessage, checkAtMention, showLightbox } from './ui.js';
+import { modifyOwnTag, startReply, recallMessage, deleteMessage, checkAtMention, showLightbox } from './ui.js';
 import { showUserMenu } from './menu.js';
 import { isFavorited, toggleFavorite } from './favorites.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
@@ -200,6 +200,7 @@ export async function loadCustomEmoji() {
 
 export function renderPoll(data) {
   if (!data || !data.question) return;
+  if (data.channel && state.currentChannel && data.channel !== state.currentChannel) return;
   let wrapper = document.createElement("p");
   wrapper.className = "chat-msg other";
   wrapper.dataset.pollId = data.pollId;
@@ -270,6 +271,77 @@ export function attachSignature(nameSpan, name) {
   });
 }
 
+// ===== 话题线程回复：统一引用条渲染（ID 精确跳转 + 模糊回退）=====
+function buildReplyQuote(reply) {
+  let quote = document.createElement("div");
+  quote.className = "reply-quote";
+  quote.style.cursor = "pointer";
+  if (reply && reply.id) quote.dataset.replyId = reply.id;
+  let replyLabel = document.createTextNode("回复 @" + (reply.name || "") + ": ");
+  quote.appendChild(replyLabel);
+  let replyContent = document.createElement("span");
+  replyContent.textContent = reply.text || "";
+  quote.appendChild(replyContent);
+  quote.title = t("点击跳转到原文");
+  quote.addEventListener("click", (e) => {
+    e.stopPropagation();
+    let target = null;
+    if (reply && reply.id) {
+      try { target = state.chatlog.querySelector('[data-msgid="' + reply.id + '"]'); } catch (err) {}
+    }
+    if (!target) {
+      let msgEls = state.chatlog.querySelectorAll(".chat-msg");
+      for (let el of msgEls) {
+        let nameEl = el.querySelector(".username");
+        if (nameEl && nameEl.textContent === reply.name) {
+          let bubble = el.querySelector(".bubble");
+          if (bubble && bubble.textContent.includes(reply.text || "")) { target = el; break; }
+        }
+      }
+    }
+    if (target) {
+      target.scrollIntoView({behavior: "smooth", block: "center"});
+      target.classList.add("msg-ref-highlight");
+      setTimeout(() => target.classList.remove("msg-ref-highlight"), 2000);
+    } else {
+      showError(t("未找到引用的原始消息（可能已被清除）"));
+    }
+  });
+  return quote;
+}
+
+// 话题线程：统计每条消息被回复的次数，在原消息尾部显示 "💬 N" 徽章，点击滚到最近一条回复
+export function refreshReplyCounts() {
+  let counts = {};
+  state.chatlog.querySelectorAll(".reply-quote").forEach(q => {
+    let rid = q.dataset.replyId;
+    if (rid) counts[rid] = (counts[rid] || 0) + 1;
+  });
+  state.chatlog.querySelectorAll(".chat-msg").forEach(w => {
+    let rid = w.dataset.msgId;
+    let old = w.querySelector(".reply-count-badge");
+    if (old) old.remove();
+    if (rid && counts[rid]) {
+      let badge = document.createElement("span");
+      badge.className = "reply-count-badge";
+      badge.textContent = "💬 " + counts[rid];
+      badge.title = counts[rid] + t(" 条回复");
+      badge.addEventListener("click", (e) => {
+        e.stopPropagation();
+        let last = null;
+        state.chatlog.querySelectorAll(".reply-quote").forEach(q => {
+          if (q.dataset.replyId === rid) last = q;
+        });
+        if (last) {
+          let msgEl = last.closest(".chat-msg");
+          if (msgEl) { msgEl.scrollIntoView({behavior: "smooth", block: "center"}); msgEl.classList.add("msg-ref-highlight"); setTimeout(() => msgEl.classList.remove("msg-ref-highlight"), 2000); }
+        }
+      });
+      w.appendChild(badge);
+    }
+  });
+}
+
 export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, reply, tagBorder, msgId, atAll, avatar) {
   if (!name) {
     let p = document.createElement("p");
@@ -315,35 +387,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
   }
   wrapper.appendChild(header);
-  if (reply) {
-    let quote = document.createElement("div");
-    quote.className = "reply-quote";
-    quote.style.cursor = "pointer";
-    let replyLabel = document.createTextNode("回复 @" + (reply.name || "") + ": ");
-    quote.appendChild(replyLabel);
-    let replyContent = document.createElement("span");
-    replyContent.textContent = reply.text || "";
-    quote.appendChild(replyContent);
-    quote.title = t("点击跳转到原文");
-    quote.addEventListener("click", (e) => {
-      e.stopPropagation();
-      let msgEls = state.chatlog.querySelectorAll(".chat-msg");
-      for (let el of msgEls) {
-        let nameEl = el.querySelector(".username");
-        if (nameEl && nameEl.textContent === reply.name) {
-          let bubble = el.querySelector(".bubble");
-          if (bubble && bubble.textContent.includes(reply.text || "")) {
-            el.scrollIntoView({behavior: "smooth", block: "center"});
-            el.classList.add("msg-ref-highlight");
-            setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000);
-            return;
-          }
-        }
-      }
-      showError(t("未找到引用的原始消息（可能已被清除）"));
-    });
-    wrapper.appendChild(quote);
-  }
+  if (reply) wrapper.appendChild(buildReplyQuote(reply));
   let bubble = document.createElement("span");
   bubble.className = "bubble";
   if (msgColor && msgColor !== "#000000") bubble.style.color = msgColor;
@@ -453,35 +497,7 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
     attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
   }
   wrapper.appendChild(header);
-  if (reply) {
-    let quote = document.createElement("div");
-    quote.className = "reply-quote";
-    quote.style.cursor = "pointer";
-    let replyLabel = document.createTextNode("回复 @" + (reply.name || "") + ": ");
-    quote.appendChild(replyLabel);
-    let replyContent = document.createElement("span");
-    replyContent.textContent = reply.text || "";
-    quote.appendChild(replyContent);
-    quote.title = t("点击跳转到原文");
-    quote.addEventListener("click", (e) => {
-      e.stopPropagation();
-      let msgEls = state.chatlog.querySelectorAll(".chat-msg");
-      for (let el of msgEls) {
-        let nameEl = el.querySelector(".username");
-        if (nameEl && nameEl.textContent === reply.name) {
-          let bubble = el.querySelector(".bubble");
-          if (bubble && bubble.textContent.includes(reply.text || "")) {
-            el.scrollIntoView({behavior: "smooth", block: "center"});
-            el.classList.add("msg-ref-highlight");
-            setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000);
-            return;
-          }
-        }
-      }
-      showError(t("未找到引用的原始消息（可能已被清除）"));
-    });
-    wrapper.appendChild(quote);
-  }
+  if (reply) wrapper.appendChild(buildReplyQuote(reply));
   let bubble = document.createElement("span");
   bubble.className = "bubble";
   if (!data) {
@@ -550,35 +566,7 @@ export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tag
     attachSignature(nameSpan, name); // 个人签名
   }
   wrapper.appendChild(header);
-  if (reply) {
-    let quote = document.createElement("div");
-    quote.className = "reply-quote";
-    quote.style.cursor = "pointer";
-    let replyLabel = document.createTextNode("回复 @" + (reply.name || "") + ": ");
-    quote.appendChild(replyLabel);
-    let replyContent = document.createElement("span");
-    replyContent.textContent = reply.text || "";
-    quote.appendChild(replyContent);
-    quote.title = t("点击跳转到原文");
-    quote.addEventListener("click", (e) => {
-      e.stopPropagation();
-      let msgEls = state.chatlog.querySelectorAll(".chat-msg");
-      for (let el of msgEls) {
-        let nameEl = el.querySelector(".username");
-        if (nameEl && nameEl.textContent === reply.name) {
-          let bubble = el.querySelector(".bubble");
-          if (bubble && bubble.textContent.includes(reply.text || "")) {
-            el.scrollIntoView({behavior: "smooth", block: "center"});
-            el.classList.add("msg-ref-highlight");
-            setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000);
-            return;
-          }
-        }
-      }
-      showError(t("未找到引用的原始消息（可能已被清除）"));
-    });
-    wrapper.appendChild(quote);
-  }
+  if (reply) wrapper.appendChild(buildReplyQuote(reply));
   let bubble = document.createElement("span");
   bubble.className = "bubble voice-bubble";
   if (!data) {
@@ -736,41 +724,33 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
     attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
   }
   wrapper.appendChild(header);
-  if (reply) {
-    let quote = document.createElement("div");
-    quote.className = "reply-quote";
-    quote.style.cursor = "pointer";
-    let replyLabel = document.createTextNode("回复 @" + (reply.name || "") + ": ");
-    quote.appendChild(replyLabel);
-    let replyContent = document.createElement("span");
-    replyContent.textContent = reply.text || "";
-    quote.appendChild(replyContent);
-    quote.title = t("点击跳转到原文");
-    quote.addEventListener("click", (e) => {
-      e.stopPropagation();
-      let msgEls = state.chatlog.querySelectorAll(".chat-msg");
-      for (let el of msgEls) {
-        let nameEl = el.querySelector(".username");
-        if (nameEl && nameEl.textContent === reply.name) {
-          let bubble = el.querySelector(".bubble");
-          if (bubble && bubble.textContent.includes(reply.text || "")) {
-            el.scrollIntoView({behavior: "smooth", block: "center"});
-            el.classList.add("msg-ref-highlight");
-            setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000);
-            return;
-          }
-        }
-      }
-      showError(t("未找到引用的原始消息（可能已被清除）"));
-    });
-    wrapper.appendChild(quote);
-  }
+  if (reply) wrapper.appendChild(buildReplyQuote(reply));
   let bubble = document.createElement("span");
   bubble.className = "bubble";
   // 文件未缓存时（历史消息），不显示下载链接
   if (!data) {
     bubble.innerHTML = '<span class="file-msg"><span class="file-icon">📎</span><span class="file-name">' + escapeHtml(fileName) + '</span> <span style="color:#999;font-size:85%">[文件已过期]</span></span>';
   } else {
+    // 📄 文件内联预览：视频直接内嵌播放、PDF 内嵌预览（过大降级为纯下载链接）
+    let isVideo = /^data:video\//i.test(data);
+    let isPdf = /^data:application\/pdf/i.test(data);
+    if ((isVideo && data.length < 8 * 1024 * 1024) || (isPdf && data.length < 5 * 1024 * 1024)) {
+      if (isVideo) {
+        let preview = document.createElement("video");
+        preview.className = "file-preview-media";
+        preview.controls = true;
+        preview.preload = "metadata";
+        preview.src = data;
+        preview.addEventListener("click", (e) => e.stopPropagation());
+        bubble.appendChild(preview);
+      } else {
+        let preview = document.createElement("iframe");
+        preview.className = "file-preview-pdf";
+        preview.src = data;
+        preview.addEventListener("click", (e) => e.stopPropagation());
+        bubble.appendChild(preview);
+      }
+    }
     let a = document.createElement("a");
     a.className = "file-msg";
     a.href = data;
@@ -859,24 +839,24 @@ function buildActionMenu(wrapper, opts) {
 
   // Reply
   if (!isSelf && name) {
-    addItem(t("💬 回复"), () => startReply(name, text));
+    addItem(t("💬 回复"), () => startReply(name, text, msgId));
   }
 
   // Forward to room
   if (!isSelf && name && timestamp) {
     addItem(t("↗️ 转房间"), () => {
+      if (document.cookie.indexOf("admin_logged=1") === -1) {
+        showError(t("转发需要管理权限，请先登录后台"));
+        return;
+      }
       let targetRoom = prompt("转发到哪个房间？\n（输入房间名，如: 闲聊）");
       if (!targetRoom || !targetRoom.trim()) return;
       let fwdText = (text || "").length > 200 ? text.slice(0, 200) + "..." : (text || "");
       let adminKey = "";
-      if (adminKey) {
-        fetch("/api/admin/send-message/" + encodeURIComponent(targetRoom.trim()) + "?key=" + encodeURIComponent(adminKey) + "&text=" + encodeURIComponent("📨 " + name + t(" 转发: ") + fwdText) + "&sender=" + encodeURIComponent(state.username || t("系统"))).then(r => {
-          if (r.ok) showSuccess(t("已转发消息到 ") + targetRoom.trim());
-          else showError(t("转发失败，房间不存在？"));
-        }).catch(() => showError(t("转发失败")));
-      } else {
-        showError(t("转发需要管理权限，请先登录后台"));
-      }
+      fetch("/api/admin/send-message/" + encodeURIComponent(targetRoom.trim()) + "?key=" + encodeURIComponent(adminKey) + "&text=" + encodeURIComponent("📨 " + name + t(" 转发: ") + fwdText) + "&sender=" + encodeURIComponent(state.username || t("系统"))).then(r => {
+        if (r.ok) showSuccess(t("已转发消息到 ") + targetRoom.trim());
+        else showError(t("转发失败，房间不存在？"));
+      }).catch(() => showError(t("转发失败")));
     });
   }
 
@@ -986,6 +966,11 @@ function buildActionMenu(wrapper, opts) {
     addItem(t("↩️ 撤回"), () => recallMessage(timestamp), true);
   }
 
+  // 🗑️ 永久删除：本人可删自己的消息（不限时间）；管理员可删任意单条
+  if (timestamp && (isSelf || isAdmin)) {
+    addItem(t("🗑️ 删除"), () => deleteMessage(timestamp), true);
+  }
+
   if (dropdown.children.length > 0) {
     wrapper.appendChild(container);
   }
@@ -1056,7 +1041,7 @@ export async function showTranslation(wrapper, text, timestamp, name) {
   try {
     let r = await fetch("/api/translate", {
       method: "POST",
-      body: JSON.stringify({text, target: t("中文")}),
+      body: JSON.stringify({text, target: t("中文"), name: state.username, token: localStorage.getItem("chat_token") || ""}),
       headers: {"Content-Type": "application/json"}
     });
     let data = await r.json();

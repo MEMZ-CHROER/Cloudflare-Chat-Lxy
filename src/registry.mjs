@@ -112,6 +112,30 @@ export class RoomRegistry {
   async saveKickProtected() { await saveKickProtected(this.storage, this.kickProtected); }
   async saveMutes() { await saveMutes(this.storage, this.mutes); }
 
+  // 💰 积分流水账本：记录每笔积分变动（上限 100 条/用户），供用户查看收支明细
+  async addLedger(name, delta, type, desc) {
+    try {
+      if (!name) return;
+      let key = "ledger:" + name;
+      let raw = await this.storage.get(key);
+      let arr = [];
+      if (raw) { let p = JSON.parse(raw); if (Array.isArray(p)) arr = p; }
+      arr.push({ts: Date.now(), delta: String(delta), type: type || "other", desc: (desc || "").slice(0, 80)});
+      if (arr.length > 100) arr = arr.slice(-100);
+      await this.storage.put(key, JSON.stringify(arr));
+    } catch (e) {}
+  }
+
+  // 读取积分流水
+  async getLedger(name, limit) {
+    try {
+      let raw = await this.storage.get("ledger:" + name);
+      if (!raw) return [];
+      let arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.slice(-(limit || 50)) : [];
+    } catch (e) { return []; }
+  }
+
   async fetch(request) {
     if (this._loadPromise) await this._loadPromise;
 

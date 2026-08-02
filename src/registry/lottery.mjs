@@ -59,6 +59,7 @@ export async function handleLottery(reg, request, url) {
       if (pts < cost) return new Response(JSON.stringify({error: "积分不足，需要 " + pool.cost + " 积分"}), {status: 400});
       reg.userPoints.set(name, String(pts - cost));
       let savePromises = [reg.savePoints()];
+      await reg.addLedger(name, -cost, "lottery", "抽奖 " + pool.name);
       let prizePool = [];
       for (let [prizeId, prize] of pool.prizes) {
         if (prize.stock > 0) prizePool.push({id: prizeId, ...prize, weight: prize.probability});

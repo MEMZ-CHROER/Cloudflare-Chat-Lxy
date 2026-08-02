@@ -71,6 +71,7 @@ export async function handleRedeem(reg, request, url) {
       reg.redeemCodes.set(code, info);
 
       await Promise.all([saveRedeemCodes(reg.storage, reg.redeemCodes), reg.savePoints()]);
+      await reg.addLedger(user, pts, "redeem", "兑换码兑换");
 
       return new Response(JSON.stringify({
         ok: true,

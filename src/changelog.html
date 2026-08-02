@@ -104,6 +104,24 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.26</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-feature">新增</span>话题线程回复 — 回复升级为基于消息ID：引用条点击精确跳转原文（不再靠用户名+文本模糊匹配），原消息旁显示「💬 N条回复」计数徽章，点击跳转到最近一条回复；历史消息也补齐回复字段</span></div>
+    <div class="feature-item"><span class="icon">🗑️</span><span class="text"><span class="tag tag-feature">新增</span>消息删除 — 普通用户可永久删除自己发的消息（不限时间，不再只有2分钟撤回）；管理员可删除任意单条消息；删除后全员显示「消息已删除」占位，跨频道缓存同步更新，历史加载亦降级显示</span></div>
+    <div class="feature-item"><span class="icon">🔍</span><span class="text"><span class="tag tag-feature">新增</span>历史搜索 — 服务端全文搜索聊天记录：按关键词/频道过滤，搜索面板显示结果列表（时间+用户+内容），点击结果自动加载该时间附近历史并精确定位，不再只能搜当前加载的 500 条</span></div>
+    <div class="feature-item"><span class="icon">🤖</span><span class="text"><span class="tag tag-feature">新增</span>AI 快捷入口 + 多轮对话 — 聊天框新增 🤖 按钮一键召唤 AI（不用手输 /ai）；AI 支持多轮对话记忆（按用户+频道持久化最近 10 条上下文，刷新不丢）</span></div>
+    <div class="feature-item"><span class="icon">📌</span><span class="text"><span class="tag tag-feature">新增</span>在线@红点 — @某人时对方在线列表用户名旁显示 🔔 红点提醒 + 标题闪烁；离线时服务端记录，下次上线补显「离线时有N条@提醒」横幅</span></div>
+    <div class="feature-item"><span class="icon">📄</span><span class="text"><span class="tag tag-feature">新增</span>文件内联预览 — 视频直接在聊天内嵌播放、PDF 内嵌预览（超过阈值自动降级为下载链接），补齐图片/语音之外的文件类型预览</span></div>
+    <div class="feature-item"><span class="icon">💰</span><span class="text"><span class="tag tag-feature">新增</span>积分流水账本 — 新增 /ledger 命令查看收支明细：签到/转账/红包/游戏/商城/任务/兑换码/抽奖/管理每笔变动都有记录（时间+增减+说明），积分去向一目了然</span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>全面审计修复 21 类功能 bug — 用户菜单 5 个管理操作（踢出/封禁/封禁IP/改标签/批量踢出）恒失败、/batch-kick 恒失败、消息转房间恒失败、更多菜单 3 个入口 TypeError（精华/房间信息/定时消息）、/签到 恒失败、消息翻译恒失败、积分展示整链路 403（积分徽章/商城/任务/排行榜/统计全恢复）、跨频道未读不更新标题、投票跨频道乱串、/clear 双重刷新等全部修复</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.23</span>
     <span class="version-date">2026-08-01</span>
     <span class="version-arrow open">▶</span>

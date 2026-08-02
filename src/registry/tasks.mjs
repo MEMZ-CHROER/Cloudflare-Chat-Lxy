@@ -98,6 +98,7 @@ export async function handleTasks(reg, request, url) {
       let reward = toBigInt(task.reward);
       reg.userPoints.set(name, String(pts + reward));
       await reg.savePoints();
+      await reg.addLedger(name, reward, "task", "完成任务奖励");
       return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(pts + reward)}), {
         headers: {"Content-Type": "application/json"}
       });

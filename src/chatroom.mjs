@@ -260,7 +260,11 @@ export class ChatRoom {
                   fileSize: msg.fileSize,
                   duration: msg.duration,
                   fid: msg.fid,
-                  repo: msg.repo
+                  repo: msg.repo,
+                  id: msg.id,
+                  atAll: msg.atAll,
+                  avatar: msg.avatar,
+                  reply: msg.reply
                 });
                 if (msgs.length >= limit) break;
               }
@@ -270,6 +274,39 @@ export class ChatRoom {
           return new Response(JSON.stringify(msgs), {
             status: 200, headers: {"Content-Type": "application/json"}
           });
+        }
+
+        case "/search": {
+          // 🔍 历史搜索：服务端遍历最近消息，按关键词/用户名/频道过滤（无索引，遍历最近 2000 条）
+          let q = url.searchParams.get("q") || "";
+          let sName = url.searchParams.get("name") || "";
+          let sChannel = url.searchParams.get("channel") || "";
+          let limit = parseInt(url.searchParams.get("limit")) || 30;
+          if (limit > 100) limit = 100;
+          if (!q.trim()) return new Response(JSON.stringify({error: "缺少搜索关键词"}), {status: 400, headers: {"Content-Type": "application/json"}});
+          let qLower = q.trim().toLowerCase();
+          let entries = await this.storage.list({reverse: true, limit: 2000});
+          let results = [];
+          for (let [key, val] of entries) {
+            if (results.length >= limit) break;
+            try {
+              let msg = JSON.parse(val);
+              if (!msg || typeof msg.message !== "string") continue;
+              if (msg.type === "file" || msg.type === "image" || msg.type === "zifu" || msg.type === "recalled" || msg.type === "deleted") continue;
+              if (sChannel && (msg.channel || "general") !== sChannel) continue;
+              if (sName && msg.name !== sName) continue;
+              if (msg.message.toLowerCase().includes(qLower)) {
+                results.push({
+                  timestamp: msg.timestamp, name: msg.name, message: msg.message,
+                  type: msg.type, channel: msg.channel || "general",
+                  tag: msg.tag, tagColor: msg.tagColor, tagBorder: msg.tagBorder || "",
+                  color: msg.color, id: msg.id, reply: msg.reply, atAll: msg.atAll, avatar: msg.avatar
+                });
+              }
+            } catch (e) {}
+          }
+          results.reverse();
+          return new Response(JSON.stringify(results), {status: 200, headers: {"Content-Type": "application/json"}});
         }
 
         case "/export": {
@@ -718,6 +755,24 @@ export class ChatRoom {
 
         this.updateRegistry();
 
+        // 📌 在线@红点：上线时补显离线期间收到的 @ 提醒，并消费（标记已读）
+        try {
+          let atRaw = await this.storage.get("at-mentions");
+          let atAll = [];
+          if (atRaw) { let arr = JSON.parse(atRaw); if (Array.isArray(arr)) atAll = arr; }
+          if (atAll.length > 0) {
+            let mine = atAll.filter(m => m.target === session.name).slice(-20);
+            if (mine.length > 0) {
+              webSocket.send(JSON.stringify({
+                type: "at-unread",
+                mentions: mine.map(m => ({from: m.from, message: m.message, timestamp: m.ts}))
+              }));
+              let rest = atAll.filter(m => m.target !== session.name);
+              await this.storage.put("at-mentions", JSON.stringify(rest.slice(-50)));
+            }
+          }
+        } catch (e) {}
+
         webSocket.send(JSON.stringify({ready: true}));
         return;
       }
@@ -924,17 +979,19 @@ export class ChatRoom {
           options: options.map((text, i) => ({index: i, text: "" + text, votes: []})),
           creator: session.name,
           timestamp: Math.max(Date.now(), this.lastTimestamp + 1),
-          voters: {}
+          voters: {},
+          channel: data.channel || session.channel || "general"
         };
         this.polls.set(pollId, poll);
         await this.storage.put("polls", [...this.polls]);
-        this.broadcast({
+        this.broadcastToChannel(poll.channel, {
           type: "poll",
           pollId: pollId,
           question: question,
           options: options.map((text, i) => ({index: i, text: "" + text})),
           creator: session.name,
-          timestamp: poll.timestamp
+          timestamp: poll.timestamp,
+          channel: poll.channel
         });
         return;
       }
@@ -979,11 +1036,13 @@ export class ChatRoom {
         if (session.ip) poll.votedIps[session.ip] = true;
         poll.options[optionIndex].votes.push(session.name);
         await this.storage.put("polls", [...this.polls]);
-        this.broadcast({
+        let pollCh = poll.channel || "general";
+        this.broadcastToChannel(pollCh, {
           type: "poll-update",
           pollId: pollId,
           options: poll.options.map(o => ({index: o.index, text: o.text, count: o.votes.length})),
-          totalVoters: Object.keys(poll.voters).length
+          totalVoters: Object.keys(poll.voters).length,
+          channel: pollCh
         });
         return;
       }
@@ -1330,6 +1389,27 @@ export class ChatRoom {
         await this.storage.put(new Date(ghCard.timestamp).toISOString(), JSON.stringify(ghCard));
         return;
       }
+      // 🗑️ 消息删除：本人可永久删除自己的消息（不限时间），管理员可删任意单条
+      if (data.type === "delete-message") {
+        let delTs = parseInt(data.timestamp);
+        if (!delTs || isNaN(delTs)) { webSocket.send(JSON.stringify({error: "无效的消息标识"})); return; }
+        let delKey = new Date(delTs).toISOString();
+        let delRaw = await this.storage.get(delKey);
+        if (!delRaw) { webSocket.send(JSON.stringify({error: "消息不存在或已过期"})); return; }
+        let delOrig;
+        try { delOrig = JSON.parse(delRaw); } catch (e) { webSocket.send(JSON.stringify({error: "消息数据异常"})); return; }
+        if (delOrig.type === "recalled" || delOrig.type === "deleted") {
+          webSocket.send(JSON.stringify({error: "该消息已被撤回或删除"})); return;
+        }
+        let isDelAdmin = this.isAdminSession(session);
+        if (!isDelAdmin && (!session.name || delOrig.name !== session.name)) {
+          webSocket.send(JSON.stringify({error: "无权删除他人的消息"})); return;
+        }
+        let delMsg = {type: "deleted", name: delOrig.name || "", timestamp: delTs, channel: delOrig.channel || "general"};
+        await this.storage.put(delKey, JSON.stringify(delMsg));
+        this.broadcastToChannel(delMsg.channel, JSON.stringify(delMsg));
+        return;
+      }
       let msgColor = data.color;
       // 🔒 安全修复（W20）：消息颜色仅允许预设色名或 hex，防 style.color 注入骚扰
       if (msgColor) {
@@ -1559,8 +1639,20 @@ export class ChatRoom {
             if (m.message.startsWith("/")) continue; // 跳过命令消息
             ctxMsgs.unshift({role: "user", content: (m.name || "用户") + ": " + m.message.slice(0, 200)});
           }
+          // 多轮对话：读取该用户在当前频道的对话历史（storage 持久化，刷新不丢）
+          let ctxKey = "aictx:" + (session.channel || "general") + ":" + session.name;
+          let aiHistory = [];
+          try {
+            let histRaw = await this.storage.get(ctxKey);
+            if (histRaw) aiHistory = JSON.parse(histRaw);
+          } catch (e) {}
+          if (!Array.isArray(aiHistory)) aiHistory = [];
           let aiMsgs = [{role: "system", content: this.env.AI_SYSTEM_PROMPT || "你是一个友好的助手，回答尽量简洁"}];
           if (ctxMsgs.length) aiMsgs = aiMsgs.concat(ctxMsgs);
+          // 注入用户与 AI 的对话历史（最近 10 条），实现多轮记忆
+          aiHistory.forEach(h => {
+            if (h && h.role && h.content) aiMsgs.push({role: h.role, content: String(h.content).slice(0, 500)});
+          });
           aiMsgs.push({role: "user", content: userPrompt});
           let resp = await fetch(this.env.AI_BASE_URL + "/chat/completions", {
             method: "POST",
@@ -1588,6 +1680,11 @@ export class ChatRoom {
           this.broadcastToChannel(session.channel || "general", JSON.stringify(aiMsg));
           let key = new Date(aiMsg.timestamp).toISOString();
           await this.storage.put(key, JSON.stringify(aiMsg));
+          // 记录多轮对话历史（上限 10 条，防 storage 膨胀）
+          aiHistory.push({role: "user", content: userPrompt.slice(0, 500)});
+          aiHistory.push({role: "assistant", content: aiText.slice(0, 1500)});
+          if (aiHistory.length > 10) aiHistory = aiHistory.slice(-10);
+          try { await this.storage.put(ctxKey, JSON.stringify(aiHistory)); } catch (e) {}
         } catch (e) {
           webSocket.send(JSON.stringify({error: "AI 请求失败: " + e.message}));
         }
@@ -1628,6 +1725,28 @@ export class ChatRoom {
             if (pingTarget !== "__all__" && (s.channel || "general") !== pingTarget) return;
             try { ws.send(pingStr); } catch (_) {}
           });
+        }
+      }
+
+      // 📌 在线@红点：检测 @<用户名>（排除 @全体/@频道），在线目标即时红点，离线目标记录下次上线补显
+      {
+        let atTargets = [];
+        let msgText = data.message || "";
+        let atRe = /@([a-zA-Z0-9_一-龥]{1,24})/g;
+        let atMatch;
+        while ((atMatch = atRe.exec(msgText)) !== null) {
+          let tn = atMatch[1];
+          if (tn === "all" || tn === "everyone" || tn === "everyone" || tn === "全体" || tn === "所有人") continue;
+          if (tn === session.name) continue;
+          if (!atTargets.includes(tn)) atTargets.push(tn);
+        }
+        for (let tn of atTargets) {
+          this.sessions.forEach((s, ws) => {
+            if (s.name === tn) {
+              try { ws.send(JSON.stringify({type: "at-mention", from: session.name, message: msgText.slice(0, 100), timestamp: data.timestamp, channel: msgChannel})); } catch (_) {}
+            }
+          });
+          await this.recordAtMention(tn, session.name, msgText, data.timestamp, msgChannel);
         }
       }
 
@@ -1799,6 +1918,18 @@ export class ChatRoom {
     return session.tag === "red" || session.tag === "cyan" ||
            session.tagColor === "red" || session.tagColor === "cyan" ||
            session.tagBorder === "gold";
+  }
+
+  // 📌 在线@红点：记录 @<用户名> 到 storage（上限 50 条），供用户下次上线时补显
+  async recordAtMention(targetName, fromName, message, ts, channel) {
+    try {
+      let raw = await this.storage.get("at-mentions");
+      let arr = [];
+      if (raw) { let p = JSON.parse(raw); if (Array.isArray(p)) arr = p; }
+      arr.push({target: targetName, from: fromName, message: (message || "").slice(0, 100), ts: ts || Date.now(), channel: channel || "general"});
+      if (arr.length > 50) arr = arr.slice(-50);
+      await this.storage.put("at-mentions", JSON.stringify(arr));
+    } catch (e) {}
   }
 
   // 频道体系：只发送给指定频道的已设名会话；未设名会话排队（命名后按频道分流）

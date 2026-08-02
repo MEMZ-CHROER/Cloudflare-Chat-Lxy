@@ -69,6 +69,7 @@ export async function handleRedPacket(reg, request, url) {
         reg.redPackets.set(rpId, rp);
 
         await reg.savePoints();
+        await reg.addLedger(creator, -BigInt(total), "redpacket", "发红包");
         return new Response(JSON.stringify({
           ok: true, redpacket: {
             id: rpId, creator, total, count, mode: rp.mode,
@@ -133,6 +134,7 @@ export async function handleRedPacket(reg, request, url) {
         rp.remainingCount--;
 
         await reg.savePoints();
+        await reg.addLedger(user, amount, "redpacket", "抢到红包");
         return new Response(JSON.stringify({
           ok: true, amount,
           remaining: rp.remaining,
