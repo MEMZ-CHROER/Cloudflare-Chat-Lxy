@@ -104,6 +104,24 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.28</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">加固</span>错误信息脱敏 — 服务端各 API 不再把内部异常堆栈返回客户端，统一为「服务器内部错误」，避免辅助侦察</span></div>
+    <div class="feature-item"><span class="icon">🧱</span><span class="text"><span class="tag tag-fix">加固</span>输入校验补全 — 房间历史 limit 上限 200（超大值防内存 DoS）；文件/撤回非法时间戳返回 400 而非 500；空/纯空白消息拦截；Bot 命令 action 白名单</span></div>
+    <div class="feature-item"><span class="icon">🗑️</span><span class="text"><span class="tag tag-fix">修复</span>已删除消息不可再被「编辑」复活原文；同名并发加入竞态修正（先到者保留）；房间历史 JSON 损坏不再拒绝所有新连接</span></div>
+    <div class="feature-item"><span class="icon">🧧</span><span class="text"><span class="tag tag-fix">修复</span>任务发奖顺序 — 先加积分后落完成状态，崩溃重试不丢奖不双发；批量扣款余额不足改为整批拒绝（与单用户一致）</span></div>
+    <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-fix">加固</span>管理密钥回传脱敏（只显后4位）；兑换码最短长度 4→8 位（防爆破）；禁言操作者由服务端固定、审计归因可信</span></div>
+    <div class="feature-item"><span class="icon">🗄️</span><span class="text"><span class="tag tag-fix">加固</span>注册/签到每 IP 每日计数持久化 — DO 重启不再清零可刷小号/刷签到</span></div>
+    <div class="feature-item"><span class="icon">🌐</span><span class="text"><span class="tag tag-fix">修复</span>前端 XSS 转义补全 — 房间信息/关键词面板/个人资料/商城金额/任务奖励/房间人数等动态内容统一 escapeHtml；管理按钮需真实管理密钥才点亮</span></div>
+    <div class="feature-item"><span class="icon">📤</span><span class="text"><span class="tag tag-fix">修复</span>消息功能多项 — 支持 // 开头转义发送 / 文本；WS 消息解析容错（畸形消息不再中断）；DM 私信发送方不再双重显示；商城购买/装备防双击；游戏多模块防重入/防竞态（调色大师双计分、扫雷/2048 下注时序、监听器去重、语言切换即时刷新）</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.27</span>
     <span class="version-date">2026-08-02</span>
     <span class="version-arrow open">▶</span>

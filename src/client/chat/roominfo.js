@@ -28,9 +28,9 @@ export function toggleRoomInfo() {
   let content = document.getElementById("room-info-content");
   let onlineCount = state.roster ? state.roster.querySelectorAll("[data-name]").length : 0;
   content.innerHTML =
-    '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">房间:</span> <strong>#' + state.roomname + '</strong></div>' +
+    '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">房间:</span> <strong>#' + escapeHtml(state.roomname) + '</strong></div>' +
     '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">在线用户:</span> <strong>' + onlineCount + '</strong></div>' +
-    '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">用户名:</span> <strong>' + state.username + '</strong></div>' +
+    '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">用户名:</span> <strong>' + escapeHtml(state.username) + '</strong></div>' +
     '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">WebSocket:</span> <strong>' + (state.currentWebSocket ? "✅ 已连接" : t("❌ 未连接")) + '</strong></div>' +
     '<div style="margin-bottom:8px;"><span style="color:var(--text-secondary);">消息时间戳:</span> <strong>' + (state.lastSeenTimestamp ? new Date(state.lastSeenTimestamp).toLocaleTimeString() : "-") + '</strong></div>';
 }

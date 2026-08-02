@@ -143,6 +143,11 @@ function ensureGameCSS() {
   document.head.appendChild(link);
 }
 
+// L36: 具名 click 处理器——openGames 每次调用前先移除，避免监听器累积（原匿名监听仅点击时自移除）
+function overlayClickHandler(e) {
+  if (e.target === document.getElementById("game-overlay")) closeGames();
+}
+
 export async function openGames() {
   showGameLoading(t('🎮 加载游戏中心...'));
   gs.balance = await getBalance();
@@ -153,9 +158,8 @@ export async function openGames() {
   let overlay = document.getElementById("game-overlay");
   if (overlay) {
     overlay.classList.add("show");
-    overlay.addEventListener("click", function h(e) {
-      if (e.target === overlay) { closeGames(); overlay.removeEventListener("click", h); }
-    });
+    overlay.removeEventListener("click", overlayClickHandler);
+    overlay.addEventListener("click", overlayClickHandler);
   }
 }
 
@@ -214,8 +218,8 @@ function renderGameMenu(el) {
     html += '<div class="game-menu-item" onclick="switchGame(\'' + name + '\')">'
       + '<span class="game-menu-icon">' + g.icon + '</span>'
       + '<div class="game-menu-info">'
-      + '<div class="game-menu-name">' + g.label + '</div>'
-      + '<div class="game-menu-desc">' + g.desc + '</div></div>'
+      + '<div class="game-menu-name">' + t(g.label) + '</div>'
+      + '<div class="game-menu-desc">' + t(g.desc) + '</div></div>'
       + '<span class="game-menu-arrow">▶</span></div>';
   });
   html += '</div>';

@@ -42,7 +42,7 @@ async function loadShopItems() {
         '<span class="shop-item-tag" style="' + colorStyle + borderStyle + '">' + escapeHtml(item.tag) + '</span>' +
         '<div class="shop-item-info"><div class="shop-item-name">' + escapeHtml(item.name) + '</div>' +
         (item.description ? '<div class="shop-item-desc">' + escapeHtml(item.description) + '</div>' : '') +
-        '</div><span class="shop-item-price">' + item.price + ' 积分</span>' +
+        '</div><span class="shop-item-price">' + escapeHtml(item.price) + ' 积分</span>' +
         '<button class="shop-btn shop-btn-buy" data-item-id="' + escapeHtml(item.id) + '">购买</button></div>';
     }
     container.innerHTML = html;
@@ -74,31 +74,43 @@ async function loadInventory() {
   } catch (e) { container.innerHTML = '<div class="shop-empty">加载失败: ' + e.message + '</div>'; }
 }
 
+// L31: 轻量防抖——同一商品操作处理中直接忽略重复点击（服务端无风险，但避免重复弹窗/重复请求）
+const _shopBusy = new Set();
+
 export async function buyItem(itemId) {
+  if (_shopBusy.has(itemId)) return;
+  _shopBusy.add(itemId);
   try {
     let r = await fetch("/api/shop/buy", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), itemId, token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("购买成功！"); updatePointsDisplay(); loadShopItems(); }
   } catch (e) { alert("购买失败: " + e.message); }
+  finally { _shopBusy.delete(itemId); }
 }
 
 export async function equipItem(itemId) {
+  if (_shopBusy.has(itemId)) return;
+  _shopBusy.add(itemId);
   try {
     let r = await fetch("/api/shop/equip", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), itemId, token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("装备成功！"); updatePointsDisplay(); loadInventory(); }
   } catch (e) { alert("装备失败: " + e.message); }
+  finally { _shopBusy.delete(itemId); }
 }
 
 export async function unequipItem() {
+  if (_shopBusy.has("__unequip__")) return;
+  _shopBusy.add("__unequip__");
   try {
     let r = await fetch("/api/shop/unequip", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), token: getAuthToken()})});
     let data = await r.json();
     if (data.error) alert(data.error);
     else { alert("已卸下装备"); updatePointsDisplay(); loadInventory(); }
   } catch (e) { alert("操作失败: " + e.message); }
+  finally { _shopBusy.delete("__unequip__"); }
 }
 
 // 事件委托

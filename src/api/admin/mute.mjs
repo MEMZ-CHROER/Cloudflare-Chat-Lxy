@@ -8,7 +8,8 @@ export async function handleAdminMute(path, request, env, url) {
 
   if (path[1] === "mute" && request.method === "POST") {
     let body = await request.json().catch(() => ({}));
-    body.mutedBy = body.mutedBy || url.searchParams.get("operator") || "";
+    // 🔒 L5 修复：mutedBy 不信任客户端传入（防审计归因伪造），由服务端固定身份
+    body.mutedBy = "admin";
     let r = await stub.fetch("https://dummy-url/admin/mute?auth=" + auth, {
       method: "POST",
       body: JSON.stringify(body),

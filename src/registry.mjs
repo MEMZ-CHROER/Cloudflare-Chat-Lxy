@@ -20,7 +20,7 @@ import {
   saveShopItems, saveBotCommands, saveUserInventory, saveTasks, saveTaskClaims,
   saveTaskCompletions, saveLotteryPools, saveLotteryRecords, saveEmoji,
   saveRedeemCodes, saveKickProtected, saveMutes,
-  saveGameDailyWin, saveRedPackets
+  saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid
 } from "./registry/persistence.mjs";
 
 // RoomRegistry Durable Object — 全局单例，跟踪所有房间、用户、商城、任务、抽奖等
@@ -44,6 +44,7 @@ export class RoomRegistry {
     this.tasks = new Map();
     this.taskCompletions = new Map();
     this.taskClaims = new Map();
+    this.taskRewardPaid = new Map();   // name -> Set<taskId> 已完成且已发奖励（L19 防崩溃重试双发）
     this.lotteryPools = new Map();
     this.lotteryRecords = new Map();
     this.botCommands = new Map();
@@ -52,6 +53,7 @@ export class RoomRegistry {
     this.kickProtected = new Set();
     this.mutes = new Map();
     this.redPackets = new Map();
+    this.checkinByIp = new Map();   // ip -> {date, count} 每 IP 每日签到计数（L13a 持久化防重启清零）
     // 游戏防刷状态（内存字段，不持久化）
     this.gameBets = new Map();       // name -> {wager, ts} 未结算下注
     this.gameLastWin = new Map();    // name -> ts 上次结算时间
@@ -81,6 +83,7 @@ export class RoomRegistry {
     if (data.tasks) this.tasks = data.tasks;
     if (data.taskCompletions) this.taskCompletions = data.taskCompletions;
     if (data.taskClaims) this.taskClaims = data.taskClaims;
+    if (data.taskRewardPaid) this.taskRewardPaid = data.taskRewardPaid;
     if (data.rateLimitExempt) this.rateLimitExempt = data.rateLimitExempt;
     if (data.lotteryPools) this.lotteryPools = data.lotteryPools;
     if (data.lotteryRecords) this.lotteryRecords = data.lotteryRecords;
@@ -91,6 +94,7 @@ export class RoomRegistry {
     if (data.mutes) this.mutes = data.mutes;
     if (data.gameDailyWin) this.gameDailyWin = data.gameDailyWin;
     if (data.redPackets) this.redPackets = data.redPackets;
+    if (data.checkinByIp) this.checkinByIp = data.checkinByIp;
   }
 
   async save() { await saveRooms(this.storage, this.rooms); }
@@ -109,6 +113,7 @@ export class RoomRegistry {
   async saveTasks() { await saveTasks(this.storage, this.tasks); }
   async saveTaskClaims() { await saveTaskClaims(this.storage, this.taskClaims); }
   async saveTaskCompletions() { await saveTaskCompletions(this.storage, this.taskCompletions); }
+  async saveTaskRewardPaid() { await saveTaskRewardPaid(this.storage, this.taskRewardPaid); }
   async saveLotteryPools() { await saveLotteryPools(this.storage, this.lotteryPools); }
   async saveLotteryRecords() { await saveLotteryRecords(this.storage, this.lotteryRecords); }
   async saveEmoji() { await saveEmoji(this.storage, this.emoji); }
@@ -116,6 +121,7 @@ export class RoomRegistry {
   async saveMutes() { await saveMutes(this.storage, this.mutes); }
   async saveGameDailyWin() { await saveGameDailyWin(this.storage, this.gameDailyWin); }
   async saveRedPackets() { await saveRedPackets(this.storage, this.redPackets); }
+  async saveCheckinByIp() { await saveCheckinByIp(this.storage, this.checkinByIp); }
 
   // 💰 积分流水账本：记录每笔积分变动（上限 100 条/用户），供用户查看收支明细
   async addLedger(name, delta, type, desc) {

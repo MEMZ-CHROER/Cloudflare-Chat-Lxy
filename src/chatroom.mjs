@@ -2,6 +2,10 @@ import { handleErrors } from "./utils.mjs";
 import { handleMedia } from "./chatroom/media.mjs";
 import { handleManage } from "./chatroom/manage.mjs";
 
+// ⚠️ 安全说明（L12）：本 DO 的 /blacklist/*、/do-kick、/do-clear、/do-destroy、/broadcast-message、
+// /tag-update、/set-announcement、/message/recall 等端点无自身鉴权，仅依赖 api/ 层路由白名单单点兜底，
+// 当前房间名+DO id 不可枚举，无法被外部直接连到。纵深防御需 api/admin 层配合改造，本次保留现状不动。
+
 // ChatRoom Durable Object — 管理单个聊天室的状态和 WebSocket 连接
 export class ChatRoom {
   constructor(state, env) {
@@ -72,12 +76,18 @@ export class ChatRoom {
 
     this.highlights = [];
     this._loadHighlights = this.storage.get("highlights").then(data => {
-      if (data) this.highlights = JSON.parse(data);
+      if (data) {
+        // 🔒 安全修复（L9）：历史 JSON 损坏时回退空数组，防房间不可进（500 拒绝所有新连接）
+        try { this.highlights = JSON.parse(data); } catch (e) { this.highlights = []; }
+      }
     });
 
     this.reactions = {};
     this._loadReactions = this.storage.get("reactions").then(data => {
-      if (data) this.reactions = JSON.parse(data);
+      if (data) {
+        // 🔒 安全修复（L9）：历史 JSON 损坏时回退空对象，防房间不可进
+        try { this.reactions = JSON.parse(data); } catch (e) { this.reactions = {}; }
+      }
     });
 
     this.lotteryPools = new Map();
@@ -217,6 +227,8 @@ export class ChatRoom {
         case "/file-data": {
           let ts = url.searchParams.get("timestamp");
           if (!ts) return new Response("请提供时间戳", {status: 400});
+          // 🔒 安全修复（L7）：非法时间戳直接返回 400，防 new Date(NaN).toISOString() 抛 500
+          if (isNaN(parseInt(ts))) return new Response(JSON.stringify({error: "无效的时间戳"}), {status: 400, headers: {"Content-Type": "application/json"}});
           let key = new Date(parseInt(ts)).toISOString();
           let val = await this.storage.get(key);
           if (!val) return new Response("未找到文件", {status: 404});
@@ -446,6 +458,8 @@ export class ChatRoom {
           let recallTs = url.searchParams.get("timestamp");
           let recallName = url.searchParams.get("name");
           if (!recallTs || !recallName) return new Response("缺少参数", {status: 400});
+          // 🔒 安全修复（L7）：非法时间戳直接返回 400，防 new Date(NaN).toISOString() 抛 500
+          if (isNaN(parseInt(recallTs))) return new Response(JSON.stringify({error: "无效的时间戳"}), {status: 400, headers: {"Content-Type": "application/json"}});
           let recallKey = new Date(parseInt(recallTs)).toISOString();
           let recallOrig = await this.storage.get(recallKey);
           // 🔒 安全修复（LD19）：消息不存在直接拒绝，杜绝伪造"已撤回"篡改视图 + 任意 storage key 写入
@@ -679,6 +693,21 @@ export class ChatRoom {
 
         session.name = rawName;
         webSocket.serializeAttachment({ ...webSocket.deserializeAttachment(), name: session.name });
+
+        // 🔒 安全修复（L8）：同名检测前置到设名后立即执行（无 await 的原子区间），
+        // 并发同名加入时先到者保留、后到者被拒，杜绝"检查-设名"竞态把先到者踢掉
+        {
+          let nameTaken = false;
+          for (let [ws, s] of this.sessions) {
+            if (ws !== webSocket && s.name === session.name) { nameTaken = true; break; }
+          }
+          if (nameTaken) {
+            webSocket.send(JSON.stringify({error: "该名字已在房间内在线，请更换名字后再加入"}));
+            this.sessions.delete(webSocket);
+            webSocket.close(1008, "名字已被占用");
+            return;
+          }
+        }
 
         try {
           let registryId = this.env.registry.idFromName("global");
@@ -1431,6 +1460,12 @@ export class ChatRoom {
       if (msgColor) data.color = msgColor;
       if (replyData) data.reply = replyData;
       if (atAll) data.atAll = true;
+
+      // 🔒 安全修复（L11）：空消息/纯空白消息直接拒绝（只加空校验，不加发送限频）
+      if (!data.message || !data.message.trim()) {
+        webSocket.send(JSON.stringify({error: "消息不能为空"}));
+        return;
+      }
 
       let maxMsgLen = (session.vip && session.vip.features ? session.vip.features.maxMsgLen : 256);
       if (data.message.length > maxMsgLen) {

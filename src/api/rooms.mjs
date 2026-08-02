@@ -34,7 +34,8 @@ export async function handleRooms(path, request, env) {
             headers: {"Content-Type": "application/json"}
           });
         } catch (error) {
-          return new Response(JSON.stringify({error: error.message}), {status: 500});
+          // 🔒 L1 脱敏：不向客户端回传内部错误详情
+          return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
         }
       }
       return new Response("未找到", {status: 404});
@@ -85,7 +86,8 @@ export async function handleRooms(path, request, env) {
         let r = await registryStub.fetch("https://dummy-url/verify-password", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
         return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
       } catch (error) {
-        return new Response(JSON.stringify({ok: false, error: error.message}), {status: 500});
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response(JSON.stringify({ok: false, error: "服务器内部错误"}), {status: 500});
       }
     }
 
@@ -95,7 +97,11 @@ export async function handleRooms(path, request, env) {
         if (!(await requireRoomPassword(env, name, request))) {
           return new Response(JSON.stringify({error: "房间需要密码才能访问"}), {status: 401, headers: {"Content-Type": "application/json"}});
         }
+        // 🔒 L3 修复：limit 参数校验（1~200），防止超大 limit 拉取全量历史导致内存 DoS
         let hLimit = new URL(request.url).searchParams.get("limit") || 50;
+        let parsedH = parseInt(hLimit);
+        if (isNaN(parsedH) || parsedH < 1 || parsedH > 200) parsedH = 50;
+        hLimit = parsedH;
         let hBefore = new URL(request.url).searchParams.get("before") || "";
         let hChannel = new URL(request.url).searchParams.get("channel") || "";
         let hUrl = "https://dummy-url/messages?limit=" + hLimit;

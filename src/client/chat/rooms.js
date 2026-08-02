@@ -18,7 +18,7 @@ function togglePinRoom(name) {
 }
 
 export async function checkAndJoinRoom(name) {
-  state.roomname = name;
+  // L34: state.roomname 只在密码校验通过/无需密码后才赋值，取消或密码错误不残留脏值
   try {
     let r = await fetch("/api/room/" + encodeURIComponent(name) + "/password-status");
     let data = await r.json();
@@ -34,6 +34,7 @@ export async function checkAndJoinRoom(name) {
       state.roomPassword = pwd;
     }
   } catch (e) {}
+  state.roomname = name;
   startChat();
 }
 
@@ -149,7 +150,7 @@ export async function loadRoomList() {
       let count = typeof info === "object" ? info.count : info;
       let hasPwd = typeof info === "object" && info.hasPassword;
       let pinIcon = isPinned ? ' <span class="pin-indicator">📌</span>' : '';
-      div.innerHTML = '<span class="room-name">#' + escapeHtml(name) + (hasPwd ? ' <span style="font-size:12px;">🔒</span>' : '') + pinIcon + '</span><span class="room-count">' + count + ' 在线</span>';
+      div.innerHTML = '<span class="room-name">#' + escapeHtml(name) + (hasPwd ? ' <span style="font-size:12px;">🔒</span>' : '') + pinIcon + '</span><span class="room-count">' + escapeHtml(count) + ' 在线</span>';
 
       // Pin toggle button
       let pinBtn = document.createElement("span");

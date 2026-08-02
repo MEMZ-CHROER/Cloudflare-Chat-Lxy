@@ -23,6 +23,7 @@ export async function handleRedeemApi(path, request, env) {
     }
     return new Response("未找到", {status: 404});
   } catch (error) {
-    return new Response(JSON.stringify({error: error.message}), {status: 500});
+    // 🔒 L1 脱敏：不向客户端回传内部错误详情
+    return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
   }
 }

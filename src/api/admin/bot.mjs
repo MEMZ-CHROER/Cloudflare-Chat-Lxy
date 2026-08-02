@@ -7,6 +7,11 @@ export async function handleAdminBot(path, request, env, url) {
     let registryId = env.registry.idFromName("global");
     let registryStub = env.registry.get(registryId);
     let action = url.searchParams.get("action") || "list";
+    // 🔒 L4 修复：action 白名单校验，防止任意字符串拼进 registry bot-commands 转发
+    const ALLOWED_BOT_ACTIONS = ["add", "update", "delete", "list", "get"];
+    if (!ALLOWED_BOT_ACTIONS.includes(action)) {
+      return new Response(JSON.stringify({error: "无效操作"}), {status: 400, headers: {"Content-Type": "application/json"}});
+    }
     // M15：registry 对 add/update/delete 做守卫，统一带 auth
     let registryUrl = "https://dummy-url/bot-commands?action=" + encodeURIComponent(action) + "&auth=" + encodeURIComponent(url.searchParams.get("auth") || "");
     if (action === "delete" || action === "get") {

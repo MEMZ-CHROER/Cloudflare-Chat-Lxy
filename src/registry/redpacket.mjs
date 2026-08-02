@@ -79,7 +79,7 @@ export async function handleRedPacket(reg, request, url) {
           }
         }), {headers: {"Content-Type": "application/json"}});
       } catch (e) {
-        return new Response(JSON.stringify({error: e.message}), {status: 500});
+        return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
       }
     }
 
@@ -146,7 +146,7 @@ export async function handleRedPacket(reg, request, url) {
           isFinished: rp.remainingCount <= 0
         }), {headers: {"Content-Type": "application/json"}});
       } catch (e) {
-        return new Response(JSON.stringify({error: e.message}), {status: 500});
+        return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
       }
     }
 

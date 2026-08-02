@@ -12,7 +12,8 @@ export function showUserMenu(name, x, y) {
   let nameLabel = document.getElementById("user-menu-name");
   let note = getNote(name);
   nameLabel.textContent = note ? name + " (" + note + ")" : name;
-  let hasAdmin = document.cookie.indexOf("admin_logged=1") !== -1;
+  // L24: 仅当 admin_logged cookie 且存在有效管理 key 时才算管理员（防控制台伪造 cookie 点亮按钮，服务端另有 httpOnly 校验兜底）
+  let hasAdmin = document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "";
   menu.querySelectorAll(".user-menu-item").forEach(el => {
     let a = el.dataset.action;
     if (a === "pay" || a === "at" || a === "dm" || a === "batch-kick" || a === "note" || a === "profile") { el.style.display = "block"; }
@@ -219,7 +220,7 @@ export async function showProfile(name) {
     }
     let stats = document.createElement("div");
     stats.className = "profile-stats";
-    stats.innerHTML = '<div class="profile-stat"><div class="profile-stat-val">' + data.points + '</div><div class="profile-stat-label">积分</div></div>'
+    stats.innerHTML = '<div class="profile-stat"><div class="profile-stat-val">' + escapeHtml(data.points) + '</div><div class="profile-stat-label">积分</div></div>'
       + '<div class="profile-stat"><div class="profile-stat-val">' + (data.registered ? "是" : t("否")) + '</div><div class="profile-stat-label">已注册</div></div>';
     content.appendChild(stats);
     if (data.vip) {

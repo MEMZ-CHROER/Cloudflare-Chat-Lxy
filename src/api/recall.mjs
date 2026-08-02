@@ -55,6 +55,6 @@ export async function handleRecall(path, request, env) {
     let text = await resp.text();
     return new Response(text, {status: resp.status});
   } catch (error) {
-    return new Response("撤回失败: " + error.message, { status: 500 });
+    return new Response("撤回失败：服务器内部错误", { status: 500 });
   }
 }

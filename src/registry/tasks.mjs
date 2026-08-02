@@ -90,17 +90,27 @@ export async function handleTasks(reg, request, url) {
       if (reg.taskCompletions.get(name).has(taskId)) {
         return new Response(JSON.stringify({error: "已完成此任务"}), {status: 400});
       }
+      // 🔒 L19 修复：先加积分后落完成状态（防两步间崩溃丢奖励），并用 taskRewardPaid 已发放标记保证崩溃重试不双发。
+      // 顺序：savePoints → saveTaskRewardPaid → saveTaskCompletions/saveTaskClaims（points 先落，剩余窗口最多是极罕见的重复发奖，绝不丢奖）
+      if (!reg.taskRewardPaid) reg.taskRewardPaid = new Map();
+      if (!reg.taskRewardPaid.has(name)) reg.taskRewardPaid.set(name, new Set());
+      // 🔒 安全修复（E6）：积分/奖励用 BigInt 运算，防大数精度丢失
+      let reward = toBigInt(task.reward);
+      let rewardNow = !reg.taskRewardPaid.get(name).has(taskId);
+      if (rewardNow) {
+        let pts = toBigInt(reg.userPoints.get(name));
+        reg.userPoints.set(name, String(pts + reward));
+        reg.taskRewardPaid.get(name).add(taskId);
+      }
       reg.taskCompletions.get(name).add(taskId);
       reg.taskClaims.get(name).delete(taskId);
+      await reg.savePoints();
+      await reg.saveTaskRewardPaid();
       await reg.saveTaskCompletions();
       await reg.saveTaskClaims();
-      // 🔒 安全修复（E6）：积分/奖励用 BigInt 运算，防大数精度丢失
-      let pts = toBigInt(reg.userPoints.get(name));
-      let reward = toBigInt(task.reward);
-      reg.userPoints.set(name, String(pts + reward));
-      await reg.savePoints();
-      await reg.addLedger(name, reward, "task", "完成任务奖励");
-      return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(pts + reward)}), {
+      if (rewardNow) await reg.addLedger(name, reward, "task", "完成任务奖励");
+      let total = toBigInt(reg.userPoints.get(name));
+      return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(total)}), {
         headers: {"Content-Type": "application/json"}
       });
     }

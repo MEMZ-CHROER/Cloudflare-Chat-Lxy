@@ -114,20 +114,29 @@ export class FileBucket {
     let entries = await this.storage.list({prefix: "f:"});
     let now = Date.now();
     let infoKeys = [];
+    let minStoredAt = Infinity; // L10：剩余未过期文件的最早存储时间，用于重设闹钟
     for (let [key, val] of entries) {
       if (key.endsWith(":info")) {
-        let info = JSON.parse(val);
+        let info;
+        try { info = JSON.parse(val); } catch (e) { continue; }
         if (now - info.storedAt > FILE_TTL) {
           infoKeys.push(key);
           let fid = info.fid;
           for (let i = 0; i < info.chunkCount; i++) {
             infoKeys.push("f:" + fid + ":c:" + i);
           }
+        } else if (info.storedAt < minStoredAt) {
+          minStoredAt = info.storedAt;
         }
       }
     }
     if (infoKeys.length > 0) {
       await this.storage.delete(infoKeys);
+    }
+    // 🔒 安全修复（L10）：清理后按剩余文件最早过期时间重设闹钟，防过期清理永不再次执行；
+    // 无剩余文件则不设闹钟（下次上传时 /upload 会重新设置）
+    if (minStoredAt !== Infinity) {
+      try { await this.state.storage.setAlarm(minStoredAt + FILE_TTL); } catch (e) {}
     }
   }
 }

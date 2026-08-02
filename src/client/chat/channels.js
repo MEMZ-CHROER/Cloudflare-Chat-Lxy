@@ -1,6 +1,7 @@
 // 频道体系 — 频道栏 UI + 切换 + 非当前频道消息缓存
-import { state } from './state.js';
+import { state, t } from './state.js';
 import { addChatMessage, resetMsgDate, refreshReplyCounts } from './renderers.js';
+import { getAdminKey } from './ui.js';
 
 const MAX_CACHE = 150;
 
@@ -25,7 +26,7 @@ export function buildChannelBar() {
     bar.appendChild(btn);
   });
   // 管理员显示新建频道入口
-  if (document.cookie.indexOf("admin_logged=1") !== -1) {
+  if (document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "") {
     const add = document.createElement("button");
     add.type = "button";
     add.className = "channel-item";
@@ -71,7 +72,7 @@ export function switchChannel(name) {
   } else {
     const ld = document.createElement("p");
     ld.className = "system-msg";
-    ld.textContent = "加载中...";
+    ld.textContent = t("加载中...");
     state.chatlog.appendChild(ld);
   }
   if (state.currentWebSocket) {

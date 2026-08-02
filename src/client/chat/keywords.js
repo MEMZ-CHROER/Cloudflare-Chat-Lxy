@@ -1,6 +1,7 @@
 // 关键词提醒 - 自定义关键词，出现时高亮+通知
 import { state, t } from './state.js';
 import { flashTitle, playMentionSound } from './ui.js';
+import { escapeHtml } from './renderers.js';
 
 const STORAGE_KEY = "chat_keywords";
 
@@ -62,7 +63,7 @@ export function showKeywordManager() {
     list.forEach(w => {
       let row = document.createElement("div");
       row.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-radius:4px;font-size:13px;background:var(--bg);margin-bottom:3px;";
-      row.innerHTML = '<span>' + w + '</span><span style="cursor:pointer;color:#e74c3c;font-size:14px;" data-word="' + w + '">&times;</span>';
+      row.innerHTML = '<span>' + escapeHtml(w) + '</span><span style="cursor:pointer;color:#e74c3c;font-size:14px;" data-word="' + escapeHtml(w) + '">&times;</span>';
       row.querySelector("[data-word]").addEventListener("click", () => {
         removeKeyword(w);
         panel.remove();

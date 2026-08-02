@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -29,6 +29,8 @@ export async function loadAll(storage) {
       storage.get("mutes"),
       storage.get("gameDailyWin"),
       storage.get("redPackets"),
+      storage.get("checkinByIp"),
+      storage.get("taskRewardPaid"),
     ]);
 
   return {
@@ -57,6 +59,8 @@ export async function loadAll(storage) {
     mutes: mutesData ? new Map(mutesData) : new Map(),
     gameDailyWin: gameDailyWinData ? new Map(gameDailyWinData) : new Map(),
     redPackets: redPacketsData ? new Map(redPacketsData) : new Map(),
+    checkinByIp: checkinByIpData ? new Map(checkinByIpData) : new Map(),
+    taskRewardPaid: taskRewardPaidData ? new Map(taskRewardPaidData.map(([u, ids]) => [u, new Set(ids)])) : new Map(),
   };
 }
 
@@ -137,4 +141,16 @@ export async function saveGameDailyWin(storage, data) {
 
 export async function saveRedPackets(storage, data) {
   await storage.put("redPackets", [...data]);
+}
+
+export async function saveCheckinByIp(storage, data) {
+  await storage.put("checkinByIp", [...data]);
+}
+
+export async function saveTaskRewardPaid(storage, data) {
+  let serialized = [];
+  for (let [username, ids] of data) {
+    serialized.push([username, [...ids]]);
+  }
+  await storage.put("taskRewardPaid", serialized);
 }

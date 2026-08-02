@@ -13,9 +13,10 @@ function safeEqual(a, b) {
 export async function handleAdmin(reg, request, url) {
   switch (url.pathname) {
     case "/admin-key/get": {
-      // 🔒 安全修复（LD15）：只返回掩码后的密钥，明文不回传（前端掩码仅是 UI 装饰，服务端兜底）
+      // 🔒 安全修复（LD15 + L15）：只返回掩码后的密钥，明文不回传（前端掩码仅是 UI 装饰，服务端兜底）
+      // L15：连前 4 位明文也不回传，改为 **** 前缀 + 后 4 位（保持 key 字段结构不变，前端显示为全掩码）
       let k = reg.adminKey || "";
-      let masked = k ? k.slice(0, 4) + "****" : "";
+      let masked = k ? "****" + k.slice(-4) : "";
       return new Response(JSON.stringify({key: masked}), {
         headers: {"Content-Type": "application/json"}
       });

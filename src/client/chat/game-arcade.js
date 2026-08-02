@@ -901,7 +901,7 @@ async function clStart() {
 }
 
 function clNext() {
-  let c = gs.color; c.round++; let t = c.target;
+  let c = gs.color; c._submitting = false; c.round++; let t = c.target;
   t.r = Math.floor(Math.random() * 256); t.g = Math.floor(Math.random() * 256); t.b = Math.floor(Math.random() * 256);
   document.getElementById("cl-target").style.background = "rgb(" + t.r + "," + t.g + "," + t.b + ")";
   document.getElementById("cl-target").textContent = t("目标颜色 ") + c.round + "/5";
@@ -912,7 +912,8 @@ function clNext() {
 }
 
 async function clSubmit() {
-  let c = gs.color; if (c.gameOver) return;
+  let c = gs.color; if (c.gameOver || c._submitting) return; // L32: 防同一轮双击双计分
+  c._submitting = true;
   let diff = Math.abs(c.current.r - c.target.r) + Math.abs(c.current.g - c.target.g) + Math.abs(c.current.b - c.target.b);
   let pts = Math.max(0, Math.floor((765 - diff) / 10));
   c.score += pts; playGameSound(pts > 30 ? 'win' : 'click');

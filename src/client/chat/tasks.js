@@ -49,7 +49,7 @@ async function loadTasks() {
       html += '<div class="task-item">' +
         '<div class="task-item-info"><div class="task-item-name">' + escapeHtml(task.name) + '</div>' +
         (task.description ? '<div class="task-item-desc">' + escapeHtml(task.description) + '</div>' : '') +
-        '</div><span class="task-item-reward">+' + task.reward + ' 积分</span>' +
+        '</div><span class="task-item-reward">+' + escapeHtml(task.reward) + ' 积分</span>' +
         btnHtml + '</div>';
     }
     container.innerHTML = html;

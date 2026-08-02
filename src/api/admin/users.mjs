@@ -198,7 +198,8 @@ export async function handleAdminUsers(path, request, env, url) {
         let r = await registryStub.fetch(new URL("https://dummy-url/user-delete?name=" + encodeURIComponent(userName) + "&auth=" + auth));
         return new Response(await r.text(), { status: r.status });
       } catch (error) {
-        return new Response("删除用户失败: " + error.message, { status: 500 });
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response("删除用户失败: 服务器内部错误", { status: 500 });
       }
     }
 

@@ -36,7 +36,8 @@ export async function handlePoints(path, request, env) {
       let r = await stub.fetch(new URL("https://dummy-url/points/transfer?sender=" + encodeURIComponent(sender) + "&receiver=" + encodeURIComponent(receiver) + "&amount=" + encodeURIComponent(amount)));
       return new Response(await r.text(), { status: r.status });
     } catch (error) {
-      return new Response("转账失败: " + error.message, { status: 500 });
+      // 🔒 L1 脱敏：不向客户端回传内部错误详情
+      return new Response("转账失败: 服务器内部错误", { status: 500 });
     }
   }
   if (action === "all") {
@@ -49,7 +50,8 @@ export async function handlePoints(path, request, env) {
       let r = await stub.fetch(new URL("https://dummy-url/points/all"));
       return new Response(await r.text(), { status: 200, headers: {"Content-Type": "application/json"} });
     } catch (error) {
-      return new Response("获取积分失败: " + error.message, { status: 500 });
+      // 🔒 L1 脱敏：不向客户端回传内部错误详情
+      return new Response("获取积分失败: 服务器内部错误", { status: 500 });
     }
   }
   if (action === "ledger") {
@@ -69,7 +71,8 @@ export async function handlePoints(path, request, env) {
       let r = await stub.fetch(new URL("https://dummy-url/points/ledger?name=" + encodeURIComponent(name) + "&limit=" + limit));
       return new Response(await r.text(), {status: 200, headers: {"Content-Type": "application/json"}});
     } catch (error) {
-      return new Response(JSON.stringify({error: "获取流水失败: " + error.message}), {status: 500, headers: {"Content-Type": "application/json"}});
+      // 🔒 L1 脱敏：不向客户端回传内部错误详情
+      return new Response(JSON.stringify({error: "获取流水失败: 服务器内部错误"}), {status: 500, headers: {"Content-Type": "application/json"}});
     }
   }
   return new Response("未找到该操作", { status: 404 });

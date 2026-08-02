@@ -39,6 +39,7 @@ export async function handleTasks(path, request, env) {
     }
     return new Response("未找到该操作", { status: 404 });
   } catch (error) {
-    return new Response("任务操作失败: " + error.message, { status: 500 });
+    // 🔒 L1 脱敏：不向客户端回传内部错误详情
+    return new Response("任务操作失败: 服务器内部错误", { status: 500 });
   }
 }

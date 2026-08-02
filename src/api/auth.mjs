@@ -15,7 +15,8 @@ export async function handleAuth(path, request, env) {
         let r = await stub.fetch("https://dummy-url/user-register", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
         return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
       } catch (e) {
-        return new Response(JSON.stringify({error: e.message}), {status: 500});
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
       }
     }
 
@@ -29,7 +30,8 @@ export async function handleAuth(path, request, env) {
         let r = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(caName) + "&token=" + encodeURIComponent(caToken)));
         return new Response(await r.text(), {status: 200, headers: {"Content-Type": "application/json"}});
       } catch (e) {
-        return new Response(JSON.stringify({authenticated: false, error: e.message}), {headers: {"Content-Type": "application/json"}});
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response(JSON.stringify({authenticated: false, error: "服务器内部错误"}), {headers: {"Content-Type": "application/json"}});
       }
     }
 
@@ -42,7 +44,8 @@ export async function handleAuth(path, request, env) {
         let r = await stub.fetch("https://dummy-url/user-login", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
         return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
       } catch (e) {
-        return new Response(JSON.stringify({error: e.message}), {status: 500});
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
       }
     }
 
@@ -56,7 +59,8 @@ export async function handleAuth(path, request, env) {
         let r = await stub.fetch("https://dummy-url/user-logout", {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
         return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
       } catch (e) {
-        return new Response(JSON.stringify({error: e.message}), {status: 500});
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
       }
     }
   }

@@ -101,6 +101,20 @@ export async function handleManage(room, session, data, webSocket) {
       webSocket.send(JSON.stringify({error: "消息不存在或已过期"}));
       return true;
     }
+    // 🔒 安全修复（L6）：delete 不回写 room.messages，删除后同 id edit 会把原文写回 storage 复活消息。
+    // 编辑前校验 storage 中该消息未被标记 deleted/recalled，已删除/撤回则拒绝编辑。
+    try {
+      let storageKeyCheck = new Date(orig.timestamp).toISOString();
+      let storageRaw = await room.storage.get(storageKeyCheck);
+      if (storageRaw) {
+        let stored;
+        try { stored = JSON.parse(storageRaw); } catch (e) { stored = null; }
+        if (stored && (stored.type === "deleted" || stored.type === "recalled")) {
+          webSocket.send(JSON.stringify({error: "消息已被删除或撤回，无法编辑"}));
+          return true;
+        }
+      }
+    } catch (e) {}
     if (orig.name !== session.name) {
       webSocket.send(JSON.stringify({error: "只能编辑自己的消息"}));
       return true;

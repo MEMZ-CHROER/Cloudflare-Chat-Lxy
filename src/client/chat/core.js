@@ -71,7 +71,9 @@ export function startChat() {
     if (state.currentWebSocket) {
       let text = state.chatInput.value;
       state.chatInput.value = "";
-      if (text.startsWith("/")) { handleCommand(text); return; }
+      // L27: // 转义——以 // 开头时去掉一个前导斜杠，按普通文本发送（如 //about → /about）
+      if (text.startsWith("//")) text = text.slice(1);
+      else if (text.startsWith("/")) { handleCommand(text); return; }
       let msg = {message: text, color: state.selectedColor, channel: state.currentChannel};
       if (state.replyTarget) { msg.reply = {name: state.replyTarget, text: state.replyText || "", id: state.replyId || ""}; cancelReply(); }
       if (/@(all|everyone|全体)/i.test(text)) msg.atAll = true;

@@ -1,7 +1,7 @@
 // 消息渲染 - addChatMessage, addChatImage, addChatFile, 投票, markdown 等
 import { state, t, getUserBio } from './state.js';
 import { TAG_COLORS, getVipLevel, createVipBadge } from './vip.js';
-import { modifyOwnTag, startReply, recallMessage, deleteMessage, checkAtMention, showLightbox } from './ui.js';
+import { modifyOwnTag, startReply, recallMessage, deleteMessage, checkAtMention, showLightbox, getAdminKey } from './ui.js';
 import { showUserMenu } from './menu.js';
 import { isFavorited, toggleFavorite } from './favorites.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
@@ -433,7 +433,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
   buildActionMenu(wrapper, {
     name, text, timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "",
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });
@@ -515,7 +515,7 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
   buildActionMenu(wrapper, {
     name, text: t("[图片]"), timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "",
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });
@@ -596,7 +596,7 @@ export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tag
   buildActionMenu(wrapper, {
     name, text: t("[语音]"), timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "",
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });
@@ -673,7 +673,7 @@ export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, m
   buildActionMenu(wrapper, {
     name, text: "[" + repo + "] ", timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "",
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });
@@ -780,7 +780,7 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
   buildActionMenu(wrapper, {
     name, text: t("[文件]"), timestamp, msgId, tag, tagColor, tagBorder,
     isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "",
     hasWs: !!state.currentWebSocket,
     roomname: state.roomname
   });

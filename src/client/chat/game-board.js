@@ -53,13 +53,18 @@ async function msClick(r, c) {
   let ms = gs.minesweeper, key = r + "," + c;
   if (ms.gameOver || ms.flags.has(key)) return;
   if (ms.firstClick) {
-    ms.firstClick = false;
+    // L33: 下注进行中忽略再次点击；下注成功后才置 firstClick=false 并生成棋盘，避免渲染 undefined 格子
+    if (ms._betting) return;
+    ms._betting = true;
     let r1 = await gameApi("bet", {game: "minesweeper", wager: 200});
-    if (r1.error) { showError(r1.error); ms.firstClick = true; return; }
+    ms._betting = false;
+    if (r1.error) { showError(r1.error); return; }
+    ms.firstClick = false;
     gs.balance = r1.balance || gs.balance; updateBalance();
     ms.board = msGenBoard(r, c); ms.revealed = new Set(); ms.flags = new Set();
     msReveal(r, c); checkMsWin(); return;
   }
+  if (!ms.board || ms.board.length === 0) return; // 棋盘未就绪（下注未完成），忽略点击
   if (ms.board[r][c] === "M") {
     ms.gameOver = true;
     for (let rr = 0; rr < 9; rr++) for (let cc = 0; cc < 9; cc++) { if (ms.board[rr][cc] === "M") { let mc = document.querySelector('.minesweeper-cell[data-r="' + rr + '"][data-c="' + cc + '"]'); if (mc) { mc.textContent = "💣"; mc.className = "minesweeper-cell minesweeper-cell-mine"; } } }
@@ -77,12 +82,20 @@ function t2048Init() { let g = Array.from({length: 4}, () => Array(4).fill(0)); 
 function t2048AddTile(grid) { let empty = []; for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if (grid[r][c] === 0) empty.push([r, c]); if (!empty.length) return grid; let [r, c] = empty[Math.floor(Math.random() * empty.length)]; grid[r][c] = Math.random() < 0.9 ? 2 : 4; return grid; }
 function t2048SlideRow(row) { let arr = row.filter(v => v !== 0), score = 0; for (let i = 0; i < arr.length - 1; i++) { if (arr[i] === arr[i + 1]) { arr[i] *= 2; score += arr[i]; arr.splice(i + 1, 1); } } while (arr.length < 4) arr.push(0); return { row: arr, score }; }
 
-function t2048Move(dir) {
+async function t2048Move(dir) {
   if (gs.t2048.gameOver) return; let gs8 = gs.t2048;
   if (!gs8.betPlaced) {
-    gs8.betPlaced = true;
+    // L35: 首步下注需 await——下注失败则阻止继续游玩，不落空跑
+    if (gs8._betting) return;
+    gs8._betting = true;
     let name = state.username || localStorage.getItem("chat_user") || "";
-    if (name) { gameApi("bet", {game: "t2048", wager: 200}).then(r1 => { if (!r1.error) { gs.balance = r1.balance || gs.balance; updateBalance(); } }); }
+    if (name) {
+      let r1 = await gameApi("bet", {game: "t2048", wager: 200});
+      if (r1.error) { showError(r1.error); gs8._betting = false; return; }
+      gs.balance = r1.balance || gs.balance; updateBalance();
+    }
+    gs8.betPlaced = true;
+    gs8._betting = false;
   }
   let old = JSON.stringify(gs8.grid), score = 0;
   if (dir === 0) { for (let r = 0; r < 4; r++) { let res = t2048SlideRow(gs8.grid[r]); gs8.grid[r] = res.row; score += res.score; } }

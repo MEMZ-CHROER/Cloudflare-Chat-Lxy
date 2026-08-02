@@ -303,14 +303,14 @@ export async function handleCommand(text) {
       let sub = arg.trim().split(/\s+/);
       let action = sub[0] || "";
       let name = sub[1] || "";
-      if (!action || !name) { showError("用法: /channel add <名称> 或 /channel remove <名称>"); break; }
+      if (!action || !name) { showError(t("用法: /channel add <名称> 或 /channel remove <名称>")); break; }
       if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({type: "channel", action, name}));
       break;
     }
     case "/switch": {
       let name = arg.trim();
       if (name) switchChannel(name);
-      else showError("用法: /switch <频道名>");
+      else showError(t("用法: /switch <频道名>"));
       break;
     }
     default:

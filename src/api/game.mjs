@@ -72,7 +72,8 @@ export async function handleGame(apiPath, request, env) {
 
       return new Response(JSON.stringify({error: "未知操作"}), {status: 400});
     } catch (e) {
-      return new Response(JSON.stringify({error: e.message}), {status: 500});
+      // 🔒 L1 脱敏：不向客户端回传内部错误详情
+      return new Response(JSON.stringify({error: "服务器内部错误"}), {status: 500});
     }
   }
 

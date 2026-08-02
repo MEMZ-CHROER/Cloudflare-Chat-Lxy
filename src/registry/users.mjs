@@ -56,15 +56,27 @@ export async function handleUsers(reg, request, url) {
       if (password.length < 6) return new Response(JSON.stringify({error: "密码至少6个字符"}), {status: 400});
       if (reg.registeredUsers.has(name)) return new Response(JSON.stringify({error: "用户名已被注册"}), {status: 409});
       // 🔒 安全修复（E4）：每 IP 每日最多注册 3 个账号，防批量注册小号铸币
+      // 🔒 安全修复（L13b）：registerByIp 计数器持久化到 storage（DO 重启不丢失）。
+      // 在 users.mjs 内自包含懒加载/保存（不动 registry.mjs / persistence.mjs 主加载链）。
       let rip = body.ip || "";
       if (rip) {
-        if (!reg.registerByIp) reg.registerByIp = new Map();
+        if (!reg.registerByIp) {
+          reg.registerByIp = new Map();
+          try {
+            let raw = await reg.storage.get("registerByIp");
+            if (raw) {
+              let parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) reg.registerByIp = new Map(parsed);
+            }
+          } catch (e) {}
+        }
         let today = new Date().toISOString().slice(0, 10);
         let rec = reg.registerByIp.get(rip);
         if (!rec || rec.date !== today) rec = {date: today, count: 0};
         if (rec.count >= 3) return new Response(JSON.stringify({error: "注册太频繁，请稍后再试"}), {status: 429});
         rec.count++;
         reg.registerByIp.set(rip, rec);
+        try { await reg.storage.put("registerByIp", JSON.stringify([...reg.registerByIp])); } catch (e) {}
       }
       // 🔒 安全修复（LD10）：每用户随机盐 + sha256(salt+password)，防离线爆破/彩虹表
       let saltBytes = new Uint8Array(16);

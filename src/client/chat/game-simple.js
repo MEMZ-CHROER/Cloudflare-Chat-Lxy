@@ -127,7 +127,8 @@ async function dicePlay(choice) {
   }, 600);
 }
 
-registerGame("dice", "🎲", t("猜大小"), t("猜骰子点数大小，最高 2 倍赔付"), renderDice, () => ({}));
+// L37: 存储原始中文 key，由 game-core.renderGameMenu 在渲染时动态 t()，语言切换后菜单随之刷新
+registerGame("dice", "🎲", "猜大小", "猜骰子点数大小，最高 2 倍赔付", renderDice, () => ({}));
 
 // ========== ✂️ 石头剪刀布 ==========
 

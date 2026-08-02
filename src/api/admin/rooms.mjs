@@ -230,7 +230,8 @@ export async function handleAdminRooms(path, request, env, url) {
         } catch (e) {}
         return new Response("房间 " + roomId + " 已销毁", { status: 200 });
       } catch (error) {
-        return new Response("销毁房间失败: " + error.message, { status: 500 });
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response("销毁房间失败: 服务器内部错误", { status: 500 });
       }
     }
 

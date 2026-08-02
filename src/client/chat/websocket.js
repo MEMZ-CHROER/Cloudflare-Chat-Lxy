@@ -1,7 +1,7 @@
 // WebSocket 连接 + 消息调度
 import { state, t } from './state.js';
 import { addChatMessage, addChatImage, addChatFile, addChatVoice, addChatGhCard, renderPoll, formatTime, markdownToHtml, escapeHtml, updateRosterCount, applyRoomBackground, updatePointsDisplay, createColoredTag, attachSignature, resetMsgDate, refreshReplyCounts } from './renderers.js';
-import { modifyOwnTag, playMsgSound, showTyping, flashTitle, checkAtMention, updateTitleUnread } from './ui.js';
+import { modifyOwnTag, playMsgSound, showTyping, flashTitle, checkAtMention, updateTitleUnread, getAdminKey } from './ui.js';
 import { showUserMenu } from './menu.js';
 import { addToDMCache, updateDmBadge } from './dm.js';
 import { TAG_COLORS, getVipLevel, createVipBadge } from './vip.js';
@@ -47,7 +47,10 @@ export function join() {
   });
 
   ws.addEventListener("message", event => {
-    let data = JSON.parse(event.data);
+    // L28: 单条畸形消息不应导致整个回调崩溃——解析失败直接忽略
+    let data;
+    try { data = JSON.parse(event.data); }
+    catch (e) { console.warn("[ws] 忽略无法解析的消息:", event.data, e); return; }
 
     // 💥 房间销毁通知：服务端销毁房间时全员收到，直接跳首页（不依赖 CloseEvent.reason）
     if (data.type === "destroyed") {
@@ -219,7 +222,7 @@ export function join() {
           if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("msg-ref-highlight"); setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000); }
         };
         if (cancelBtn) {
-          cancelBtn.style.display = document.cookie.indexOf("admin_logged=1") !== -1 ? "inline" : "none";
+          cancelBtn.style.display = document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "" ? "inline" : "none";
           cancelBtn.onclick = (e) => {
             e.stopPropagation();
             if (state.currentWebSocket) {
@@ -512,7 +515,8 @@ export function join() {
       }
     } else if (data.type === "whisper") {
       if (data.to) {
-        addChatMessage(null, "* 私聊给 " + data.to + ": " + data.message);
+        // L29: 发送方回显——sendDM 已乐观写入 DM 面板，此处不再于主聊天区重复渲染
+        return;
       } else {
         if (state.blockedUsers.has(data.from)) return;
         addToDMCache(data.from, {from: data.from, message: data.message, timestamp: data.timestamp}, false);
