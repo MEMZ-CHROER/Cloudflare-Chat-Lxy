@@ -31,20 +31,27 @@ export async function handleArchive(apiPath, request, env) {
     if (!permission) {
       return new Response(JSON.stringify({error: "密钥无效"}), {status: 403, headers: {"Content-Type": "application/json"}});
     }
-    // 🔒 安全修复（A6）：限制上传体积，防耗尽存档 DO 存储
-    let contentLength = parseInt(request.headers.get("Content-Length") || "0");
-    if (contentLength > 50 * 1024 * 1024) {
-      return new Response(JSON.stringify({error: "存档文件过大（最大50MB）"}), {status: 413, headers: {"Content-Type": "application/json"}});
+    // 🔒 M4 修复：上传版本存档仅限超管密钥（ADMIN_SECRET_KEY）。普通 admin（ADMIN_KEY）无权上传，
+    // 防普通管理员误传含敏感文件的 zip（存档包为公开下载，泄露风险来自"误传含密钥文件"，故收严到 super）
+    if (permission !== "super") {
+      return new Response(JSON.stringify({error: "仅超管可上传存档"}), {status: 403, headers: {"Content-Type": "application/json"}});
     }
 
     let name = new URL(request.url).searchParams.get("name");
     let description = new URL(request.url).searchParams.get("description") || "";
     if (!name) return new Response(JSON.stringify({error: "请提供版本名称"}), {status: 400, headers: {"Content-Type": "application/json"}});
 
-    // 转发整个 body 到 DO
+    // 🔒 M4 修复：体积限制改为读取实际 body 字节数校验（不再依赖可被 Transfer-Encoding: chunked 绕过的 Content-Length 头）。
+    // request.arrayBuffer() 由运行时聚合完整请求体（含 chunked），byteLength 即真实大小。
+    let bodyBuf = await request.arrayBuffer();
+    if (bodyBuf.byteLength > 50 * 1024 * 1024) {
+      return new Response(JSON.stringify({error: "存档文件过大（最大50MB）"}), {status: 413, headers: {"Content-Type": "application/json"}});
+    }
+
+    // 转发整个 body（已缓冲的 ArrayBuffer）到 DO
     let doResp = await stub.fetch("https://dummy-url/upload?name=" + encodeURIComponent(name) + "&description=" + encodeURIComponent(description), {
       method: "POST",
-      body: request.body,
+      body: bodyBuf,
       headers: {"Content-Type": "application/octet-stream"}
     });
     return new Response(await doResp.text(), {status: doResp.status, headers: {"Content-Type": "application/json"}});

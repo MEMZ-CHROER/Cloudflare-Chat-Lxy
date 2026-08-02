@@ -835,8 +835,18 @@ export class ChatRoom {
       }
 
       if (data.type === "kick") {
-        // 🔒 安全修复：踢人限频（普通用户30秒内只能踢1次，管理员不限），防反复骚扰他人
+        // 🔒 安全修复（M10）：未设名的游客会话禁止踢人
+        if (!session.name) {
+          webSocket.send(JSON.stringify({error: "请先设置昵称后再踢人"}));
+          return;
+        }
+        // 🔒 安全修复（M10）：踢人限频（普通用户30秒内只能踢1次，管理员不限），防反复骚扰他人
         let isKickAdmin = this.isAdminSession(session);
+        // 🔒 安全修复（M10）：非管理员踢人必须是已认证（登录）用户，堵住游客换名重连绕限频
+        if (!isKickAdmin && !session.authenticated) {
+          webSocket.send(JSON.stringify({error: "请登录后再踢人"}));
+          return;
+        }
         if (!isKickAdmin) {
           if (!this.lastKick) this.lastKick = new Map();
           let last = this.lastKick.get(session.name) || 0;
@@ -892,6 +902,16 @@ export class ChatRoom {
           }
         } catch (e) {}
 
+        // 🔒 安全修复（M10）：同一目标 60 秒内只能被踢一次（限频键为目标名，换名重连也无法绕过）
+        if (!isKickAdmin) {
+          if (!this.lastKickTarget) this.lastKickTarget = new Map();
+          let lastT = this.lastKickTarget.get(targetName) || 0;
+          if (Date.now() - lastT < 60000) {
+            webSocket.send(JSON.stringify({error: targetName + " 刚被踢出过，请稍后再试"}));
+            return;
+          }
+        }
+
         let kickedEntry = null;
         for (let [ws, s] of this.sessions) {
           if (s.name === targetName) {
@@ -901,6 +921,7 @@ export class ChatRoom {
         }
 
         if (kickedEntry) {
+          if (!isKickAdmin) this.lastKickTarget.set(targetName, Date.now());
           this.sessions.delete(kickedEntry.ws);
           kickedEntry.ws.close(1000, "kicked");
           this.broadcast({kicked: targetName});
@@ -1862,8 +1883,11 @@ export class ChatRoom {
     let s = String(text || "").normalize("NFKC");
     s = s.replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0));
     s = s.replace(/[àáâãäåÀÁÂÃÄÅ]/g, "a").replace(/[èéêëÈÉÊË]/g, "e").replace(/[ìíîïÌÍÎÏ]/g, "i")
-         .replace(/[òóôõöÒÓÔÕÖ]/g, "o").replace(/[ùúûüÙÚÛÜ]/g, "u").replace(/[ñÑ]/g, "n").replace(/çÇ/g, "c");
-    const t = s.replace(/[^a-z一-鿿]/gi, "").toLowerCase();
+         .replace(/[òóôõöÒÓÔÕÖ]/g, "o").replace(/[ùúûüÙÚÛÜ]/g, "u").replace(/[ñÑ]/g, "n").replace(/çÇ/g, "c")
+         // 🔒 安全修复（M9）：希腊/异体字母映射回拉丁，堵住 fμck 等希腊字母插入绕过
+         .replace(/[μµ]/g, "u").replace(/[ρ]/g, "p").replace(/[σς]/g, "s").replace(/[κ]/g, "k").replace(/[λ]/g, "l");
+    // 🔒 安全修复（M9）：保留数字（不再剥离），配合下方 leetspeak 字符类匹配，堵住 sh1t/f0ck 等数字插入绕过
+    const t = s.replace(/[^a-z0-9一-鿿]/gi, "").toLowerCase();
     const roots = [
       "草泥马", "草你妈", "操你妈", "操你妈", "肏你妈",
       "傻逼", "傻比", "煞笔", "沙比", "撒比",
@@ -1891,6 +1915,19 @@ export class ChatRoom {
     for (const ch of t) {
       normalized += homophones[ch] || ch;
     }
+    // 🔒 安全修复（M9）：leetspeak 归一化匹配 —— 对词根每个拉丁字母构建含常见数字变体的字符类，
+    // 使 sh1t/f0ck 等插入数字的变体也命中（仅影响检测，不改变消息内容）
+    const leetExtras = {a:"4", b:"8", e:"3", g:"69", i:"1", l:"1", o:"0", s:"5", t:"7", u:"0", z:"2"};
+    const escRe = (c) => /[.*+?^${}()|[\]\\]/.test(c) ? "\\" + c : c;
+    let pattern = "";
+    for (const root of roots) {
+      let p = "";
+      for (const ch of root) {
+        p += /[a-z]/.test(ch) ? "[" + ch + (leetExtras[ch] || "") + "]" : escRe(ch);
+      }
+      pattern += (pattern ? "|" : "") + p;
+    }
+    if (pattern && new RegExp(pattern, "i").test(normalized)) return true;
     for (const root of roots) {
       if (normalized.includes(root)) return true;
     }

@@ -104,6 +104,20 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.29</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🗄️</span><span class="text"><span class="tag tag-fix">安全</span>版本存档上传收紧 — 仅超管可上传（防误传含密钥压缩包公开泄露）；体积限制改实际字节校验，chunked 编码不再绕过 50MB 上限</span></div>
+    <div class="feature-item"><span class="icon">🚫</span><span class="text"><span class="tag tag-fix">安全</span>敏感词过滤防绕过 — 支持 leetspeak 数字映射（1→i、0→o、3→e…）与希腊异体字母（μ→u），sh1t/f0ck/fμck 等变体不再漏过，正常文本不误伤</span></div>
+    <div class="feature-item"><span class="icon">👢</span><span class="text"><span class="tag tag-fix">安全</span>游客踢人封堵 — 未设名/未登录会话不能踢人；新增按目标 60 秒限频，换名重连也无法骚扰；管理员踢人不受影响</span></div>
+    <div class="feature-item"><span class="icon">🏷️</span><span class="text"><span class="tag tag-fix">安全</span>特权标签提权封堵 — 商城装备/抽奖发放校验 red/cyan/gold/VIP 特权标签，普通用户无法通过购买或抽奖获得管理员/VIP 权益</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.28</span>
     <span class="version-date">2026-08-02</span>
     <span class="version-arrow open">▶</span>

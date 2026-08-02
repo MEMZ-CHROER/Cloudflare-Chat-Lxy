@@ -1,5 +1,15 @@
-import { tokenValid } from "../utils.mjs";
+import { tokenValid, getVipLevel } from "../utils.mjs";
 // 抽奖系统
+
+// 🔒 M16：特权标签判定——聊天室 isAdminSession 认可 tag/color 为 red、cyan（管理员色），border 为 gold（超管金边）；
+// getVipLevel 识别 VIP1-10/VIP+/MVP（VIP 权益标签）。普通用户不得经商城/抽奖获取这些标签。
+function isPrivilegedTag(tag, color, border) {
+  let t = String(tag || "").toLowerCase();
+  let c = String(color || "").toLowerCase();
+  let b = String(border || "").toLowerCase();
+  if (t === "red" || t === "cyan" || c === "red" || c === "cyan" || b === "gold") return true;
+  return !!getVipLevel(tag);
+}
 
 // 🔒 安全修复（E6）：BigInt 解析，防余额大数精度丢失
 function toBigInt(val) {
@@ -78,9 +88,17 @@ export async function handleLottery(reg, request, url) {
       let poolPrize = pool.prizes.get(chosen.id);
       if (poolPrize) poolPrize.stock--;
       savePromises.push(reg.saveLotteryPools());
-      // 🔒 安全修复（LD20）：抽奖奖品禁止发放管理标签（red/cyan），防止普通用户抽中即获管理员权限
-      let ct = (chosen.tag || "").toUpperCase();
-      if (ct === "RED" || ct === "CYAN") chosen.tag = "";
+      // 🔒 M16：抽奖奖品禁止向普通用户发放特权标签（管理员色 red/cyan、金色边框 gold、VIP 标签）。
+      // 已是特权用户（管理员/VIP 本人）抽中则照常发放；普通用户抽中则剥离特权部分（拒绝发放），
+      // 与既有 LD20 对 red/cyan 的处理一致。
+      if (isPrivilegedTag(chosen.tag, chosen.color, chosen.border)) {
+        let curTag = reg.tags.get(name);
+        if (!isPrivilegedTag(curTag && curTag.tag, curTag && curTag.color, curTag && curTag.border)) {
+          chosen.tag = "";
+          chosen.color = "";
+          chosen.border = "";
+        }
+      }
       if (chosen.tag) {
         let itemId = "lottery_" + chosen.id + "_" + Date.now();
         if (!reg.userInventory.has(name)) reg.userInventory.set(name, new Map());

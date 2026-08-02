@@ -1,5 +1,15 @@
-import { tokenValid } from "../utils.mjs";
+import { tokenValid, getVipLevel } from "../utils.mjs";
 // 商城系统 + 管理员商城 CRUD
+
+// 🔒 M16：特权标签判定——聊天室 isAdminSession 认可 tag/color 为 red、cyan（管理员色），border 为 gold（超管金边）；
+// getVipLevel 识别 VIP1-10/VIP+/MVP（VIP 权益标签）。普通用户不得经商城/抽奖获取这些标签。
+function isPrivilegedTag(tag, color, border) {
+  let t = String(tag || "").toLowerCase();
+  let c = String(color || "").toLowerCase();
+  let b = String(border || "").toLowerCase();
+  if (t === "red" || t === "cyan" || c === "red" || c === "cyan" || b === "gold") return true;
+  return !!getVipLevel(tag);
+}
 
 // 🔒 安全修复（E6）：BigInt 解析，防余额大数精度丢失
 function toBigInt(val) {
@@ -108,10 +118,13 @@ export async function handleShop(reg, request, url) {
       if (!inv || !inv.has(itemId)) return new Response(JSON.stringify({error: "未拥有此商品"}), {status: 400});
       let item = reg.shopItems.get(itemId);
       if (!item) return new Response(JSON.stringify({error: "商品不存在"}), {status: 404});
-      // 🔒 安全修复（LD20）：禁止通过商城商品获得管理标签（red/cyan=管理员/超管），防止普通用户静默提权
-      let itTag = (item.tag || "").toUpperCase();
-      if (itTag === "RED" || itTag === "CYAN") {
-        return new Response(JSON.stringify({error: "该标签为管理专用，无法装备"}), {status: 400});
+      // 🔒 M16：禁止普通用户通过商城商品获得特权标签（管理员色 red/cyan、金色边框 gold、VIP 标签）。
+      // 若购买者现有标签已含特权（管理员/VIP 本人），装备特权商品合理，放行。
+      if (isPrivilegedTag(item.tag, item.color, item.border)) {
+        let cur = reg.tags.get(name);
+        if (!isPrivilegedTag(cur && cur.tag, cur && cur.color, cur && cur.border)) {
+          return new Response(JSON.stringify({error: "该商品含特权标签（管理/VIP），无法装备"}), {status: 400});
+        }
       }
       for (let [id, info] of inv) { if (info.equipped) info.equipped = false; }
       inv.get(itemId).equipped = true;
