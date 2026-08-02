@@ -12,6 +12,8 @@ export async function handleAdminLottery(path, request, env, url) {
   try {
     let registryId = env.registry.idFromName("global");
     let stub = env.registry.get(registryId);
+    // M15：转发带 auth（admin.mjs 已注入 url.auth），registry 守卫校验
+    let auth = encodeURIComponent(url.searchParams.get("auth") || "");
     const lotAction = path.slice(2).join("/");
 
     // 白名单验证：防止路径遍历攻击（如 ../../../admin-key/get）
@@ -20,10 +22,10 @@ export async function handleAdminLottery(path, request, env, url) {
     }
 
     if (lotAction === "pools") {
-      let r = await stub.fetch(new URL("https://dummy-url/lottery/admin/pools"));
+      let r = await stub.fetch(new URL("https://dummy-url/lottery/admin/pools?auth=" + auth));
       return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
     }
-    let registryUrl = "https://dummy-url/lottery/admin/" + lotAction;
+    let registryUrl = "https://dummy-url/lottery/admin/" + lotAction + "?auth=" + auth;
     let r = await stub.fetch(registryUrl, {method: request.method, body: request.method === "POST" ? await request.text() : undefined, headers: {"Content-Type": "application/json"}});
     return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
   } catch (error) {

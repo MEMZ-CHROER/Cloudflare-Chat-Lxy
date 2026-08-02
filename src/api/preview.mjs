@@ -26,6 +26,20 @@ function isPrivateHost(hostname) {
     // IPv4-mapped ::ffff:a.b.c.d（URL 解析会把 [::ffff:127.0.0.1] 规范化为 [::ffff:7f00:1]，此处再兜底映射格式）
     let m4 = h.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
     if (m4) return isPrivateIPv4(m4[1]);
+    // H2 修复：IPv4-mapped 十六进制形式（::ffff:7f00:1 两组16位 / ::ffff:7f000001 单组32位），
+    // 解析回点分十进制后走 isPrivateIPv4，公网映射地址放行、私网一律拦截
+    let m6 = h.match(/::ffff:([0-9a-f]{1,4})(?::([0-9a-f]{1,4}))?$/i);
+    if (m6) {
+      let a = parseInt(m6[1], 16);
+      let b = m6[2] !== undefined ? parseInt(m6[2], 16) : null;
+      if (b === null && !isNaN(a) && a >= 0 && a <= 0xffffffff) {
+        return isPrivateIPv4([(a >>> 24) & 255, (a >>> 16) & 255, (a >>> 8) & 255, a & 255].join("."));
+      }
+      if (b !== null && !isNaN(a) && !isNaN(b) && a >= 0 && a <= 0xffff && b >= 0 && b <= 0xffff) {
+        return isPrivateIPv4([(a >>> 8) & 255, a & 255, (b >>> 8) & 255, b & 255].join("."));
+      }
+      return true; // 无法解析的映射形式 → 保守拒绝
+    }
     // ULA fc00::/7、link-local fe80::/10
     if (/^f[cd]/.test(h) || /^fe[89ab]/.test(h)) return true;
     return false;
@@ -50,6 +64,8 @@ function isBannedHost(hostname) {
 }
 
 // 🔒 安全修复（A3）：通过 DNS-over-HTTPS 解析域名，校验解析结果不含私网/保留 IP（防 DNS rebinding 与公共域名解析到内网）
+// M6 缓解：DNS rebinding 在 Workers fetch 上无法根治（fetch 目标 IP 由平台解析，无法固定），
+// 缓解措施为每跳重定向前复查 dnsResolvesToPrivate（见 fetchSafe），H2 修复后 IPv4-mapped 十六进制私网全拦，本函数持续生效
 async function dnsResolvesToPrivate(hostname) {
   let h = hostname.replace(/^\[|\]$/g, "").toLowerCase();
   if (h.includes(":") || /^\d+\.\d+\.\d+\.\d+$/.test(h)) return isPrivateHost(h);

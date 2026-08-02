@@ -43,6 +43,10 @@ function getResultsPanel() {
   return panel;
 }
 
+// M20：防抖（300ms），快速连续输入不反复打服务端；请求序号丢弃过期响应
+let _searchTimer = null;
+let _searchSeq = 0;
+
 // 回车搜索：走服务端全文搜索
 export function doSearch() {
   clearHighlights();
@@ -54,10 +58,12 @@ export function doSearch() {
     closeResultsPanel();
     return;
   }
-  serverSearch(query);
+  if (_searchTimer) clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => serverSearch(query), 300);
 }
 
 async function serverSearch(q) {
+  let my = ++_searchSeq;
   let url = "/api/room/" + encodeURIComponent(state.roomname) + "/search?q=" + encodeURIComponent(q) + "&limit=50";
   if (state.currentChannel) url += "&channel=" + encodeURIComponent(state.currentChannel);
   if (state.roomPassword) url += "&password=" + encodeURIComponent(state.roomPassword);
@@ -66,7 +72,9 @@ async function serverSearch(q) {
   panel.style.display = "block";
   try {
     let r = await fetch(url);
+    if (my !== _searchSeq) return; // 过期响应丢弃
     let data = await r.json();
+    if (my !== _searchSeq) return;
     if (!Array.isArray(data)) {
       panel.innerHTML = '<div style="padding:8px;color:#e74c3c;font-size:12px;">' + escapeHtml((data && data.error) || t("搜索失败")) + '</div>';
       return;
@@ -101,8 +109,35 @@ async function serverSearch(q) {
       panel.appendChild(row);
     });
   } catch (e) {
+    if (my !== _searchSeq) return;
     panel.innerHTML = '<div style="padding:8px;color:#e74c3c;font-size:12px;">' + t("搜索失败: ") + escapeHtml(e.message) + '</div>';
   }
+}
+
+// M19：返回实时视图（历史定位后可一键回到跳转前的实时界面）
+export function backToLive() {
+  if (state._savedView) {
+    state.chatlog.innerHTML = state._savedView.html;
+    state.lastSeenTimestamp = state._savedView.lastSeen;
+    state._savedView = null;
+    resetMsgDate();
+    refreshReplyCounts();
+  }
+  let btn = document.getElementById("back-to-live-btn");
+  if (btn) btn.style.display = "none";
+}
+
+function showBackToLiveButton() {
+  let btn = document.getElementById("back-to-live-btn");
+  if (!btn) {
+    btn = document.createElement("div");
+    btn.id = "back-to-live-btn";
+    btn.textContent = "⬅ " + t("返回实时");
+    btn.style.cssText = "position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:60;background:var(--primary);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.25);";
+    btn.addEventListener("click", () => backToLive());
+    document.body.appendChild(btn);
+  }
+  btn.style.display = "block";
 }
 
 // 点击结果：优先 DOM 定位；不在 DOM 则加载该时间附近历史替换聊天区再定位
@@ -121,11 +156,16 @@ async function jumpToResult(item) {
     let r = await fetch(url);
     let msgs = await r.json();
     if (!Array.isArray(msgs)) return;
+    // M19：保存跳转前的实时视图，加载历史定位后提供"返回实时"
+    if (!state._savedView) {
+      state._savedView = { html: state.chatlog.innerHTML, lastSeen: state.lastSeenTimestamp };
+    }
     state.chatlog.innerHTML = '<div id="spacer"></div>';
     state.lastSeenTimestamp = 0;
     resetMsgDate();
     msgs.forEach(m => renderChannelMessage(m));
     refreshReplyCounts();
+    showBackToLiveButton();
     let target = state.chatlog.querySelector('[data-timestamp="' + item.timestamp + '"]');
     if (target) {
       target.scrollIntoView({behavior: "smooth", block: "center"});

@@ -1,6 +1,8 @@
 // 管理后台标签操作
 
 export async function handleAdminTags(path, request, env, url) {
+  // M15：转发带 auth（admin.mjs 已注入 url.auth），registry 守卫校验
+  let auth = encodeURIComponent(url.searchParams.get("auth") || "");
   switch (path[1]) {
     case "tag": {
       const action = path[2];
@@ -31,7 +33,7 @@ export async function handleAdminTags(path, request, env, url) {
           const border = url.searchParams.get("border") || "";
           if (!userName) return new Response("请提供用户名", { status: 400 });
           if (!tag) return new Response("请提供标签", { status: 400 });
-          let response = await registryStub.fetch(new URL("https://dummy-url/tag/set?name=" + encodeURIComponent(userName) + "&tag=" + encodeURIComponent(tag) + "&color=" + encodeURIComponent(color) + "&border=" + encodeURIComponent(border)));
+          let response = await registryStub.fetch(new URL("https://dummy-url/tag/set?name=" + encodeURIComponent(userName) + "&tag=" + encodeURIComponent(tag) + "&color=" + encodeURIComponent(color) + "&border=" + encodeURIComponent(border) + "&auth=" + auth));
           let text = await response.text();
           await updateTagInRooms(userName, tag, color, border);
           if (color === "gray") {
@@ -51,7 +53,7 @@ export async function handleAdminTags(path, request, env, url) {
           return new Response(text, { status: response.status });
         } else if (action === "remove") {
           if (!userName) return new Response("请提供用户名", { status: 400 });
-          let response = await registryStub.fetch(new URL("https://dummy-url/tag/remove?name=" + encodeURIComponent(userName)));
+          let response = await registryStub.fetch(new URL("https://dummy-url/tag/remove?name=" + encodeURIComponent(userName) + "&auth=" + auth));
           let text = await response.text();
           await updateTagInRooms(userName, "", "", "");
           return new Response(text, { status: response.status });
@@ -73,7 +75,7 @@ export async function handleAdminTags(path, request, env, url) {
       try {
         let registryId = env.registry.idFromName("global");
         let stub = env.registry.get(registryId);
-        let r = await stub.fetch(new URL("https://dummy-url/admin/user-inventory"));
+        let r = await stub.fetch(new URL("https://dummy-url/admin/user-inventory?auth=" + auth));
         let data = await r.json();
         return new Response(JSON.stringify(data), {
           status: 200, headers: {"Content-Type": "application/json"}

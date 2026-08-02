@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -27,6 +27,8 @@ export async function loadAll(storage) {
       storage.get("redeemCodes"),
       storage.get("kickProtected"),
       storage.get("mutes"),
+      storage.get("gameDailyWin"),
+      storage.get("redPackets"),
     ]);
 
   return {
@@ -53,6 +55,8 @@ export async function loadAll(storage) {
     redeemCodes: redeemCodesData ? new Map(redeemCodesData) : new Map(),
     kickProtected: kickProtectedData ? new Set(kickProtectedData) : new Set(),
     mutes: mutesData ? new Map(mutesData) : new Map(),
+    gameDailyWin: gameDailyWinData ? new Map(gameDailyWinData) : new Map(),
+    redPackets: redPacketsData ? new Map(redPacketsData) : new Map(),
   };
 }
 
@@ -125,4 +129,12 @@ export async function saveKickProtected(storage, data) {
 
 export async function saveMutes(storage, data) {
   await storage.put("mutes", [...data]);
+}
+
+export async function saveGameDailyWin(storage, data) {
+  await storage.put("gameDailyWin", [...data]);
+}
+
+export async function saveRedPackets(storage, data) {
+  await storage.put("redPackets", [...data]);
 }

@@ -7,7 +7,8 @@ export async function handleAdminBot(path, request, env, url) {
     let registryId = env.registry.idFromName("global");
     let registryStub = env.registry.get(registryId);
     let action = url.searchParams.get("action") || "list";
-    let registryUrl = "https://dummy-url/bot-commands?action=" + encodeURIComponent(action);
+    // M15：registry 对 add/update/delete 做守卫，统一带 auth
+    let registryUrl = "https://dummy-url/bot-commands?action=" + encodeURIComponent(action) + "&auth=" + encodeURIComponent(url.searchParams.get("auth") || "");
     if (action === "delete" || action === "get") {
       let keyword = url.searchParams.get("keyword");
       if (keyword) registryUrl += "&keyword=" + encodeURIComponent(keyword);

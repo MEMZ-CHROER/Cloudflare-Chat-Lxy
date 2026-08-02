@@ -4,6 +4,8 @@ export async function handleAdminKey(path, request, env, url) {
   if (path[1] !== "admin-key") return null;
 
   const akAction = path[2];
+  // M15：转发带 auth（admin.mjs 已注入 url.auth），registry 守卫校验
+  let auth = encodeURIComponent(url.searchParams.get("auth") || "");
 
   try {
     let registryId = env.registry.idFromName("global");
@@ -18,10 +20,10 @@ export async function handleAdminKey(path, request, env, url) {
     } else if (akAction === "set") {
       const newKey = url.searchParams.get("newkey");
       if (!newKey) return new Response("请提供新密钥（?newkey=xxx）", { status: 400 });
-      let response = await registryStub.fetch(new URL("https://dummy-url/admin-key/set?key=" + encodeURIComponent(newKey)));
+      let response = await registryStub.fetch(new URL("https://dummy-url/admin-key/set?key=" + encodeURIComponent(newKey) + "&auth=" + auth));
       return new Response(await response.text(), { status: response.status });
     } else if (akAction === "reset") {
-      let response = await registryStub.fetch(new URL("https://dummy-url/admin-key/reset?default=" + encodeURIComponent(env.ADMIN_KEY || "")));
+      let response = await registryStub.fetch(new URL("https://dummy-url/admin-key/reset?default=" + encodeURIComponent(env.ADMIN_KEY || "") + "&auth=" + auth));
       return new Response(await response.text(), { status: response.status });
     }
 

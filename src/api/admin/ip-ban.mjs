@@ -9,14 +9,16 @@ export async function handleAdminIpBan(path, request, env, url) {
   try {
     let registryId = env.registry.idFromName("global");
     let registryStub = env.registry.get(registryId);
+    // M15：转发带 auth（admin.mjs 已注入 url.auth），registry 守卫校验
+    let auth = encodeURIComponent(url.searchParams.get("auth") || "");
 
     if (action === "add") {
       if (!ip) return new Response("请提供IP地址", { status: 400 });
-      let response = await registryStub.fetch(new URL("https://dummy-url/ip-ban?ip=" + encodeURIComponent(ip)));
+      let response = await registryStub.fetch(new URL("https://dummy-url/ip-ban?ip=" + encodeURIComponent(ip) + "&auth=" + auth));
       return new Response(await response.text(), { status: response.status });
     } else if (action === "remove") {
       if (!ip) return new Response("请提供IP地址", { status: 400 });
-      let response = await registryStub.fetch(new URL("https://dummy-url/ip-unban?ip=" + encodeURIComponent(ip)));
+      let response = await registryStub.fetch(new URL("https://dummy-url/ip-unban?ip=" + encodeURIComponent(ip) + "&auth=" + auth));
       return new Response(await response.text(), { status: response.status });
     } else if (action === "list") {
       let response = await registryStub.fetch(new URL("https://dummy-url/ip-banned-list"));

@@ -3,8 +3,13 @@ import { state, t } from './state.js';
 import { addChatMessage } from './renderers.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
 
+// M21：管理密钥——优先 localStorage 旧登录（URL 带 key），cookie 登录由服务端 httpOnly cookie 兜底，两兼容
+export function getAdminKey() {
+  return localStorage.getItem("admin_key") || "";
+}
+
 export async function modifyOwnTag(currentTag, currentColor) {
-  let adminKey = "";
+  let adminKey = getAdminKey();
   if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）才能修改标签")); return; }
   let newTag = prompt("输入新标签（留空取消）:", currentTag || "");
   if (newTag === null || !newTag.trim()) return;
@@ -109,6 +114,8 @@ export async function exportChatLog() {
     showInfo(t("正在导出聊天记录..."));
     // 🔒 安全修复（W1/A2）：密码房间导出需携带密码
     let exportUrl = "/api/room/" + encodeURIComponent(state.roomname) + "/export?format=" + fmt;
+    // M11：导出当前频道（服务端默认 general，前端显式携带当前频道）
+    if (state.currentChannel) exportUrl += "&channel=" + encodeURIComponent(state.currentChannel);
     if (state.roomPassword) exportUrl += "&password=" + encodeURIComponent(state.roomPassword);
     let r = await fetch(exportUrl);
     if (!r.ok) { showError(t("导出失败")); return; }

@@ -19,7 +19,8 @@ import {
   saveUserIps, saveGlobalBlacklist, saveAdminKey, savePoints, saveRegisteredUsers,
   saveShopItems, saveBotCommands, saveUserInventory, saveTasks, saveTaskClaims,
   saveTaskCompletions, saveLotteryPools, saveLotteryRecords, saveEmoji,
-  saveRedeemCodes, saveKickProtected, saveMutes
+  saveRedeemCodes, saveKickProtected, saveMutes,
+  saveGameDailyWin, saveRedPackets
 } from "./registry/persistence.mjs";
 
 // RoomRegistry Durable Object — 全局单例，跟踪所有房间、用户、商城、任务、抽奖等
@@ -88,6 +89,8 @@ export class RoomRegistry {
     if (data.redeemCodes) this.redeemCodes = data.redeemCodes;
     if (data.kickProtected) this.kickProtected = data.kickProtected;
     if (data.mutes) this.mutes = data.mutes;
+    if (data.gameDailyWin) this.gameDailyWin = data.gameDailyWin;
+    if (data.redPackets) this.redPackets = data.redPackets;
   }
 
   async save() { await saveRooms(this.storage, this.rooms); }
@@ -111,6 +114,8 @@ export class RoomRegistry {
   async saveEmoji() { await saveEmoji(this.storage, this.emoji); }
   async saveKickProtected() { await saveKickProtected(this.storage, this.kickProtected); }
   async saveMutes() { await saveMutes(this.storage, this.mutes); }
+  async saveGameDailyWin() { await saveGameDailyWin(this.storage, this.gameDailyWin); }
+  async saveRedPackets() { await saveRedPackets(this.storage, this.redPackets); }
 
   // 💰 积分流水账本：记录每笔积分变动（上限 100 条/用户），供用户查看收支明细
   async addLedger(name, delta, type, desc) {
@@ -136,11 +141,46 @@ export class RoomRegistry {
     } catch (e) { return []; }
   }
 
+  // M15：管理鉴权（与 registry/points.mjs 的 adminAuthorized 同源逻辑）
+  adminAuthorized(auth) {
+    if (!auth) return false;
+    if (this.adminKey && auth === this.adminKey) return true;
+    if (this.env) {
+      if (this.env.ADMIN_SECRET_KEY && auth === this.env.ADMIN_SECRET_KEY) return true;
+      if (this.env.ADMIN_KEY && auth === this.env.ADMIN_KEY) return true;
+    }
+    return false;
+  }
+
   async fetch(request) {
     if (this._loadPromise) await this._loadPromise;
 
     let url = new URL(request.url);
     let path = url.pathname;
+
+    // M15：registry 管理端点统一鉴权——防"api 无鉴权端点 → 转发 registry 管理端点"的绕过链。
+    // auth 由 api/admin 子模块转发时携带（?auth=，源自 httpOnly cookie admin_key 或 URL ?key=）。
+    // /room-destroy 不加守卫（chatroom /destroy 命令内部调用，且已有 DESTROY_KEY + admin API 双重校验）
+    let auth = url.searchParams.get("auth") || "";
+    const adminExactPaths = new Set([
+      "/tag/set", "/tag/remove",
+      "/ban", "/unban", "/ip-ban", "/ip-unban", "/kick-protect", "/kick-unprotect",
+      "/global-blacklist/add", "/global-blacklist/remove",
+      "/admin-key/set", "/admin-key/reset",
+      "/user-delete", "/set-password",
+      "/admin/shop/items", "/admin/shop/item/add", "/admin/shop/item/toggle", "/admin/shop/item/delete",
+      "/admin/tasks/list", "/admin/task/add", "/admin/task/toggle", "/admin/task/delete",
+      "/redeem/generate", "/redeem/add", "/redeem/delete", "/redeem/list",
+      "/log/add", "/log/list", "/log/clear",
+      "/admin/user-inventory",
+      "/admin/mute", "/admin/unmute", "/admin/mute-list",
+      "/emoji/add", "/emoji/remove"
+    ]);
+    let needsAdmin = adminExactPaths.has(path) || path.startsWith("/lottery/admin/") ||
+      (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
+    if (needsAdmin && !this.adminAuthorized(auth)) {
+      return new Response("无权操作", { status: 403 });
+    }
 
     let handler = null;
 

@@ -655,7 +655,7 @@ export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, m
   let repo = data && data.repo || "";
   inner.innerHTML =
     '<span style="display:flex;align-items:center;gap:8px;padding:10px 12px;">' +
-      (data && data.avatar ? '<img src="' + data.avatar.replace(/"/g, '&quot;') + '" alt="" style="width:32px;height:32px;border-radius:6px;flex:0 0 32px;">' : '<span style="width:32px;height:32px;border-radius:6px;background:#24292e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 32px;">🐙</span>') +
+      (data && data.avatar ? '<img src="' + escapeHtml(data.avatar) + '" alt="" style="width:32px;height:32px;border-radius:6px;flex:0 0 32px;">' : '<span style="width:32px;height:32px;border-radius:6px;background:#24292e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 32px;">🐙</span>') +
       '<span style="display:block;overflow:hidden;">' +
         '<span style="display:block;font-weight:700;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(repo) + '</span>' +
         (data && data.language ? '<span style="display:block;font-size:11px;color:var(--text-secondary);">' + escapeHtml(data.language) + '</span>' : '') +

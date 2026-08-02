@@ -20,6 +20,10 @@ export async function handlePoints(path, request, env) {
     if (!sender || !receiver || !amount) {
       return new Response("请提供 sender、receiver 和 amount", { status: 400 });
     }
+    // M2 修复：金额必须为正整数（防负转账/大指数 DoS，registry 层另有 amount<=0n 兜底）
+    if (!/^[1-9]\d*$/.test(amount)) {
+      return new Response("金额必须为正整数", { status: 400 });
+    }
     try {
       let registryId = env.registry.idFromName("global");
       let stub = env.registry.get(registryId);
@@ -49,13 +53,19 @@ export async function handlePoints(path, request, env) {
     }
   }
   if (action === "ledger") {
-    // 💰 积分流水账本（公开只读）：透传 registry 查询该用户流水
+    // 💰 积分流水账本：M3 修复——需本人 token 验证（防公开 IDOR 泄露财务），前端 /ledger 命令已带 token
     let name = url.searchParams.get("name");
+    let token = url.searchParams.get("token") || "";
     let limit = url.searchParams.get("limit") || 50;
     if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400, headers: {"Content-Type": "application/json"}});
     try {
       let registryId = env.registry.idFromName("global");
       let stub = env.registry.get(registryId);
+      let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
+      let authData = await authCheck.json();
+      if (!authData.authenticated) {
+        return new Response(JSON.stringify({error: "请先登录后查看流水"}), {status: 403, headers: {"Content-Type": "application/json"}});
+      }
       let r = await stub.fetch(new URL("https://dummy-url/points/ledger?name=" + encodeURIComponent(name) + "&limit=" + limit));
       return new Response(await r.text(), {status: 200, headers: {"Content-Type": "application/json"}});
     } catch (error) {

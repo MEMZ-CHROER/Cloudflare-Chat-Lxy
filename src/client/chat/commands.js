@@ -4,6 +4,7 @@ import { addChatMessage, updatePointsDisplay, applyRoomBackground } from './rend
 import { renderTextToAsciiCanvas } from './ascii.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
 import { switchChannel } from './channels.js';
+import { getAdminKey } from './ui.js';
 
 export async function handleCommand(text) {
   // 应急回滚命令（公开管理功能）：透传给服务端处理，不拦截为前端命令
@@ -32,7 +33,7 @@ export async function handleCommand(text) {
 
     case "/kick": {
       if (!arg) { showError(t("用法: /kick <用户名>")); break; }
-      let adminKey = "";
+      let adminKey = getAdminKey();
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       try {
         let r = await fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg) + "&caller=" + encodeURIComponent(state.username));
@@ -61,7 +62,7 @@ export async function handleCommand(text) {
 
     case "/ban": {
       if (!arg) { showError(t("用法: /ban <用户名>")); break; }
-      let adminKey = "";
+      let adminKey = getAdminKey();
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       try {
         await fetch("/api/admin/global-kick?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg));
@@ -73,7 +74,7 @@ export async function handleCommand(text) {
 
     case "/unban": {
       if (!arg) { showError(t("用法: /unban <用户名>")); break; }
-      let adminKey = "";
+      let adminKey = getAdminKey();
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       try {
         let r = await fetch("/api/admin/ban/remove?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg));
@@ -148,7 +149,8 @@ export async function handleCommand(text) {
     case "/流水": {
       if (!state.username) { showError(t("请先登录后查看积分流水")); break; }
       try {
-        let r = await fetch("/api/points/ledger?name=" + encodeURIComponent(state.username));
+        // M3：查看流水需本人 token 验证
+        let r = await fetch("/api/points/ledger?name=" + encodeURIComponent(state.username) + "&token=" + encodeURIComponent(localStorage.getItem("chat_token") || ""));
         let data = await r.json();
         if (!Array.isArray(data)) { addChatMessage(null, "* " + ((data && data.error) || t("获取流水失败"))); break; }
         if (data.length === 0) { addChatMessage(null, "* " + t("暂无积分流水记录")); break; }
@@ -194,7 +196,7 @@ export async function handleCommand(text) {
     case "/tag": {
       let targetUser = parts[1], tagValue = parts[2], tagColor = parts[3] || "", tagBorder = parts[4] || "";
       if (!targetUser || !tagValue) { showError(t("用法: /tag <用户名> <标签> [颜色] [边框颜色]\n  支持多色: /tag 1 [red]五[green]彩[blue]斑斓")); break; }
-      let adminKey = "";
+      let adminKey = getAdminKey();
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       try {
         let url = "/api/admin/tag/set?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(targetUser) + "&tag=" + encodeURIComponent(tagValue);
@@ -208,7 +210,7 @@ export async function handleCommand(text) {
     case "/untag": {
       let targetUser = parts[1];
       if (!targetUser) { showError(t("用法: /untag <用户名>")); break; }
-      let adminKey = "";
+      let adminKey = getAdminKey();
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       try {
         let r = await fetch("/api/admin/tag/remove?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(targetUser));
@@ -218,7 +220,7 @@ export async function handleCommand(text) {
     }
 
     case "/clear": {
-      let adminKey = "";
+      let adminKey = getAdminKey();
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       if (!confirm(t("确定清空 ") + state.roomname + t(" 的聊天记录吗？"))) break;
       try {

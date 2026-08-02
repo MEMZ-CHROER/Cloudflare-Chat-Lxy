@@ -1,6 +1,8 @@
 // 管理后台用户相关操作
 
 export async function handleAdminUsers(path, request, env, url) {
+  // M15：转发带 auth（admin.mjs 已注入 url.auth），registry 守卫校验
+  let auth = encodeURIComponent(url.searchParams.get("auth") || "");
   switch (path[1]) {
     case "kick-protect": {
       const action = path[2];
@@ -14,11 +16,11 @@ export async function handleAdminUsers(path, request, env, url) {
         const userName = url.searchParams.get("name");
         if (!userName) return new Response("请提供用户名", { status: 400 });
         if (action === "add") {
-          let r = await stub.fetch(new URL("https://dummy-url/kick-protect?name=" + encodeURIComponent(userName)));
+          let r = await stub.fetch(new URL("https://dummy-url/kick-protect?name=" + encodeURIComponent(userName) + "&auth=" + auth));
           return new Response(await r.text(), { status: r.status });
         }
         if (action === "remove") {
-          let r = await stub.fetch(new URL("https://dummy-url/kick-unprotect?name=" + encodeURIComponent(userName)));
+          let r = await stub.fetch(new URL("https://dummy-url/kick-unprotect?name=" + encodeURIComponent(userName) + "&auth=" + auth));
           return new Response(await r.text(), { status: r.status });
         }
       } catch (error) {
@@ -126,21 +128,21 @@ export async function handleAdminUsers(path, request, env, url) {
 
         if (action === "add") {
           if (!userName) return new Response("请提供用户名", { status: 400 });
-          let response = await registryStub.fetch(new URL("https://dummy-url/ban?name=" + encodeURIComponent(userName)));
+          let response = await registryStub.fetch(new URL("https://dummy-url/ban?name=" + encodeURIComponent(userName) + "&auth=" + auth));
           let text = await response.text();
           try {
             let ipRes = await registryStub.fetch(new URL("https://dummy-url/user-ips"));
             let ips = await ipRes.json();
             let userIp = ips[userName];
             if (userIp) {
-              await registryStub.fetch(new URL("https://dummy-url/ip-ban?ip=" + encodeURIComponent(userIp)));
+              await registryStub.fetch(new URL("https://dummy-url/ip-ban?ip=" + encodeURIComponent(userIp) + "&auth=" + auth));
               text += "（IP已同时封禁）";
             }
           } catch (e) {}
           return new Response(text, { status: response.status });
         } else if (action === "remove") {
           if (!userName) return new Response("请提供用户名", { status: 400 });
-          let response = await registryStub.fetch(new URL("https://dummy-url/unban?name=" + encodeURIComponent(userName)));
+          let response = await registryStub.fetch(new URL("https://dummy-url/unban?name=" + encodeURIComponent(userName) + "&auth=" + auth));
           let text = await response.text();
           return new Response(text, { status: response.status });
         } else if (action === "list") {
@@ -167,11 +169,11 @@ export async function handleAdminUsers(path, request, env, url) {
 
         if (gbAction === "add") {
           if (!gbName) return new Response("请提供用户名", { status: 400 });
-          let response = await registryStub.fetch(new URL("https://dummy-url/global-blacklist/add?name=" + encodeURIComponent(gbName)));
+          let response = await registryStub.fetch(new URL("https://dummy-url/global-blacklist/add?name=" + encodeURIComponent(gbName) + "&auth=" + auth));
           return new Response(await response.text(), { status: response.status });
         } else if (gbAction === "remove") {
           if (!gbName) return new Response("请提供用户名", { status: 400 });
-          let response = await registryStub.fetch(new URL("https://dummy-url/global-blacklist/remove?name=" + encodeURIComponent(gbName)));
+          let response = await registryStub.fetch(new URL("https://dummy-url/global-blacklist/remove?name=" + encodeURIComponent(gbName) + "&auth=" + auth));
           return new Response(await response.text(), { status: response.status });
         } else if (gbAction === "list") {
           let response = await registryStub.fetch(new URL("https://dummy-url/global-blacklist/list"));
@@ -193,7 +195,7 @@ export async function handleAdminUsers(path, request, env, url) {
       try {
         let registryId = env.registry.idFromName("global");
         let registryStub = env.registry.get(registryId);
-        let r = await registryStub.fetch(new URL("https://dummy-url/user-delete?name=" + encodeURIComponent(userName)));
+        let r = await registryStub.fetch(new URL("https://dummy-url/user-delete?name=" + encodeURIComponent(userName) + "&auth=" + auth));
         return new Response(await r.text(), { status: r.status });
       } catch (error) {
         return new Response("删除用户失败: " + error.message, { status: 500 });

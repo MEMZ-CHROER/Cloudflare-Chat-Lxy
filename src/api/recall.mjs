@@ -22,6 +22,24 @@ export async function handleRecall(path, request, env) {
     return new Response("撤回失败：验证服务不可用", {status: 503});
   }
 
+  // M5 修复：密码房撤回需提供正确密码（复制 rooms.mjs requireRoomPassword 逻辑，fail-closed）
+  try {
+    let registryId = env.registry.idFromName("global");
+    let stub = env.registry.get(registryId);
+    let pResp = await stub.fetch("https://dummy-url/password-status?name=" + encodeURIComponent(recallRoom));
+    let pData = await pResp.json();
+    if (pData.hasPassword) {
+      let pwd = url.searchParams.get("password") || "";
+      let vResp = await stub.fetch("https://dummy-url/verify-password", {
+        method: "POST", body: JSON.stringify({name: recallRoom, password: pwd}), headers: {"Content-Type": "application/json"}
+      });
+      let vData = await vResp.json();
+      if (!vData.ok) return new Response("撤回失败：需要正确的房间密码", {status: 403});
+    }
+  } catch (e) {
+    return new Response("撤回失败：验证服务不可用", {status: 503});
+  }
+
   let recallId;
   if (recallRoom.match(/^[0-9a-f]{64}$/)) {
     recallId = env.rooms.idFromString(recallRoom);

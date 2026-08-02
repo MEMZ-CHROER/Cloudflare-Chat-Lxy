@@ -104,6 +104,27 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.27</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔐</span><span class="text"><span class="tag tag-fix">安全</span>管理端 CSRF 防护 — 登录 Cookie 升级为 SameSite=Strict + Secure，跨站请求不再携带管理凭据</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-fix">安全</span>SSRF 十六进制绕过封堵 — URL 预览拦截 IPv4-mapped 十六进制内网地址（::ffff:7f00:1 等），此前可绕过内网访问限制</span></div>
+    <div class="feature-item"><span class="icon">🧹</span><span class="text"><span class="tag tag-fix">修复</span>清空聊天记录不彻底 — 文本消息无 type 字段导致 /clear 删不掉，现按「数字时间戳 + 消息内容」判定，系统数据不受影响</span></div>
+    <div class="feature-item"><span class="icon">🎰</span><span class="text"><span class="tag tag-fix">安全</span>游戏赔率修正 — 原 45% 概率赢 1~25 倍（+EV 长期铸币），改为 1~2 倍（负期望），每日净赢上限持久化（重启不重置防刷额度）</span></div>
+    <div class="feature-item"><span class="icon">💳</span><span class="text"><span class="tag tag-fix">安全</span>积分铸币权限收紧 — 设置/增加/批量积分仅超管可用，普通管理员降为只读；积分管理入口超管专属</span></div>
+    <div class="feature-item"><span class="icon">📒</span><span class="text"><span class="tag tag-fix">安全</span>积分流水加鉴权 — /ledger 需本人 token 验证，堵住公开 IDOR 泄露财务；转账金额校验正整数（负数/超大指数拒绝）</span></div>
+    <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-fix">安全</span>registry 管理端点统一鉴权 — 标签/封禁/兑换码/商城/任务/抽奖/日志/表情/机器人等 30+ 管理端点全部校验管理密钥，堵住内部转发绕过链</span></div>
+    <div class="feature-item"><span class="icon">⏱️</span><span class="text"><span class="tag tag-fix">安全</span>登录爆破限流 — 同 IP 10 分钟失败 ≥20 次返回 429；BigInt 指数 DoS 防护（超大指数直接拒绝）</span></div>
+    <div class="feature-item"><span class="icon">🧧</span><span class="text"><span class="tag tag-fix">修复</span>红包持久化 — 未抢完的红包重启后仍可抢；文件 MIME 白名单补漏（svg/xhtml+xml 等可注入类型全拦）</span></div>
+    <div class="feature-item"><span class="icon">📋</span><span class="text"><span class="tag tag-fix">修复</span>导出/搜索/文件列表默认当前频道 — 不带频道参数不再跨全部频道泄露</span></div>
+    <div class="feature-item"><span class="icon">🖥️</span><span class="text"><span class="tag tag-fix">修复</span>前端多项 — 非当前频道消息不再被丢弃（进缓存+未读）、搜索防抖+过期响应丢弃、历史定位可一键返回实时、管理 key 双源兼容（cookie/localStorage）、游戏切走清理计时器、双击下注防重入</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.26</span>
     <span class="version-date">2026-08-02</span>
     <span class="version-arrow open">▶</span>

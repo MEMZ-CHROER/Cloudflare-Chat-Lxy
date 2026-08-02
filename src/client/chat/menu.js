@@ -4,6 +4,7 @@ import { addChatMessage, updatePointsDisplay } from './renderers.js';
 import { openDM } from './dm.js';
 import { getNote, setNote } from './note.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
+import { getAdminKey } from './ui.js';
 
 export function showUserMenu(name, x, y) {
   state.menuTargetUser = name;
@@ -59,7 +60,7 @@ export function handleMenuAction(action) {
     case "kick": {
       if (target === state.username) { showError(t("不能踢出自己")); return; }
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
-      let k = "";
+      let k = getAdminKey();
       if (!confirm(t("确定要踢出「") + target + t("」吗？"))) return;
       fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target) + "&caller=" + encodeURIComponent(state.username))
         .then(r => r.text()).then(t => addChatMessage(null, "* " + t));
@@ -88,7 +89,7 @@ export function handleMenuAction(action) {
     }
     case "ban": {
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
-      let k = "";
+      let k = getAdminKey();
       if (!confirm(t("确定要永久封禁「") + target + t("」吗？（将同时封禁IP）"))) return;
       fetch("/api/admin/global-kick?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target));
       fetch("/api/admin/ban/add?key=" + encodeURIComponent(k) + "&name=" + encodeURIComponent(target))
@@ -97,7 +98,7 @@ export function handleMenuAction(action) {
     }
     case "banip": {
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
-      let k = "";
+      let k = getAdminKey();
       if (!confirm(t("确定要封禁「") + target + t("」的IP吗？"))) return;
       fetch("/api/admin/user-ips?key=" + encodeURIComponent(k))
         .then(r => r.json())
@@ -138,7 +139,7 @@ export function handleMenuAction(action) {
     }
     case "tag": {
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
-      let k = "";
+      let k = getAdminKey();
       let newTag = prompt("输入「" + target + t("」的新标签（留空取消）:"));
       if (!newTag || !newTag.trim()) return;
       let newColor = prompt("标签颜色（留空默认）: red/blue/green/purple/pink/cyan/gray/orange");
@@ -149,7 +150,7 @@ export function handleMenuAction(action) {
     }
     case "batch-kick": {
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); return; }
-      let k = "";
+      let k = getAdminKey();
       let names = prompt("输入要批量踢出的用户名，用逗号分隔：");
       if (!names || !names.trim()) return;
       let nameList = names.split(/[,，\s]+/).filter(Boolean);

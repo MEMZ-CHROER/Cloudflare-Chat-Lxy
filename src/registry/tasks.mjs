@@ -10,6 +10,7 @@ function toBigInt(val) {
       let [base, exp] = s.split('e');
       let e = parseInt(exp, 10);
       if (e < 0) return 0n;
+      if (e > 100000) return 0n; // 防 DoS：指数过大直接拒绝
       let dot = base.indexOf('.');
       if (dot === -1) s = base + '0'.repeat(e);
       else {

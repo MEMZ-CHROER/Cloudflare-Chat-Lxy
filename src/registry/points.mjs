@@ -11,6 +11,7 @@ function toBigInt(val) {
       let sign = 1;
       let e = parseInt(exp, 10);
       if (e < 0) return 0n; // 不支持小数
+      if (e > 100000) return 0n; // 防 DoS：指数过大直接拒绝
       let dot = base.indexOf('.');
       if (dot === -1) {
         // "123e+10" → "123" + "0"*10
@@ -203,9 +204,10 @@ export async function handlePoints(reg, request, url) {
         return new Response(JSON.stringify({error: "积分不足，无法下注"}), {status: 400});
       }
       reg.userPoints.set(name, String(current - BigInt(wager)));
-      // 服务端定局：约 45% 概率赢，奖励为下注 1~25 倍随机（单局上限 10000）
+      // 服务端定局：约 45% 概率赢，奖励为下注 1~2 倍随机（单局上限 10000）
+      // H5 修复：原 1~25 倍为 +EV（期望约 6.1 倍，长期铸币），改为 1~2 倍 → 期望 0.675×wager，负期望稳定
       let won = Math.random() < 0.45;
-      let prize = won ? Math.min(Math.floor(wager * (1 + Math.random() * 24)), 10000) : 0;
+      let prize = won ? Math.min(Math.floor(wager * (1 + Math.random())), 10000) : 0;
       // 每日净赢上限 10000（prize - wager 累计），超出则截断至额度内（至少保本）
       let today = new Date().toISOString().slice(0, 10);
       let daily = reg.gameDailyWin.get(name);
@@ -218,6 +220,7 @@ export async function handlePoints(reg, request, url) {
           awarded = prize;
           daily.total += (prize - wager);
           reg.gameDailyWin.set(name, daily);
+          await reg.saveGameDailyWin(); // H6：每日净赢上限持久化，DO 重启不重置防刷额度
         }
       }
       if (awarded > 0) {

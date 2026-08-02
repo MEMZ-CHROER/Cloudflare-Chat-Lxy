@@ -542,6 +542,9 @@ export function join() {
       }
     } else {
       if (state.blockedUsers.has(data.name)) return;
+      // M18：频道路由优先于 lastSeenTimestamp 检查——非当前频道消息一律入缓存+未读，不因 timestamp 旧被丢弃
+      let txtCh = data.channel || "general";
+      if (txtCh !== state.currentChannel) { pushToChannelCache(txtCh, data); bumpChannelUnread(txtCh); return; }
       if (data.timestamp > state.lastSeenTimestamp) {
         if (!state.isAtBottom && !state._newMsgDividerAdded) {
           state._newMsgDividerAdded = true;
@@ -553,9 +556,6 @@ export function join() {
         }
         checkKeywords(data.message, data.name);
         // 日期分组由 renderers.addChatMessage 统一处理
-        // 频道体系：非当前频道消息入缓存，不渲染
-        let txtCh = data.channel || "general";
-        if (txtCh !== state.currentChannel) { pushToChannelCache(txtCh, data); bumpChannelUnread(txtCh); return; }
         addChatMessage(data.name, data.message, data.tag, data.tagColor, data.color, data.timestamp, data.reply, data.tagBorder, data.id, data.atAll, data.avatar);
         state.lastSeenTimestamp = data.timestamp;
         refreshReplyCounts();

@@ -5,6 +5,8 @@ export async function handleAdminEmoji(path, request, env, url) {
     case "emoji": {
       let registryId = env.registry.idFromName("global");
       let stub = env.registry.get(registryId);
+      // M15：转发带 auth（admin.mjs 已注入 url.auth），registry 守卫校验
+      let auth = encodeURIComponent(url.searchParams.get("auth") || "");
 
       if (path[2] === "list") {
         let r = await stub.fetch("https://dummy-url/emoji/list");
@@ -19,7 +21,7 @@ export async function handleAdminEmoji(path, request, env, url) {
       if (path[2] === "add" && request.method === "POST") {
         try {
           let body = await request.json();
-          let r = await stub.fetch("https://dummy-url/emoji/add", {
+          let r = await stub.fetch("https://dummy-url/emoji/add?auth=" + auth, {
             method: "POST",
             body: JSON.stringify(body),
             headers: {"Content-Type": "application/json"}
@@ -33,7 +35,7 @@ export async function handleAdminEmoji(path, request, env, url) {
       if (path[2] === "remove") {
         let name = url.searchParams.get("name");
         if (!name) return new Response("请提供表情名称", {status: 400});
-        let r = await stub.fetch("https://dummy-url/emoji/remove?name=" + encodeURIComponent(name));
+        let r = await stub.fetch("https://dummy-url/emoji/remove?name=" + encodeURIComponent(name) + "&auth=" + auth);
         return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
       }
 

@@ -26,8 +26,8 @@ export async function handleMedia(room, session, data, webSocket) {
       webSocket.send(JSON.stringify({error: "图片内容类型不合法"}));
       return true;
     }
-    // 🔒 安全修复：图片消息拒绝 svg+xml 等可注入类型
-    if (/^data:image\/svg\+xml/i.test(imageData)) {
+    // 🔒 安全修复：图片消息拒绝 svg/svg+xml 等可注入类型（M13：svg 不带 +xml 后缀也拦）
+    if (/^data:image\/svg/i.test(imageData)) {
       webSocket.send(JSON.stringify({error: "图片内容类型不合法"}));
       return true;
     }
@@ -89,8 +89,9 @@ export async function handleMedia(room, session, data, webSocket) {
       webSocket.send(JSON.stringify({error: "文件内容类型不合法"}));
       return true;
     }
-    // 🔒 安全修复：拒绝可执行/可注入类型（data:text/html、data:image/svg+xml）
-    if (/^data:text\/html/i.test(fileData) || /^data:image\/svg\+xml/i.test(fileData)) {
+    // 🔒 安全修复：拒绝可执行/可注入类型（M13 补全：text/html、image/svg、xhtml+xml、svg+xml）
+    if (/^data:text\/html/i.test(fileData) || /^data:image\/svg/i.test(fileData) ||
+        /^data:application\/xhtml\+xml/i.test(fileData) || /^data:application\/svg\+xml/i.test(fileData)) {
       webSocket.send(JSON.stringify({error: "文件内容类型不合法"}));
       return true;
     }

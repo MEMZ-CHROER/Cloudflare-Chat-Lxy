@@ -72,9 +72,16 @@ export function hideGameLoading() {
 
 // ========== 积分操作 ==========
 
+// M23：下注防重入——同一时刻仅允许一个 bet 在途，双击"开始"第二次直接拒绝。
+// 服务端另有 30 秒冷却兜底，双保险杜绝重复扣费。
+let _betInFlight = false;
 export async function gameApi(action, data) {
   // 自动触发音效
   if (action === 'win') playGameSound('win');
+  if (action === "bet") {
+    if (_betInFlight) return { error: "下注处理中，请勿重复点击" };
+    _betInFlight = true;
+  }
   try {
     let name = state.username || localStorage.getItem("chat_user") || "";
     let token = localStorage.getItem("chat_token") || "";
@@ -86,6 +93,8 @@ export async function gameApi(action, data) {
     return await r.json();
   } catch (e) {
     return {error: e.message};
+  } finally {
+    if (action === "bet") _betInFlight = false;
   }
 }
 
@@ -150,13 +159,30 @@ export async function openGames() {
   }
 }
 
+// M22：统一清理游戏计时器/动画帧（switchGame/closeGames 时调用，防旧 interval 泄漏与时间减半）
+function cleanupGameTimers() {
+  for (let k of Object.keys(gs)) {
+    let v = gs[k];
+    if (!v || typeof v !== "object") continue;
+    for (let tk of ["timer", "spawnTimer", "countdown", "anim", "moleTimer", "_chargeTimer"]) {
+      if (v[tk] != null) {
+        if (tk === "anim") { try { cancelAnimationFrame(v[tk]); } catch (e) {} }
+        else { try { clearInterval(v[tk]); } catch (e) {} }
+        v[tk] = null;
+      }
+    }
+  }
+}
+
 export function closeGames() {
+  cleanupGameTimers();
   let overlay = document.getElementById("game-overlay");
   if (overlay) overlay.classList.remove("show");
   gs.currentGame = null;
 }
 
 export function switchGame(game) {
+  cleanupGameTimers(); // M22：切走前清理旧游戏 interval/rAF
   if (gs.currentGame && gameRegistry[gs.currentGame]) {
     // 不中断动画，但不做特殊处理
   }

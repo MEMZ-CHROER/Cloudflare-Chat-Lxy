@@ -188,7 +188,7 @@ export class ChatRoom {
         }
 
         case "/files": {
-          let channel = url.searchParams.get("channel") || "";
+          let channel = url.searchParams.get("channel") || "general"; // M11：不带频道默认只列/导 general
           let entries = await this.storage.list({reverse: true, limit: 100});
           let files = [];
           for (let [key, val] of entries) {
@@ -280,7 +280,7 @@ export class ChatRoom {
           // 🔍 历史搜索：服务端遍历最近消息，按关键词/用户名/频道过滤（无索引，遍历最近 2000 条）
           let q = url.searchParams.get("q") || "";
           let sName = url.searchParams.get("name") || "";
-          let sChannel = url.searchParams.get("channel") || "";
+          let sChannel = url.searchParams.get("channel") || "general"; // M11：不带频道默认只搜 general，防跨频道泄露
           let limit = parseInt(url.searchParams.get("limit")) || 30;
           if (limit > 100) limit = 100;
           if (!q.trim()) return new Response(JSON.stringify({error: "缺少搜索关键词"}), {status: 400, headers: {"Content-Type": "application/json"}});
@@ -311,7 +311,7 @@ export class ChatRoom {
 
         case "/export": {
           let format = url.searchParams.get("format") || "json";
-          let channel = url.searchParams.get("channel") || "";
+          let channel = url.searchParams.get("channel") || "general"; // M11：不带频道默认只列/导 general
           let entries = await this.storage.list({reverse: false});
           let msgs = [];
           for (let [key, val] of entries) {
@@ -517,7 +517,12 @@ export class ChatRoom {
     for (let [key, val] of allEntries) {
       try {
         let parsed = JSON.parse(val);
-        if (parsed && parsed.type && ["message", "image", "file", "reply", "zifu"].includes(parsed.type)) {
+        // H3 修复：文本消息无 type 字段（data={name,message,channel}），原条件删不掉文本；
+        // 改为"有数字 timestamp + (有 message 字段 或 type 属消息类)"。系统 key
+        // （channels/blacklist/announcement/__destroyed__/pinnedMessage/scheduledMessages/polls/relays/
+        //  highlights/reactions/at-mentions/ghcache:*/aictx:*）无数字 timestamp 或类型非消息，不会误删
+        if (parsed && typeof parsed.timestamp === "number" &&
+            (typeof parsed.message === "string" || ["image", "file", "zifu", "voice", "gh-card", "reply", "text", "recalled", "deleted"].includes(parsed.type))) {
           msgKeys.push(key);
         }
       } catch (e) {}
@@ -1902,7 +1907,8 @@ export class ChatRoom {
           this.sessions.delete(webSocket);
         }
       } else {
-        session.blockedMessages.push(message);
+        // M12：未命名会话消息队列设上限，防无限累积
+        if (session.blockedMessages.length < 200) session.blockedMessages.push(message);
       }
     });
 
@@ -1944,7 +1950,8 @@ export class ChatRoom {
           catch (err) { session.quit = true; this.sessions.delete(webSocket); }
         }
       } else {
-        session.blockedMessages.push(message);
+        // M12：未命名会话消息队列设上限，防无限累积
+        if (session.blockedMessages.length < 200) session.blockedMessages.push(message);
       }
     });
   }

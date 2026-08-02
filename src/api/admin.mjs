@@ -17,6 +17,10 @@ import { handleAdminRedeem } from "./admin/redeem.mjs";
 import { handleAdminLog } from "./admin/log.mjs";
 import { handleAdminMute } from "./admin/mute.mjs";
 
+// M7：登录爆破限流（IP → {count, resetTs}），同 IP 10 分钟内失败 ≥20 次封禁
+// 局限：Workers 多实例不共享，属缓解措施
+const loginAttempts = new Map();
+
 // 🔒 安全修复（A10）：常量时间字符串比较，降低远程时序测信道风险
 function safeEqual(a, b) {
   a = String(a || "");
@@ -28,11 +32,12 @@ function safeEqual(a, b) {
 }
 
 // 操作日志助手
-async function logAdminAction(env, operator, action, target, detail) {
+async function logAdminAction(env, auth, operator, action, target, detail) {
   try {
     let registryId = env.registry.idFromName("global");
     let stub = env.registry.get(registryId);
-    await stub.fetch("https://dummy-url/log/add", {
+    // M15：日志写入也需 registry 鉴权，附带 auth（源自管理 cookie/URL key）
+    await stub.fetch("https://dummy-url/log/add?auth=" + encodeURIComponent(auth || ""), {
       method: "POST",
       body: JSON.stringify({operator, action, target, detail}),
       headers: {"Content-Type": "application/json"}
@@ -66,14 +71,29 @@ export async function handleAdmin(path, request, env) {
   // 🔒 安全修复（LD12）：管理登录/登出端点（httpOnly Cookie，JS 不可读）
   if (path[1] === "login" && request.method === "POST") {
     try {
+      // M7：登录爆破限流——同 IP 10 分钟内失败 ≥20 次返回 429
+      let ip = request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "unknown";
+      let now = Date.now();
+      let rec = loginAttempts.get(ip);
+      if (rec && now > rec.resetTs) { loginAttempts.delete(ip); rec = null; }
+      if (rec && rec.count >= 20) {
+        return new Response(JSON.stringify({error: "尝试过于频繁，请 10 分钟后再试"}), {status: 429, headers: {"Content-Type": "application/json"}});
+      }
       let body = await request.json();
       let k = String(body.key || "");
       let p = await getAdminPermission(k, env);
-      if (!p) return new Response(JSON.stringify({error: "密钥无效"}), {status: 401, headers: {"Content-Type": "application/json"}});
+      if (!p) {
+        if (!rec) rec = {count: 0, resetTs: now + 600000};
+        rec.count++;
+        loginAttempts.set(ip, rec);
+        return new Response(JSON.stringify({error: "密钥无效"}), {status: 401, headers: {"Content-Type": "application/json"}});
+      }
+      loginAttempts.delete(ip); // 成功登录清计数
       let resp = new Response(JSON.stringify({ok: true, level: p}), {status: 200, headers: {"Content-Type": "application/json"}});
       // admin_key: httpOnly 密钥（JS 不可读）；admin_logged: 非 httpOnly 登录标记（供前端显示管理菜单，不含密钥）
-      resp.headers.set("Set-Cookie", "admin_key=" + encodeURIComponent(k) + "; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400");
-      resp.headers.append("Set-Cookie", "admin_logged=1; Path=/; SameSite=Lax; Max-Age=86400");
+      // H1 修复：SameSite=Strict + Secure，防 CSRF（管理面板同源 fetch 不受影响，跨站请求不再带 cookie）
+      resp.headers.set("Set-Cookie", "admin_key=" + encodeURIComponent(k) + "; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=86400");
+      resp.headers.append("Set-Cookie", "admin_logged=1; Path=/; SameSite=Strict; Secure; Max-Age=86400");
       return resp;
     } catch (e) { return new Response(JSON.stringify({error: "请求解析失败"}), {status: 400}); }
   }
@@ -85,6 +105,13 @@ export async function handleAdmin(path, request, env) {
   }
 
   let permission = await getAdminPermission(requestKey, env);
+  // M15：把解析出的管理密钥注入 url.auth（cookie/URL 两源兼容），供 registry 子模块转发鉴权
+  let resolvedKey = requestKey || "";
+  if (!resolvedKey) {
+    let m = (request.headers.get("Cookie") || "").match(/(?:^|;\s*)admin_key=([^;]+)/);
+    if (m) { try { resolvedKey = decodeURIComponent(m[1]); } catch (_) { resolvedKey = m[1]; } }
+  }
+  url.searchParams.set("auth", resolvedKey);
   // 💥 独立销毁口令（DESTROY_KEY）：仅对 destroy-room 生效，不授予其他超管权限
   if (!permission && path[1] === "destroy-room" && env.DESTROY_KEY && requestKey && safeEqual(requestKey, env.DESTROY_KEY)) {
     permission = "super";
@@ -96,7 +123,8 @@ export async function handleAdmin(path, request, env) {
   // 🔒 安全修复（A1）：普通管理员（ADMIN_KEY）仅允许日常运维功能；
   // destroy-room（销毁房间）、delete-user（删用户）、redeem（兑换码铸币）、log（审计日志）、
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
-  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "points", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "mute", "unmute", "mute-list"];
+  // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
+  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "mute", "unmute", "mute-list"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -105,7 +133,10 @@ export async function handleAdmin(path, request, env) {
   }
 
   if (permission === "admin" && !adminAllowedPaths.includes(path[1])) {
-    return new Response("无权限访问此管理功能。", { status: 403 });
+    // M1 联动：积分端点仅 super 可写；普通 admin 允许只读查询（get/all 供 dashboard 统计），禁止 set/add/batch 铸币
+    if (!(path[1] === "points" && ["get", "all"].includes(path[2]))) {
+      return new Response("无权限访问此管理功能。", { status: 403 });
+    }
   }
 
   // 按领域分发
@@ -170,7 +201,7 @@ export async function handleAdmin(path, request, env) {
       cleanParams.delete("key"); cleanParams.delete("newkey"); cleanParams.delete("auth");
       let cleanQs = cleanParams.toString();
       let detail = url.pathname + (cleanQs ? "?" + cleanQs : "");
-      await logAdminAction(env, permission === "super" ? "super" : "admin", path[1], target, detail);
+      await logAdminAction(env, resolvedKey, permission === "super" ? "super" : "admin", path[1], target, detail);
     }
     return result;
   }

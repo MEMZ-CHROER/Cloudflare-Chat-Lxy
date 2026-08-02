@@ -200,7 +200,9 @@ export async function handleAdminRooms(path, request, env, url) {
       try {
         let registryId = env.registry.idFromName("global");
         let stub = env.registry.get(registryId);
-        let r = await stub.fetch("https://dummy-url/set-password?name=" + encodeURIComponent(roomId) + "&password=" + encodeURIComponent(password));
+        // M15：/set-password 属 registry 管理端点，转发带 auth
+        let auth = encodeURIComponent(url.searchParams.get("auth") || "");
+        let r = await stub.fetch("https://dummy-url/set-password?name=" + encodeURIComponent(roomId) + "&password=" + encodeURIComponent(password) + "&auth=" + auth);
         return new Response(await r.text(), { status: r.status });
       } catch (error) {
         return new Response("操作失败: " + "操作失败", { status: 500 });

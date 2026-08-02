@@ -10,6 +10,7 @@ function toBigInt(val) {
       let [base, exp] = s.split('e');
       let e = parseInt(exp, 10);
       if (e < 0) return 0n;
+      if (e > 100000) return 0n; // 防 DoS：指数过大直接拒绝
       let dot = base.indexOf('.');
       if (dot === -1) s = base + '0'.repeat(e);
       else {
@@ -69,6 +70,7 @@ export async function handleRedPacket(reg, request, url) {
         reg.redPackets.set(rpId, rp);
 
         await reg.savePoints();
+        await reg.saveRedPackets(); // M14：红包持久化，DO 重启后红包仍可抢
         await reg.addLedger(creator, -BigInt(total), "redpacket", "发红包");
         return new Response(JSON.stringify({
           ok: true, redpacket: {
@@ -134,6 +136,7 @@ export async function handleRedPacket(reg, request, url) {
         rp.remainingCount--;
 
         await reg.savePoints();
+        await reg.saveRedPackets(); // M14：抢后红包状态持久化
         await reg.addLedger(user, amount, "redpacket", "抢到红包");
         return new Response(JSON.stringify({
           ok: true, amount,
