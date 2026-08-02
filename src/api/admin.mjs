@@ -16,6 +16,7 @@ import { handleAdminEmoji } from "./admin/emoji.mjs";
 import { handleAdminRedeem } from "./admin/redeem.mjs";
 import { handleAdminLog } from "./admin/log.mjs";
 import { handleAdminMute } from "./admin/mute.mjs";
+import { handleAdminWebhooks } from "./admin/webhooks.mjs";
 
 // M7：登录爆破限流（IP → {count, resetTs}），同 IP 10 分钟内失败 ≥20 次封禁
 // 局限：Workers 多实例不共享，属缓解措施
@@ -124,7 +125,7 @@ export async function handleAdmin(path, request, env) {
   // destroy-room（销毁房间）、delete-user（删用户）、redeem（兑换码铸币）、log（审计日志）、
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
   // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
-  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "mute", "unmute", "mute-list"];
+  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "mute", "unmute", "mute-list", "webhook"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -191,6 +192,9 @@ export async function handleAdmin(path, request, env) {
 
   if (!result && ["mute", "unmute", "mute-list"].includes(path[1]))
     result = await handleAdminMute(path, request, env, url);
+
+  if (!result && path[1] === "webhook")
+    result = await handleAdminWebhooks(path, request, env, url);
 
   if (result) {
     // 🔒 安全修复（A4）：记录管理操作日志（此前 logAdminAction 从未被调用，审计形同虚设）

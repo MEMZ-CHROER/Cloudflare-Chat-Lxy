@@ -1,4 +1,6 @@
-// 房间注册/更新/列表 + 密码管理
+// 房间注册/更新/列表 + 密码管理 + 房间级 Webhook secret
+
+import { safeEqual } from "../utils.mjs";
 
 export async function handleRooms(reg, request, url) {
   switch (url.pathname) {
@@ -84,6 +86,59 @@ export async function handleRooms(reg, request, url) {
       reg.rooms.delete(name);
       await reg.save();
       return new Response("房间 " + name + " 已从注册表中移除", { status: 200 });
+    }
+
+    // 🔗 通用 Webhook：房间级 secret 管理（list/gen/del/status）
+    // 管理端点（registry.mjs adminExactPaths 已加鉴权）；入站校验走 /room/webhook-verify（公开）
+    case "/room/webhook": {
+      let roomName = url.searchParams.get("room");
+      let action = url.searchParams.get("action") || "";
+      if (action === "list") {
+        let result = {};
+        for (let [name, info] of reg.rooms) {
+          result[name] = { hasWebhook: !!info.webhookSecret };
+        }
+        return new Response(JSON.stringify(result), {headers: {"Content-Type": "application/json"}});
+      }
+      if (!roomName) return new Response(JSON.stringify({error: "请提供房间名"}), {status: 400, headers: {"Content-Type": "application/json"}});
+      if (!reg.rooms.has(roomName)) reg.rooms.set(roomName, {count: 0, password: null});
+      let room = reg.rooms.get(roomName);
+      if (action === "gen") {
+        let buf = crypto.getRandomValues(new Uint8Array(16));
+        let secret = Array.from(buf).map(b => b.toString(16).padStart(2, "0")).join("");
+        room.webhookSecret = secret;
+        await reg.save();
+        return new Response(JSON.stringify({ok: true, room: roomName, secret}), {headers: {"Content-Type": "application/json"}});
+      }
+      if (action === "del") {
+        room.webhookSecret = null;
+        await reg.save();
+        return new Response(JSON.stringify({ok: true, room: roomName, hasWebhook: false}), {headers: {"Content-Type": "application/json"}});
+      }
+      if (action === "status") {
+        return new Response(JSON.stringify({ok: true, room: roomName, hasWebhook: !!room.webhookSecret}), {headers: {"Content-Type": "application/json"}});
+      }
+      return new Response(JSON.stringify({error: "未知操作"}), {status: 400, headers: {"Content-Type": "application/json"}});
+    }
+
+    // 🔗 通用 Webhook：入站 secret 校验（公开，POST {room, secret}，常量时间比较防时序）
+    case "/room/webhook-verify": {
+      if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405, headers: {"Content-Type": "application/json"}});
+      try {
+        let body = await request.json();
+        let roomName = body.room;
+        let secret = String(body.secret || "");
+        let room = reg.rooms.get(roomName);
+        if (!room || !room.webhookSecret) {
+          return new Response(JSON.stringify({ok: false, error: "该房间未开启Webhook"}), {status: 403, headers: {"Content-Type": "application/json"}});
+        }
+        if (safeEqual(secret, room.webhookSecret)) {
+          return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
+        }
+        return new Response(JSON.stringify({ok: false, error: "Webhook密钥错误"}), {status: 403, headers: {"Content-Type": "application/json"}});
+      } catch (e) {
+        return new Response(JSON.stringify({error: "请求解析失败"}), {status: 400, headers: {"Content-Type": "application/json"}});
+      }
     }
 
     default:

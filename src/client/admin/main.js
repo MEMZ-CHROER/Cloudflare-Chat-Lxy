@@ -32,6 +32,7 @@ import { sendMessage, quickSendMessage } from './sendmessage.js';
 import { loadRedeemSection, generateRedeemCodes, addRedeemCode, deleteRedeemCode } from './redeem.js';
 import { loadKickProtected, kickProtectAdd, kickProtectRemove } from './kickprotect.js';
 import { loadLogSection, clearLog } from './log.js';
+import { loadWebhooksSection, genWebhook, delWebhook } from './webhooks.js';
 
 // ======== 暴露到 window 供 onclick 调用 ========
 
@@ -109,6 +110,10 @@ window.deleteBot = deleteBot;
 // 发送消息
 window.sendMessage = sendMessage;
 window.quickSendMessage = quickSendMessage;
+
+// 房间 Webhook
+window.genWebhook = genWebhook;
+window.delWebhook = delWebhook;
 
 // IP 分组
 window.loadIpGroup = loadIpGroup;

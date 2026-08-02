@@ -357,6 +357,16 @@ export class ChatRoom {
           let text = url.searchParams.get("text");
           let sender = url.searchParams.get("sender") || "系统公告";
           if (!text) return new Response("请提供消息内容", {status: 400});
+          // 🔗 通用 Webhook 增强：可选 channel 参数（合法且存在的频道才生效，否则 general）+ webhook 来源标记
+          let channelParam = url.searchParams.get("channel") || "";
+          let isWebhook = url.searchParams.get("webhook") === "1";
+          let targetChannel = "general";
+          if (channelParam) {
+            if (this._loadChannels) await this._loadChannels;
+            if (/^[a-zA-Z0-9_-]{1,24}$/.test(channelParam) && this.channels.some(c => c.name === channelParam)) {
+              targetChannel = channelParam;
+            }
+          }
 
           let timestamp = Date.now();
           let data = {
@@ -368,13 +378,18 @@ export class ChatRoom {
             tagColor: "red",
             tagBorder: "",
             admin: true,
-            channel: "general",
+            channel: targetChannel,
             roomwide: true
           };
+          if (isWebhook) data.webhook = true;
           data.id = ++this.msgCounter;
           this.lastTimestamp = data.timestamp;
           let dataStr = JSON.stringify(data);
-          this.broadcast(dataStr);
+          if (channelParam) {
+            this.broadcastToChannel(targetChannel, dataStr);
+          } else {
+            this.broadcast(dataStr);
+          }
           let key = new Date(data.timestamp).toISOString();
           await this.storage.put(key, dataStr);
           return new Response("消息已发送到房间 " + (this.roomName || "未知"), {status: 200});

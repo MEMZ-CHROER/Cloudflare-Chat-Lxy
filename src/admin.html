@@ -473,6 +473,7 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus { border-colo
     <div class="nav-header">导航</div>
     <a class="nav-item" data-route="/admin/dashboard/" onclick="navigateTo('/admin/dashboard/')">系统概览</a>
     <a class="nav-item" data-route="/admin/send-message/" onclick="navigateTo('/admin/send-message/')">发送消息</a>
+    <a class="nav-item" data-route="/admin/webhooks/" onclick="navigateTo('/admin/webhooks/')">🔗 房间Webhook</a>
     <a class="nav-item" data-route="/admin/rooms/" onclick="navigateTo('/admin/rooms/')">房间列表</a>
     <a class="nav-item nav-super" data-route="/admin/users/" onclick="navigateTo('/admin/users/')">在线用户</a>
     <a class="nav-item nav-super" data-route="/admin/bans/" onclick="navigateTo('/admin/bans/')">封禁用户</a>
@@ -530,6 +531,19 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus { border-colo
       <div style="display:flex;gap:8px;align-items:center">
         <button id="sm-send-btn" style="padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">发送</button>
         <span id="sm-status" style="color:#888;font-size:13px"></span>
+      </div>
+    </div>
+  </div>
+<div id="webhooks-section" class="page-section" data-route="/admin/webhooks/">
+    <h2>🔗 房间 Webhook</h2>
+    <div style="background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);padding:16px;max-width:720px">
+      <p style="color:#888;font-size:90%;margin:0 0 12px 0">
+        为每个房间生成独立的 Webhook 地址，外部系统（GitHub / 监控 / 通知等）POST JSON 即可向房间推送 📢 系统消息。
+        <code>POST /api/webhook/&lt;房间名&gt;?secret=xxx</code>，body：<code>{"content":"消息内容","sender":"可选","channel":"可选"}</code>，secret 也可放 <code>X-Webhook-Secret</code> 请求头。
+        生成后地址含密钥请妥善保管，删除后外部将无法再推送。
+      </p>
+      <div id="webhooks-list" style="font-size:90%">
+        <div style="color:#888;text-align:center;padding:20px">加载中...</div>
       </div>
     </div>
   </div>

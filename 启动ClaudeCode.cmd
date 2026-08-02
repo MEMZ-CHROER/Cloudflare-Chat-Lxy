@@ -1,0 +1,1 @@
+cmd /c "cd /d I:\Cloudflare-Workers-Chat-master\ && claude --resume aee5df33-aefd-4977-b4f3-533b3b4ed09b"

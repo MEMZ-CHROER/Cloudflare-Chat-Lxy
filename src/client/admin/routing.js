@@ -15,6 +15,7 @@ import { loadSendMessageSection } from './sendmessage.js';
 import { loadBotSection } from './bot.js';
 import { loadRedeemSection } from './redeem.js';
 import { loadKickProtected } from './kickprotect.js';
+import { loadWebhooksSection } from './webhooks.js';
 
 export const routeToSection = {
   '/admin/': 'dashboard-section',
@@ -34,6 +35,7 @@ export const routeToSection = {
   '/admin/user-tags/': 'user-tags-section',
   '/admin/lottery/': 'lottery-section',
   '/admin/send-message/': 'send-message-section',
+  '/admin/webhooks/': 'webhooks-section',
   '/admin/bot/': 'bot-section',
   '/admin/emoji/': 'emoji-section',
   '/admin/redeem/': 'redeem-section',
@@ -85,6 +87,7 @@ function loadSectionData(sectionId) {
     case 'user-tags-section': loadUserTags(); break;
     case 'lottery-section': loadLotteryPools(); break;
     case 'send-message-section': loadSendMessageSection(); break;
+    case 'webhooks-section': loadWebhooksSection(); break;
     case 'bot-section': loadBotSection(); break;
     case 'redeem-section': loadRedeemSection(); break;
   }

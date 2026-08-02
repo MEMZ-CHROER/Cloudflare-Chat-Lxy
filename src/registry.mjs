@@ -180,7 +180,8 @@ export class RoomRegistry {
       "/log/add", "/log/list", "/log/clear",
       "/admin/user-inventory",
       "/admin/mute", "/admin/unmute", "/admin/mute-list",
-      "/emoji/add", "/emoji/remove"
+      "/emoji/add", "/emoji/remove",
+      "/room/webhook"
     ]);
     let needsAdmin = adminExactPaths.has(path) || path.startsWith("/lottery/admin/") ||
       (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
@@ -190,7 +191,7 @@ export class RoomRegistry {
 
     let handler = null;
 
-    if (path === "/register" || path === "/update" || path === "/list" || path === "/password-status" || path === "/verify-password" || path === "/set-password" || path === "/room-destroy")
+    if (path === "/register" || path === "/update" || path === "/list" || path === "/password-status" || path === "/verify-password" || path === "/set-password" || path === "/room-destroy" || path === "/room/webhook" || path === "/room/webhook-verify")
       handler = handleRooms;
     else if (path.startsWith("/ban") || path.startsWith("/unban") || path.startsWith("/banned-list") || path.startsWith("/is-banned") || path.startsWith("/ip-") || path.startsWith("/kick-"))
       handler = handleBans;

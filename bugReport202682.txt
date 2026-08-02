@@ -1,0 +1,460 @@
+════════════════════════════════════════════════════════════════════
+ 聊天室全面安全/漏洞审计报告
+ 日期：2026-08-02
+ 方法：5 个并行审计 agent 分工扫描（服务端核心 / API层 / 积分经济 / 前端核心 / 前端功能）
+ 状态：仅审计，未修复
+════════════════════════════════════════════════════════════════════
+
+■ 审计范围
+  - 服务端核心：src/chatroom.mjs, src/chatroom/manage.mjs, src/chatroom/media.mjs, src/filebucket.mjs
+  - API 层：src/index.mjs, src/utils.mjs, src/api/*.mjs（15 业务 + admin 主入口 + 14 admin 子模块）
+  - 积分经济：src/registry.mjs + src/registry/*.mjs（points/shop/tasks/redeem/lottery/redpacket/users/bans/mute/tags/blacklist/adminKey/rooms/emoji/bot/persistence/log）
+  - 前端核心：client/chat/{main,state,core,websocket,renderers,menu,ui,commands,channels,search,auth,toast,banner}.js
+  - 前端功能：client/chat/{games,game-core,game-action,game-arcade,game-board,game-cards,game-simple,shop,tasks,lottery,vip,dm,roominfo,rooms,settings,music,note,quick,keywords,highlights,filespanel,favorites,ascii}.js
+
+■ 汇总统计：高危 6 项，中危 23 项，低危约 36 项（去重后）
+
+────────────────────────────────────────────────────────────────────
+一、高危漏洞（6 项）
+────────────────────────────────────────────────────────────────────
+
+[H1] 管理员接口 CSRF——可被恶意链接点击触发铸币/销毁房间
+  位置：src/api/admin.mjs:75 + src/api/admin/points.mjs:17-31 + src/api/admin/rooms.mjs:210
+  类型：CSRF / 越权
+  描述：登录后下发 admin_key Cookie 为 SameSite=Lax（非 Strict），且几乎所有管理操作均为 GET
+    （points/set、points/add、points/batch、destroy-room、tag/set、ban/add、kick-user、
+    room-password、announcement、message/recall 等无方法校验、无 CSRF Token、无 Origin 校验）。
+  利用：管理员登录后，诱导其点击 https://host/api/admin/points/set?name=attacker&amount=999999，
+    SameSite=Lax 在顶层 GET 导航时携带 Cookie，直接给任意用户加积分。同理可销毁房间、改密码、踢人。
+
+[H2] SSRF 绕过——IPv4-mapped IPv6 私网地址检测失效
+  位置：src/api/preview.mjs:21-35（isPrivateHost）+ :72-92（fetchSafe）
+  类型：SSRF
+  描述：isPrivateHost 只匹配点分十进制 ::ffff:a.b.c.d，但 URL 解析会把 [::ffff:127.0.0.1]
+    规范化为十六进制 [::ffff:7f00:1]。实测 [::ffff:7f00:1]、[::ffff:a9fe:a9fe](=169.254.169.254)、
+    [::ffff:a00:1](=10.0.0.1)、[::ffff:c0a8:101](=192.168.1.1) 全部判定为非私网。
+  利用：/api/preview 是无鉴权公开端点，任何访客可让 Worker 代为请求内网/回环/云元数据地址。
+
+[H3] 清空/销毁不彻底——普通文本消息全部残留，"已清空"消息刷新后复活
+  位置：src/chatroom.mjs:514-531（过滤条件:520）对照 :1421
+  类型：逻辑 bug / 数据残留 / 隐私
+  描述：普通文本消息存储时根本没有 type 字段（data={name,message,channel}），而 clearAllMessages
+    只删 type ∈ ["message","image","file","reply","zifu"] 的条目 → 所有文本/voice/gh-card 不删。
+  利用：管理员"清空聊天记录"、/do-clear、/do-destroy、/destroy 后，刷新重新拉历史，被清空消息
+    原样复活；idFromName 重建同名房间时旧文本仍在。宣称"永久删除"未兑现。
+
+[H4] 文本消息无发送限频 + 空消息可发 → 存储填满 + 全员广播放大 DoS
+  位置：src/chatroom.mjs:1413-1436, 1694-1754
+  类型：DoS / 滥用
+  描述：文本/reply/@ 均无限频（仅媒体/投票/表情/踢人/特效有限频）；data.message 无 !data.message
+    校验 → 可发空消息、纯空白消息。每条都 storage.put 落库（且因 H3 无法被清理）+ broadcastToChannel
+    推给频道内所有人。长期可耗尽 DO 存储配额并放大带宽。
+
+[H5] 游戏赔率设计错误——小注稳定铸币（+EV 刷分）
+  位置：src/registry/points.mjs:207-208（胜率 0.45 + 赔率 wager×(1+rand×24) 封顶 10000），:211-221
+  类型：经济模型 bug / 铸币
+  描述：胜率 45%、赔率 1~25 倍，注额 ≤400 时期望净收益 = 0.45×(wager+25×wager)/2 − wager = +4.85×wager，
+    庄家必亏。唯一限制是每日净赢上限 10000。
+  利用：注册+签到得 500 分 → 脚本循环 /api/game/play（wager:400 带 token），3~5 次净赚约 10000 分/天。
+
+[H6] 防刷上限全部内存态——DO 重启即清零，可无限重置刷分
+  位置：src/registry.mjs:55-57（gameBets/gameLastWin/gameDailyWin = new Map()，load() 不加载）
+  类型：防刷上限失效 / 状态重置
+  描述：H5 的唯一护栏是内存态每日净赢上限，DO 被部署、空闲回收或崩溃重启后清零。
+  利用：每次部署后重复执行 H5 脚本即可反复刷满 10000 分。
+
+────────────────────────────────────────────────────────────────────
+二、中危漏洞（23 项）
+────────────────────────────────────────────────────────────────────
+
+[M1] 普通管理员（admin 非 super）可直接铸币/改任意用户积分
+  位置：src/api/admin.mjs:99 + src/api/admin/points.mjs:17-31,36-52
+  类型：越权（权限分级过宽）
+  描述：adminAllowedPaths 含 "points"，points/set|add|batch 接受任意 name+amount 无上限/频次校验。
+  利用：持有普通 ADMIN_KEY 即可 /api/admin/points/batch?names=...&amount=100000&action=add。
+
+[M2] 积分转账 amount 未校验（负数/零/科学计数）→ 反向盗分
+  位置：src/api/points.mjs:15-36
+  类型：输入校验缺失 / 逻辑漏洞
+  描述：transfer 仅校验 sender token 与参数非空，amount 原样透传 registry，未做 amount>0 校验。
+  利用：GET /api/points/transfer?sender=attacker&receiver=victim&amount=-10000&token=<attacker_token>，
+    从 receiver 扣分加给 sender。
+
+[M3] 公开端点按用户名泄露他人财务/私密数据（IDOR）
+  位置：src/api/points.mjs:7,51 / src/api/shop.mjs:14 / src/api/tasks.mjs:14,20 / src/registry/points.mjs:120-127
+  类型：IDOR / 信息泄露
+  描述：points/get、points/ledger（完整流水）、shop/inventory、tasks/completions、tasks/claims
+    均无鉴权，仅凭 ?name= 即可查任意用户余额、全部收支流水、背包物品、任务记录。
+  利用：GET /api/points/ledger?name=<victim>&limit=999 遍历用户名拉取全站财务明细。
+
+[M4] 版本存档：普通 admin 可上传 + 公开可下载（潜在密钥泄露通道）+ 体积限制可绕过
+  位置：src/api/archive.mjs:14-51, :35, :53-67
+  类型：信息泄露 / 存储型风险
+  描述：上传仅需 admin 级密钥；download/list 完全公开。若误传含 wrangler.toml/密钥的 zip 即公开泄露。
+    50MB 限制依赖 Content-Length 头，Transfer-Encoding: chunked 可绕过。
+
+[M5] 用户撤回消息不校验房间密码
+  位置：src/api/recall.mjs:1-42
+  类型：越权访问 / 认证缺失
+  描述：/api/recall/{room} 只校验用户 token，未校验密码房密码。已知房间名的已登录用户即可在
+    密码房内操作（撤回仍按本人 name 匹配，但越过密码房门禁进入操作面）。
+
+[M6] SSRF DNS 解析 TOCTOU（DNS rebinding）
+  位置：src/api/preview.mjs:53-69
+  类型：SSRF（时间差）
+  描述：先 DoH 解析校验、后 fetch 重新解析，存在时间窗口。TTL=0 域名可在校验返回公网 IP、
+    实际 fetch 返回私网 IP，叠加 H2 私网防护基本失效。
+
+[M7] 管理员登录无速率限制（密钥爆破 oracle）
+  位置：src/api/admin.mjs:67-79 + :101-105
+  类型：暴力破解
+  描述：/api/admin/login 与 auth-check 无限流/验证码，401/200 可直接区分密钥对错。
+
+[M8] 公开 AI 翻译无速率限制（盗刷付费模型）
+  位置：src/index.mjs:417-462
+  类型：资源滥用 / DoS
+  描述：/api/translate 仅需任意已登录 token（无频次限制），可无限调用付费 AI API 耗尽预算。
+
+[M9] 敏感词过滤可被数字插入/异体字符绕过（审核失效）
+  位置：src/chatroom.mjs:1820-1858（:1826 剥离逻辑）
+  类型：内容过滤绕过
+  描述：s.replace(/[^a-z一-鿿]/gi,"") 把非字母/非 CJK（含数字）直接剥离后再匹配词根。
+    sh1t→sht、f0ck→fck、fμck→fck 均不命中，完整绕过审核。
+
+[M10] 任何游客可踢任意非保护用户（骚扰向量）
+  位置：src/chatroom.mjs:803-878
+  类型：设计缺陷 / 滥用
+  描述：WS kick 不要求认证，仅 30 秒限频 1 次；目标仅 VIP kickProtect 与全局保护名单免疫。
+    攻击者无需注册即可每 30s 踢同一普通用户，换名重连可绕限频。
+
+[M11] /export 与 /search 公开导出/检索全频道历史（跨频道信息泄露）
+  位置：src/chatroom.mjs:279-310（search）、312-342（export）
+  类型：信息泄露
+  描述：二者都在 PUBLIC_ROOM_ENDPOINTS 白名单，仅受房间密码保护。channel 为空时跨全部频道
+    导出/检索（含管理员公告/其他频道）。无密码公开房任何访客可一键导出整个房间历史。
+    /export 遍历全部 storage 无上限，可反复调用造成 CPU/内存 DoS。
+
+[M12] 未命名会话 blockedMessages 无限累积 + 限频 Map 无上限（内存泄漏）
+  位置：src/chatroom.mjs:1904-1906, 1946-1948；限频 Map 见 manage.mjs:164、media.mjs:16/76/143、
+    chatroom.mjs:807/940/1026/1231
+  类型：内存 DoS
+  描述：连 WS 不发名字，broadcast 会把每条消息 push 进该会话 blockedMessages 永久持有；
+    lastKick/lastVote/lastReaction/lastEffect/lastUpload/lastPollCreate 以 session.name 为键永不清理。
+
+[M13] XSS 全依赖客户端单层转义 + 文件 MIME 白名单缺口
+  位置：服务端 chatroom.mjs 1358-1390（gh-card 透传）、media.mjs:88-96（类型校验）；
+    客户端 renderers.js:658（data.avatar 拼 innerHTML 仅转义引号）
+  类型：XSS（纵深防御）
+  描述：服务端对文本/名称/tag/avatar/fileName 一律不转义，安全全押客户端。gh-card avatar 只转义
+    "；文件类型只拦 data:text/html 与 data:image/svg+xml，data:image/svg（不带+xml）、
+    data:application/xhtml+xml、data:application/svg+xml 未拦截，存在 iframe/img 注入面。
+
+[M14] 红包系统完全不持久化——发包资金在 DO 重启/部署后凭空销毁
+  位置：src/registry/redpacket.mjs:53-72（create 扣款落盘，红包本体仅内存 Map）；
+    src/registry.mjs:53（redPackets = new Map()）；persistence.mjs 无 saveRedPackets
+  类型：资金销毁 / 状态丢失
+  描述：发红包扣款是持久化的，但红包对象（含未抢完的 remaining）不落盘。DO 重启/部署/崩溃后
+    所有未抢完红包消失，发包人积分永久损失；grabs、lastRpGrabByIp 限频一并丢失。
+
+[M15] Registry 层大量管理端点无鉴权（纵深防御缺口，一旦暴露即全站沦陷）
+  位置：registry/shop.mjs:158-189、tasks.mjs:139-170、lottery.mjs:110-197、redeem.mjs:88-186、
+    bans.mjs:5-51、tags.mjs:5-30、blacklist.mjs、adminKey.mjs:24-39、users.mjs:296-317、
+    log.mjs:17-42、rooms.mjs:68-79（对照：points.mjs:31-39 已加 adminAuthorized，模式不一致）
+  类型：越权 / 未授权访问
+  描述：上述端点无管理密钥校验。当前因 DO 不直接收公网请求暂不可外部直连，但任何新增路由、
+    同账号 Worker 引用该 DO 绑定、或服务端 SSRF 一旦出现即可：/redeem/generate 铸币、
+    /admin/task/add 刷分、/admin-key/set 改密钥、/tag/set 自置管理员标签、/user-delete 删任意账号。
+
+[M16] 商城/抽奖标签校验只封 RED/CYAN——gold 边框与 VIP 标签可获聊天室管理员/特权
+  位置：registry/shop.mjs:110-114（equip 仅拒绝 RED/CYAN）、lottery.mjs:80-82；
+    chatroom.mjs:1917-1921（isAdminSession 认 tagColor=red/cyan 及 tagBorder=gold）
+  类型：权限提升
+  描述：管理员在商城/奖池配置 border:"gold" 或 VIP 标签商品，普通用户购买/抽中并装备后即成为
+    聊天室管理员或获得 VIP 权益（kickProtect、更长消息、更大上传）。
+
+[M17] toBigInt 对用户可控超大指数分配巨量内存（CPU/内存 DoS）
+  位置：src/registry/points.mjs:7-27（'0'.repeat(e) 处理科学计数法）；src/api/points.mjs:32
+  类型：拒绝服务
+  描述：/api/points/transfer?amount=1e9999999 先 '0'.repeat(9999999) 分配 10MB+ 字符串再构造
+    BigInt。registry 单线程串行，每请求占数十~百 ms CPU；极端值可触发 DO 崩溃重启。
+
+[M18] 跨频道消息被全局 lastSeenTimestamp 误丢弃（未读红点丢失）
+  位置：src/client/chat/websocket.js:545-571（文本）/ :262-306（image/file/voice/gh-card）
+  类型：逻辑 bug
+  描述：所有类型消息在频道路由前先进 if (data.timestamp > state.lastSeenTimestamp) 过滤，而
+    lastSeenTimestamp 只记录当前频道最新消息。用户在 general 活跃（时间戳很高）时，announcement
+    频道来一条时间戳略早的消息即被 return，既不进 channelCache 也不 bumpChannelUnread，红点丢失。
+
+[M19] 搜索结果跳转永久覆盖聊天区且不还原
+  位置：src/client/chat/search.js:109-136
+  类型：逻辑 bug
+  描述：点击不在 DOM 的搜索结果时，state.chatlog.innerHTML 被替换为 60 条历史，当前频道实时消息
+    列表被永久覆盖，后续实时消息仍 append 到这段历史上，视图错乱；只能刷新或切频道恢复。
+
+[M20] 搜索无防抖/无 AbortController（竞态）
+  位置：src/client/chat/search.js:47-105
+  类型：竞态
+  描述：input 事件直接触发 serverSearch，快速输入产生并发 fetch，后发先返覆盖结果面板。
+
+[M21] 管理操作 key 全部空串——仅依赖 httpOnly cookie（功能脆弱 + 纵深防御回归）
+  位置：src/client/chat/menu.js:62/91/100/141/152、commands.js:35/49/65/77/198/212/222、ui.js:7
+  类型：功能 bug + 防御回归
+  描述：新版前端把旧版 localStorage.getItem("admin_key") 检索丢掉，URL 永远带空 ?key=。仅通过
+    新管理端 /api/admin/login（种 httpOnly cookie）登录后才可用；旧 /admin 登录（仅存 localStorage）
+    的用户聊天页管理操作全 401，URL 层鉴权被完全放弃。
+
+[M22] 游戏计时器/动画在切换/关闭游戏时未清理（状态污染 + 异常刷屏）
+  位置：src/client/chat/game-core.js:159-171（switchGame 不清理 interval/rAF）
+  类型：逻辑 bug / 资源泄漏
+  描述：switchGame('menu')、closeGames() 不清理正在运行的 interval/rAF，切走后旧 interval 每秒抛
+    TypeError: Cannot set properties of null，且永不清理；重进该游戏旧 interval 同时递减新会话
+    时间，游戏时间减半。涉及 game-action/arcade/board/cards。
+
+[M23] 双击"开始"重复下注扣费（竞态）
+  位置：src/client/chat/game-action.js:22-25 及 game-arcade.js 12 处 / game-board.js / game-cards.js / game-simple.js
+  类型：逻辑 bug / 竞态
+  描述：通用模式 if (gs.X.betPlaced) return; → await gameApi("bet") → 之后才 betPlaced=true。
+    网络往返窗口内再点，第二次 bet 照常扣款（双倍 wager）。例外：扫雷/记忆翻牌/2048 已先置位。
+
+────────────────────────────────────────────────────────────────────
+三、低危（约 36 项，去重后）
+────────────────────────────────────────────────────────────────────
+
+[L1]  内部错误信息泄露给客户端
+  位置：rooms.mjs:37,88 / auth.mjs:18,45,59 / points.mjs:35,48,62 / shop.mjs:56 / tasks.mjs:42 /
+    recall.mjs:40 / game.mjs:75 / redeem.mjs:26 / lottery.mjs:27 / preview.mjs:126 / admin/users.mjs:199 /
+    admin/rooms.mjs:231
+  类型：信息泄露
+  描述：多处 catch 直接把 error.message 返回客户端，可辅助侦察内部结构。
+
+[L2]  admin_key Cookie 缺少 Secure 标志
+  位置：src/api/admin.mjs:75
+  类型：传输安全
+  描述：Cookie 仅 HttpOnly; SameSite=Lax，无 Secure；workers.dev 同时提供 http/https，明文通道传输。
+
+[L3]  房间历史 limit 未校验（内存 DoS）
+  位置：src/api/rooms.mjs:98-104
+  类型：输入校验缺失
+  描述：/history?limit= 原样透传，超大值/负数可能拉爆 DO 内存或响应体积。
+
+[L4]  Bot 命令 action 未白名单
+  位置：src/api/admin/bot.mjs:9-20
+  类型：输入校验缺失
+  描述：?action= 任意字符串直接拼进 registry bot-commands 转发。
+
+[L5]  禁言操作 mutedBy 可伪造（审计归因）
+  位置：src/api/admin/mute.mjs:9
+  类型：审计完整性
+
+[L6]  删除的消息可被原作者"编辑"复活
+  位置：chatroom.mjs:1393-1411（delete 不更新 room.messages）+ manage.mjs:92-127（edit 只查 room.messages）
+  类型：逻辑 bug
+  描述：删除后 2 分钟内用同一 id 发 edit，room.messages 仍存原文，edit 把原文写回 storage 并广播。
+
+[L7]  /file-data 与 /message/recall 缺 isNaN 守卫 → 500
+  位置：src/chatroom.mjs:220、:449
+  类型：逻辑 bug
+  描述：new Date(parseInt(非法值)).toISOString() 抛 RangeError（/messages 已有修复，这两处遗漏）。
+
+[L8]  同名并发加入竞态——先完成注册者反被误拒
+  位置：src/chatroom.mjs:737-746
+  类型：竞态
+  描述：同名 A/B 并发，A 检查时 B 已设名 → A 被踢；留在线的是后到者。
+
+[L9]  highlights/reactions 存储损坏会 500 拒绝所有新连接
+  位置：src/chatroom.mjs:74-81
+  类型：健壮性
+  描述：_loadHighlights/_loadReactions 的 JSON.parse 无 try/catch，历史 JSON 损坏则房间不可进。
+
+[L10] FileBucket alarm 不重新设闹钟，7 天清理可能永不执行
+  位置：src/filebucket.mjs:112-131
+  类型：健壮性
+  描述：清理到期文件后不按剩余文件最近过期时间重设闹钟。
+
+[L11] 空消息/纯空白消息可发送（配合 H4 刷屏）
+  位置：src/chatroom.mjs:1421
+  类型：输入校验缺失
+
+[L12] DO 层危险 HTTP 端点零鉴权，仅靠路由白名单单点兜底
+  位置：src/chatroom.mjs:146-510（blacklist/do-kick/do-clear/do-destroy/broadcast-message/tag-update/
+    set-announcement/message/recall）
+  类型：纵深防御缺口
+  描述：当前不可被用户触达，但白名单增补或 DO 子域暴露后 tag-update 即可把任意会话打成管理员。
+
+[L13] 反批量注册/签到 IP 计数内存态，DO 重启后重复刷小号
+  位置：src/registry/users.mjs:59-68（registerByIp）、points.mjs:162-170（checkinByIp）
+  类型：防滥用上限失效
+  描述：每 IP 每日注册 3 个、签到 3 次的计数器不持久化，重启即清零。
+
+[L14] /api/points/all 公开返回全站余额（当前为设计如此，勿再收紧）
+  位置：src/api/points.mjs:38-50
+  类型：信息泄露
+  描述：排行榜所需，v1.21 曾收紧 403 致前端崩溃后恢复公开。注意它是全量余额快照。
+
+[L15] /admin-key/get 回传密钥前 4 位明文
+  位置：src/registry/adminKey.mjs:15-22
+  类型：信息泄露
+  描述：当前 64 位 hex 风险可忽略。
+
+[L16] 只读 IDOR：查他人背包/任务进度
+  位置：src/api/shop.mjs:14-19、src/api/tasks.mjs:14-25、src/registry/points.mjs:43-52
+  类型：信息泄露
+
+[L17] 抽奖无冷却/无每日上限，0 成本奖池可无限刷
+  位置：src/registry/lottery.mjs:42-95
+  类型：缺限流
+  描述：/lottery/draw 只扣 pool.cost 无频率限制；cost=0 时可无限抽白拿奖品标签。
+
+[L18] /redeem/add 允许 4 位自定义码（可爆破）
+  位置：src/registry/redeem.mjs:133-161（:142 仅 code.length<4 拦截）
+  类型：兑换码可爆破
+  描述：4 位短码 32 字母表≈100 万组合可爆破；自动生成的 8 位码安全。
+
+[L19] /task/complete 先落完成状态、后加积分——两步间崩溃丢奖励
+  位置：src/registry/tasks.mjs:92-104
+  类型：可靠性（非铸币）
+  描述：保存完成状态后、加积分前崩溃，用户"已完成"但未得奖励且无法重领。
+
+[L20] /points/batch 扣款钳制为 0 而非拒绝（与单用户扣款行为不一致）
+  位置：src/registry/points.mjs:143-149
+  类型：逻辑不一致（管理员接口）
+
+[L21] roominfo.js 用户名/房间名未转义拼 innerHTML（服务端过滤兜底）
+  位置：src/client/chat/roominfo.js:30-35
+  类型：XSS（缓解后）
+  描述：被服务端两层过滤兜底（chatroom.mjs:669、users.mjs:54 拒绝 <>&"' 字符），实际无法注入，
+    但属"靠服务端过滤而非前端转义"隐患。
+
+[L22] keywords.js 关键词面板 innerHTML 未转义 → 存储型自 XSS
+  位置：src/client/chat/keywords.js:65
+  类型：XSS（自 XSS）
+  描述：row.innerHTML 拼用户输入，data-word 属性可被 " 逃逸注入 onclick。存于自身 localStorage，
+    无远程注入路径，但为确认的注入缺陷。
+
+[L23] menu.js profile 积分未转义拼 innerHTML
+  位置：src/client/chat/menu.js:221
+  类型：XSS（缓解后）
+  描述：points 服务端存 Number，实际不可注入，属缺省转义坏味道。
+
+[L24] 管理权限仅凭非 HttpOnly 的 admin_logged=1 cookie 判断（UI 欺骗）
+  位置：src/client/chat/menu.js:14、renderers.js:436/518/599/676/783、websocket.js:222
+  类型：UI 欺骗
+  描述：任何用户可在控制台伪造 admin_logged=1 点亮管理按钮。实际操作用例被服务端 httpOnly
+    admin_key 拦截，不会越权。
+
+[L25] GH 卡片 avatar 仅转义引号后拼入 src
+  位置：src/client/chat/renderers.js:658
+  类型：浅层防御
+  描述：双引号属性包裹+引号已转义，实际无法属性逃逸，应统一 escapeHtml。
+
+[L26] /channel /switch 硬编码中文（i18n 缺失）
+  位置：src/client/chat/commands.js:304/311、channels.js:74
+  类型：i18n
+  描述：英文环境不翻译。
+
+[L27] 所有 / 开头消息被强制当命令（设计限制）
+  位置：src/client/chat/core.js:74
+  类型：可用性
+  描述：用户无法发送字面 /about、// 等消息。
+
+[L28] websocket JSON.parse(event.data) 无 try/catch
+  位置：src/client/chat/websocket.js:50
+  类型：健壮性
+  描述：单条畸形消息使该消息回调抛异常被丢弃（WS 连接不受影响）。
+
+[L29] DM 私信发送方双重显示
+  位置：src/client/chat/websocket.js:513-515 + dm.js:69
+  类型：逻辑 bug
+  描述：发送方乐观写入 DM 缓存，服务端回显又在主聊天区渲染 * 私聊给 X 系统消息。
+
+[L30] 商城/任务/房间列表金额或计数未转义
+  位置：src/client/chat/shop.js:45、tasks.js:52、rooms.js:152
+  类型：XSS（潜在）
+  描述：字段当前均为数字不可直接利用，字段类型变化即成存储型 XSS。
+
+[L31] 商城购买/装备按钮无防抖
+  位置：src/client/chat/shop.js:77-93
+  类型：逻辑 / UX
+  描述：双击发两个请求（服务端 DO 串行+余额校验，无双花风险，但重复弹窗）。
+
+[L32] 调色大师 clSubmit 双击同一轮双计分
+  位置：src/client/chat/game-arcade.js:914-930
+  类型：逻辑 bug
+  描述：if (c.gameOver) return; 未防重入，双击提交在 800ms 延迟内把同一轮 pts 加两次。
+
+[L33] 扫雷首击下注期间二次点击渲染 "undefined" 格子
+  位置：src/client/chat/game-board.js:56-62
+  类型：逻辑 bug
+  描述：ms.firstClick=false 先于 await 置位，ms.board 仍空，await 期间点第二个格子渲染 undefined。
+
+[L34] checkAndJoinRoom 密码取消后 roomname 残留脏值
+  位置：src/client/chat/rooms.js:21-37
+  类型：状态管理
+  描述：state.roomname = name 在密码校验前执行；取消密码框后直接 return，roomname 被改为未加入房间。
+
+[L35] 2048 首步下注未等待，输赢查询与下注竞争
+  位置：src/client/chat/game-board.js:82-96
+  类型：逻辑 bug
+  描述：首次移动 gameApi("bet") 未 await，下注失败仍可游玩，快速达成时 win 查询可能先于 bet 落账。
+
+[L36] game-core openGames 点击监听累积
+  位置：src/client/chat/game-core.js:147-149
+  类型：内存泄漏（轻微）
+  描述：每次 openGames 都添加具名 h 监听，仅在被点击时自移除。
+
+[L37] 游戏菜单标签切换语言不刷新
+  位置：src/client/chat/game-simple.js:130
+  类型：i18n
+  描述：registerGame 时 t() 结果被固化，切换语言后不随语言变化。
+
+────────────────────────────────────────────────────────────────────
+四、已核实为安全的点（重要结论）
+────────────────────────────────────────────────────────────────────
+- 核心消息气泡渲染安全：renderers.js markdownToHtml 先整体转义再套 markdown，URL 限定 https?://，
+  自定义 emoji dataUrl 已转义引号，无属性逃逸。
+- 服务端 admin 鉴权在：admin.mjs httpOnly cookie + 常量时间比较，不存在"只靠前端隐藏"的越权。
+- 用户/消息/标签服务端均有过滤（chatroom.mjs:668-673、users.mjs:54），前端未转义点被兜底。
+- 游戏结果伪造/刷分被堵死：game.mjs 下注即按服务端概率结算，客户端上报 win 不影响金额。
+- 签到/任务/兑换码/红包/抽奖在单 DO 内"查→写"无 await 且 DO 串行，重复领取在实例内不可达；
+  跨实例不存在（idFromName("global") 恒映射同一实例）。
+- CORS 无通配，浏览器跨源读取默认阻止；管理密钥不落 URL/日志。
+- PUBLIC_ROOM_ENDPOINTS 白名单放行只读端点，tag-update/do-kick 等管理操作匿名直达被 403。
+- super/admin 分级：delete-user、redeem、log、user-ips、global-blacklist、kick-protect、
+  room-users-detail、admin-key 均不在 adminAllowedPaths。
+- DESTROY_KEY 作用域仅限 destroy-room，不扩散到其他超管端点。
+- 密码房 fail-closed：requireRoomPassword 校验出错一律拒绝。
+
+────────────────────────────────────────────────────────────────────
+五、修复优先级建议
+────────────────────────────────────────────────────────────────────
+P0（高危，影响资金/隐私/可用性）：
+  1. H1 管理员 CSRF → 管理写操作改 POST + Origin/CSRF Token 校验，或 Cookie 改 SameSite=Strict
+  2. H2 SSRF → isPrivateHost 对 IPv4-mapped 分支改用 URL 规范化十六进制或数值解析
+  3. H3 清空/销毁不彻底 → clearAllMessages 改为遍历删除（去掉 type 白名单），或给文本消息补 type 字段
+  4. H4 文本无限频 + 空消息 → 加 sendInterval 限频 + message.trim() 非空校验
+  5. H5 游戏赔率 → 调整胜率/赔率使其 -EV，或改为抽奖式固定回报
+  6. H6 防刷上限 → gameDailyWin/gameLastWin 持久化到 storage
+
+P1（中危，越权/信息泄露/资金销毁）：
+  7. M2 转账 amount 校验为正整数且小于余额
+  8. M3 公开数据端点按需加鉴权（至少 ledger 需 token）
+  9. M14 红包持久化（saveRedPackets）
+  10. M15 registry 管理端点统一套 adminAuthorized（按 points.mjs 模式）
+  11. M16 标签提权 → equip/lottery 校验封 gold/VIP
+  12. M17 toBigInt 指数上限
+  13. M18 跨频道 lastSeenTimestamp 过滤逻辑修正
+  14. M19/M20 搜索面板修复（还原视图 + 防抖）
+  15. M21 管理 key 恢复 localStorage 回退或强制 cookie 一致性
+  16. M22/M23 游戏计时器清理 + 下注防重入
+
+P2（低危，加固/健壮性）：
+  17. 统一 escapeHtml（roominfo/keywords/menu/shop/tasks/rooms/renderers avatar）
+  18. MIME 白名单补 data:image/svg / xhtml+xml / svg+xml
+  19. 服务端统一转义消息字段（纵深防御）
+  20. 错误消息脱敏、Cookie 加 Secure、limit 校验、敏感词数字剥离修复、L6 edit 复活修复、
+      L7 isNaN 守卫、L9 JSON.parse 防护、L10 alarm 重设
+
+════════════════════════════════════════════════════════════════════
+ 报告完。修复时建议逐项核对 file:line，修复后按版本更新流程：
+ 两仓库同步 → 部署 → 两站存档 → changelog → 提交。
+════════════════════════════════════════════════════════════════════
