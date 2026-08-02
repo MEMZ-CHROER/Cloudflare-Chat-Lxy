@@ -40,6 +40,7 @@ export async function loadGlobalUsers() {
         '<span class="points-badge" style="color:#e67e22;font-weight:bold">' + userPoints + '</span>' +
         '<input class="tag-input" placeholder="积分" id="pts-input-' + safeId + '" style="width:50px">' +
         '<button class="tag-set-btn" onclick="setPoints(\'' + escUser + '\')">设置</button>' +
+        '<button class="tag-set-btn" onclick="grantAnon(\'' + escUser + '\')" title="发放匿名券">🕶️发券</button>' +
         '<button class="kick-btn" onclick="globalKick(\'' + escUser + '\')">全局踢出</button>' +
         '<button class="ban-btn" onclick="banUser(\'' + escUser + '\')">封禁</button>' +
         '<button class="ban-btn" onclick="blacklistUser(\'' + escUser + '\')">拉黑</button></span></div>';
@@ -152,6 +153,20 @@ export async function setPoints(user) {
     let r = await fetch("/api/admin/points/set?key=" + encodeURIComponent(state.adminKey) + "&name=" + encodeURIComponent(user) + "&amount=" + amount);
     alert(await r.text());
     loadGlobalUsers();
+  } catch (e) { alert("操作失败: " + e.message); }
+}
+
+// 🕶️ 发放匿名券（管理操作，普通 admin 可用）
+export async function grantAnon(user) {
+  let count = prompt("给 " + user + " 发放几张匿名券？", "1");
+  if (count === null) return;
+  count = parseInt(count, 10);
+  if (isNaN(count) || count < 1 || count > 1000) { alert("请输入 1-1000 之间的数量"); return; }
+  try {
+    let r = await fetch("/api/admin/anon-grant?key=" + encodeURIComponent(state.adminKey) + "&name=" + encodeURIComponent(user) + "&count=" + count);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    let data = await r.json();
+    alert("已给 " + user + " 发放 " + count + " 张匿名券，当前共 " + data.anonCoupons + " 张");
   } catch (e) { alert("操作失败: " + e.message); }
 }
 

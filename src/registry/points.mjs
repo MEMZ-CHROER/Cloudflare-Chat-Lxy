@@ -179,12 +179,14 @@ export async function handlePoints(reg, request, url) {
       }
       let reward = 500n;
       user.lastCheckin = today;
+      // 🕶️ 每日签到额外送 1 张匿名券（三渠道之一）
+      user.anonCoupons = (user.anonCoupons || 0) + 1;
       let current = toBigInt(reg.userPoints.get(name));
       let result = current + reward;
       reg.userPoints.set(name, String(result));
       await Promise.all([reg.saveRegisteredUsers(), reg.savePoints(), reg.saveCheckinByIp()]);
       await reg.addLedger(name, reward, "checkin", "每日签到");
-      return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(result), message: "签到成功！获得 " + reward + " 积分"}), {
+      return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(result), anonCoupons: user.anonCoupons, message: "签到成功！获得 " + reward + " 积分 + 1 张匿名券"}), {
         headers: {"Content-Type": "application/json"}
       });
     }

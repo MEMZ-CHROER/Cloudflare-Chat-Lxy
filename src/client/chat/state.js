@@ -60,6 +60,9 @@ export const state = {
   channels: [{name: "general", type: "text"}, {name: "announcement", type: "announcement"}],
   channelCache: {},   // channel -> 非当前频道消息数组（切换时渲染）
   channelUnread: {},  // channel -> 未读计数
+
+  // 🕶️ 匿名马甲
+  anonMode: false,
 };
 
 export function loadBlockedUsers() {

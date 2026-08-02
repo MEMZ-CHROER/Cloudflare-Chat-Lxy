@@ -77,6 +77,8 @@ export function startChat() {
       let msg = {message: text, color: state.selectedColor, channel: state.currentChannel};
       if (state.replyTarget) { msg.reply = {name: state.replyTarget, text: state.replyText || "", id: state.replyId || ""}; cancelReply(); }
       if (/@(all|everyone|全体)/i.test(text)) msg.atAll = true;
+      // 🕶️ 匿名马甲：开启时携带 anon 标志，服务端扣一张券后以「匿名」身份展示
+      if (state.anonMode && localStorage.getItem("chat_token")) msg.anon = true;
       state.currentWebSocket.send(JSON.stringify(msg));
       localStorage.removeItem("chat_draft");
       state.chatlog.scrollBy(0, 1e8);
@@ -86,6 +88,31 @@ export function startChat() {
   document.getElementById("announcement-dismiss").addEventListener("click", () => {
     document.getElementById("announcement-banner").style.display = "none";
   });
+
+  // 🕶️ 匿名发言开关：开启后下一条消息以「匿名」身份发送（服务端扣一张匿名券）
+  let btnAnon = document.getElementById("btn-anon");
+  if (btnAnon) {
+    btnAnon.addEventListener("click", () => {
+      if (!localStorage.getItem("chat_token")) {
+        showToast("请先登录后再使用匿名发言", "warning");
+        return;
+      }
+      state.anonMode = !state.anonMode;
+      btnAnon.classList.toggle("active", state.anonMode);
+      if (state.anonMode) {
+        // 查询剩余券数（user-profile 公开返回）
+        fetch("/api/user/profile?name=" + encodeURIComponent(state.username || ""))
+          .then(r => r.json())
+          .then(d => {
+            let n = d && d.anonCoupons ? d.anonCoupons : 0;
+            showToast("🕶️ 匿名模式已开启（剩余 " + n + " 张匿名券），下一条消息以「匿名」身份发送", "info", 3500);
+          })
+          .catch(() => showToast("🕶️ 匿名模式已开启，下一条消息以「匿名」身份发送", "info"));
+      } else {
+        showToast("匿名模式已关闭", "info");
+      }
+    });
+  }
 
   state.chatlog.addEventListener("scroll", event => {
     let wasNotAtBottom = state.isAtBottom;

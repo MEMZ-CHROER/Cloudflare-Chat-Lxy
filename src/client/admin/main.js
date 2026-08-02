@@ -4,7 +4,7 @@ import { checkAuthAndLoad, isSuper, showSuperSections } from './auth.js';
 import {
   loadGlobalUsers, globalKick, banUser, unbanUser, loadBannedList,
   loadIpBannedList, banIpByInput, banIp, unbanIp, loadGlobalBlacklist,
-  setPoints, blacklistUser, unblacklistUser, deleteUser
+  setPoints, grantAnon, blacklistUser, unblacklistUser, deleteUser
 } from './users.js';
 import { loadHistoryUsers } from './history.js';
 import { loadAdminKeyInfo, changeAdminKey, resetAdminKey } from './key.js';
@@ -54,6 +54,7 @@ window.loadUserTags = loadUserTags;
 
 // 积分
 window.searchPointsUser = searchPointsUser;
+window.grantAnon = grantAnon;
 window.setPointsToolbar = setPtsToolbar;
 window.addPointsToolbar = addPtsToolbar;
 window.deductPointsToolbar = deductPtsToolbar;

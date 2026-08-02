@@ -32,6 +32,25 @@ function safeEqual(a, b) {
   return r === 0;
 }
 
+// 🕶️ 匿名券管理：发放（anon-grant）、审计日志（anon-log）—— 转发 registry，保留 ?auth= 供 registry 鉴权
+async function handleAdminAnon(path, request, env, url) {
+  try {
+    let action = path[1] === "anon-grant" ? "grant" : (path[1] === "anon-log" ? "log" : null);
+    if (!action) return null;
+    let rid = env.registry.idFromName("global");
+    let stub = env.registry.get(rid);
+    let qs = new URLSearchParams(url.search);
+    qs.delete("key"); // 管理密钥不转发（registry 用 auth 鉴权，auth 由上级已注入保留）
+    if (action === "grant" && !qs.has("count")) qs.set("count", "1");
+    let r = await stub.fetch(new URL("https://dummy-url/anon/" + action + "?" + qs.toString()));
+    let ct = r.headers.get("Content-Type") || "";
+    if (ct.includes("application/json")) return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
+    return new Response(await r.text(), {status: r.status});
+  } catch (e) {
+    return new Response(JSON.stringify({error: "匿名服务暂时不可用"}), {status: 500, headers: {"Content-Type": "application/json"}});
+  }
+}
+
 // 操作日志助手
 async function logAdminAction(env, auth, operator, action, target, detail) {
   try {
@@ -125,7 +144,7 @@ export async function handleAdmin(path, request, env) {
   // destroy-room（销毁房间）、delete-user（删用户）、redeem（兑换码铸币）、log（审计日志）、
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
   // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
-  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "mute", "unmute", "mute-list", "webhook"];
+  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "mute", "unmute", "mute-list", "webhook", "anon-grant", "anon-log"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -195,6 +214,9 @@ export async function handleAdmin(path, request, env) {
 
   if (!result && path[1] === "webhook")
     result = await handleAdminWebhooks(path, request, env, url);
+
+  if (!result && ["anon-grant", "anon-log"].includes(path[1]))
+    result = await handleAdminAnon(path, request, env, url);
 
   if (result) {
     // 🔒 安全修复（A4）：记录管理操作日志（此前 logAdminAction 从未被调用，审计形同虚设）

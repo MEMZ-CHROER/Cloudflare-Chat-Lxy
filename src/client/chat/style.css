@@ -1064,6 +1064,11 @@ body::after {
   background: var(--bg);
 }
 
+#input-toolbar-expanded .tb-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
 #emoji-btn:hover,
 #image-btn:hover,
 #file-btn:hover,

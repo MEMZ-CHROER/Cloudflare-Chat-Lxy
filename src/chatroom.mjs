@@ -1488,6 +1488,7 @@ export class ChatRoom {
       }
       let replyData = data.reply;
       let atAll = data.atAll;
+      let anonFlag = !!data.anon;
       data = { name: session.name, message: "" + data.message, channel: msgChannel };
       if (session.tag) data.tag = session.tag;
       if (session.tagColor) data.tagColor = session.tagColor;
@@ -1765,6 +1766,40 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "AI 请求失败: " + e.message}));
         }
         return;
+      }
+
+      // 🕶️ 匿名马甲：消耗一张匿名券，消息以「匿名」身份展示（真实身份由 registry /anon/use 写审计日志）。
+      // 放在命令（/bot /ai /gh /destroy /rollback）全部 return 之后，命令消息不消耗匿名券。
+      if (anonFlag) {
+        if (!session.authenticated) {
+          webSocket.send(JSON.stringify({error: "请先登录后再使用匿名发言"}));
+          return;
+        }
+        try {
+          let rid = this.env.registry.idFromName("global");
+          let stub = this.env.registry.get(rid);
+          let useResp = await stub.fetch("https://dummy-url/anon/use", {
+            method: "POST",
+            body: JSON.stringify({name: session.name, token: session.token || "", channel: msgChannel}),
+            headers: {"Content-Type": "application/json"}
+          });
+          if (!useResp.ok) {
+            let errText = await useResp.text();
+            let errObj = {};
+            try { errObj = JSON.parse(errText); } catch (e) {}
+            webSocket.send(JSON.stringify({error: errObj.error || "匿名券不足，可在商店购买"}));
+            return;
+          }
+        } catch (e) {
+          webSocket.send(JSON.stringify({error: "匿名服务暂时不可用"}));
+          return;
+        }
+        data.name = "匿名";
+        data.tag = "🕶️";
+        data.tagColor = "purple";
+        data.tagBorder = "";
+        data.avatar = "";
+        data.anon = true;
       }
 
       data.timestamp = Math.max(Date.now(), this.lastTimestamp + 1);

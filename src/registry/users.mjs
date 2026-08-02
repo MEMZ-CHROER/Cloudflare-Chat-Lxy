@@ -83,7 +83,7 @@ export async function handleUsers(reg, request, url) {
       crypto.getRandomValues(saltBytes);
       let salt = Array.from(saltBytes, b => b.toString(16).padStart(2, '0')).join('');
       let hash = await sha256(salt + password);
-      reg.registeredUsers.set(name, {passwordHash: hash, salt, token: null, tokenExpiry: null, avatar: "", bio: ""});
+      reg.registeredUsers.set(name, {passwordHash: hash, salt, token: null, tokenExpiry: null, avatar: "", bio: "", anonCoupons: 0});
       await reg.saveRegisteredUsers();
       return new Response(JSON.stringify({ok: true}));
     }
@@ -202,6 +202,7 @@ export async function handleUsers(reg, request, url) {
         points: pts,
         registered: !!user,
         registeredAt: user ? (user.registeredAt || null) : null,
+        anonCoupons: user ? (user.anonCoupons || 0) : 0,
         vip: vip ? {level: vip.id, label: vip.label, tier: vip.tier} : null
       }), {headers: {"Content-Type": "application/json"}});
     }
@@ -298,7 +299,7 @@ export async function handleUsers(reg, request, url) {
       let vip = getVipLevel(tag);
       let vipFeatures = getVipFeatures(vip);
 
-      let result = {banned, ipBanned, registered, authenticated, tag, color, border, avatar: userAvatar, bio: userBio, vip: vip ? {level: vip.id, label: vip.label, tier: vip.tier, features: vipFeatures} : null};
+      let result = {banned, ipBanned, registered, authenticated, tag, color, border, avatar: userAvatar, bio: userBio, anonCoupons: uiUser ? (uiUser.anonCoupons || 0) : 0, vip: vip ? {level: vip.id, label: vip.label, tier: vip.tier, features: vipFeatures} : null};
       if (savePromises.length) Promise.all(savePromises).catch(() => {});
       return new Response(JSON.stringify(result), {
         headers: {"Content-Type": "application/json"}

@@ -95,6 +95,11 @@ export class RoomRegistry {
     if (data.gameDailyWin) this.gameDailyWin = data.gameDailyWin;
     if (data.redPackets) this.redPackets = data.redPackets;
     if (data.checkinByIp) this.checkinByIp = data.checkinByIp;
+
+    // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
+    if (!this.shopItems.has("anon_coupon")) {
+      this.shopItems.set("anon_coupon", {name: "匿名券", description: "匿名发言一次，消息显示为「匿名」🕶️ 紫色标签（真实身份仅管理员可查）", price: 50, consumable: true, enabled: true});
+    }
   }
 
   async save() { await saveRooms(this.storage, this.rooms); }
@@ -181,7 +186,8 @@ export class RoomRegistry {
       "/admin/user-inventory",
       "/admin/mute", "/admin/unmute", "/admin/mute-list",
       "/emoji/add", "/emoji/remove",
-      "/room/webhook"
+      "/room/webhook",
+      "/anon/grant", "/anon/log"
     ]);
     let needsAdmin = adminExactPaths.has(path) || path.startsWith("/lottery/admin/") ||
       (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
@@ -205,7 +211,7 @@ export class RoomRegistry {
       handler = handleUsers;
     else if (path.startsWith("/points/") || path.startsWith("/game/"))
       handler = handlePoints;
-    else if (path.startsWith("/shop/") || path.startsWith("/admin/shop/"))
+    else if (path.startsWith("/shop/") || path.startsWith("/admin/shop/") || path.startsWith("/anon/"))
       handler = handleShop;
     else if (path.startsWith("/task") || path.startsWith("/tasks") || path.startsWith("/admin/task"))
       handler = handleTasks;
