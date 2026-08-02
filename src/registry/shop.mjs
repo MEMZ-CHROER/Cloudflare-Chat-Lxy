@@ -99,6 +99,8 @@ export async function handleShop(reg, request, url) {
         await reg.addLedger(name, -price, "shop", "购买" + (item.name || "消耗品"));
         u.anonCoupons = (u.anonCoupons || 0) + 1;
         await reg.saveRegisteredUsers();
+        // ⭐ 购物经验：消耗品也计入购物（+2 经验，shopCount 成就判定用）
+        try { await reg.grantExp(name, 2, "shop"); } catch (e) {}
         return new Response(JSON.stringify({ok: true, name, itemId, consumable: true, anonCoupons: u.anonCoupons}), {
           headers: {"Content-Type": "application/json"}
         });
@@ -111,6 +113,8 @@ export async function handleShop(reg, request, url) {
       await reg.addLedger(name, -price, "shop", "购买商品 #" + itemId);
       inv.set(itemId, {purchasedAt: Date.now(), equipped: false});
       await reg.saveUserInventory();
+      // ⭐ 购物经验：成功购买 +2 经验，计入 shopCount（成就判定用）
+      try { await reg.grantExp(name, 2, "shop"); } catch (e) {}
       return new Response(JSON.stringify({ok: true, name, itemId}), {
         headers: {"Content-Type": "application/json"}
       });

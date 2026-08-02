@@ -557,6 +557,9 @@ export function startChat() {
         hideMoreMenu();
         let action = item.dataset.action;
         switch (action) {
+          case "achievements":
+            import('./achievements.js').then(m => m.toggleAchievementsPanel());
+            break;
           case "favorites":
             import('./favorites.js').then(m => m.toggleFavoritesPanel());
             break;

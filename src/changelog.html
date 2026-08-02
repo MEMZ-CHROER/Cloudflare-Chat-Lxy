@@ -126,6 +126,20 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.32</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">⭐</span><span class="text"><span class="tag tag-feature">功能</span>经验·等级·成就系统（纯展示）— 注册用户发言 +1 经验（15 秒/条限频）、每日签到 +10、游戏获胜 +5、购物 +2；升级时全员可见名字旁 Lv 徽章 + 升级横幅 🎉，累计经验进度条</span></div>
+    <div class="feature-item"><span class="icon">🏅</span><span class="text"><span class="tag tag-feature">功能</span>成就系统 — 9 项成就：初来乍到/话痨/舌战群儒/签到首日/一周坚持/小试牛刀/剁手党/崭露头角/声名鹊起，解锁实时 toast 提示；更多菜单「🏅 我的成就」面板查看等级、经验进度、四项统计与成就达成进度</span></div>
+    <div class="feature-item"><span class="icon">⭐</span><span class="text"><span class="tag tag-feature">功能</span>管理面板等级管理 — 在线用户列表显示 Lv 徽章；「⭐ 等级管理」页查看全员经验/等级排行，支持查询、设置、增加、扣除单个用户经验（写操作仅超级管理员，普通 admin 只读），调整经验即时触发成就判定</span></div>
+    <div class="feature-item"><span class="icon">🏅</span><span class="text"><span class="tag tag-feature">功能</span>每房间每等级徽章样式自定义 — 管理员可为指定房间的指定等级配置徽章：颜色（白名单色名/hex，非法自动置空）、图标（≤4 字符）、文字（默认 Lv.N，≤10 字符）；配置实时推送该房间所有在线用户，join 时自动同步；前后端双重白名单防护，createElement+textContent 渲染防 XSS</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.29</span>
     <span class="version-date">2026-08-02</span>
     <span class="version-arrow open">▶</span>

@@ -5,6 +5,7 @@ import { handleAdminRooms } from "./admin/rooms.mjs";
 import { handleAdminUsers } from "./admin/users.mjs";
 import { handleAdminIpBan } from "./admin/ip-ban.mjs";
 import { handleAdminPoints } from "./admin/points.mjs";
+import { handleAdminExp } from "./admin/exp.mjs";
 import { handleAdminShop } from "./admin/shop.mjs";
 import { handleAdminTasks } from "./admin/tasks.mjs";
 import { handleAdminTags } from "./admin/tags.mjs";
@@ -144,7 +145,7 @@ export async function handleAdmin(path, request, env) {
   // destroy-room（销毁房间）、delete-user（删用户）、redeem（兑换码铸币）、log（审计日志）、
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
   // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
-  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "mute", "unmute", "mute-list", "webhook", "anon-grant", "anon-log"];
+  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "anon-grant", "anon-log"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -153,8 +154,8 @@ export async function handleAdmin(path, request, env) {
   }
 
   if (permission === "admin" && !adminAllowedPaths.includes(path[1])) {
-    // M1 联动：积分端点仅 super 可写；普通 admin 允许只读查询（get/all 供 dashboard 统计），禁止 set/add/batch 铸币
-    if (!(path[1] === "points" && ["get", "all"].includes(path[2]))) {
+    // M1 联动：积分/经验端点仅 super 可写；普通 admin 允许只读查询（get/all 供 dashboard 统计），禁止 set/add/batch 改值
+    if (!((path[1] === "points" || path[1] === "exp") && ["get", "all"].includes(path[2]))) {
       return new Response("无权限访问此管理功能。", { status: 403 });
     }
   }
@@ -176,6 +177,9 @@ export async function handleAdmin(path, request, env) {
   if (!result && path[1] === "points")
     result = await handleAdminPoints(path, request, env, url);
 
+  if (!result && path[1] === "exp")
+    result = await handleAdminExp(path, request, env, url);
+
   if (!result && path[1] === "shop")
     result = await handleAdminShop(path, request, env, url);
 
@@ -191,7 +195,7 @@ export async function handleAdmin(path, request, env) {
   if (!result && path[1] === "bot")
     result = await handleAdminBot(path, request, env, url);
 
-  if (!result && ["announcement", "blacklist", "message", "send-message"].includes(path[1]))
+  if (!result && ["announcement", "blacklist", "message", "send-message", "level-style"].includes(path[1]))
     result = await handleAdminMessages(path, request, env, url);
 
   if (!result && path[1] === "admin-key")

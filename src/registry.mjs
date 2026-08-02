@@ -6,9 +6,12 @@ import { handleTags } from "./registry/tags.mjs";
 import { handleUsers } from "./registry/users.mjs";
 import { handlePoints } from "./registry/points.mjs";
 import { handleShop } from "./registry/shop.mjs";
+import { handleExp } from "./registry/exp.mjs";
 import { handleTasks } from "./registry/tasks.mjs";
 import { handleLottery } from "./registry/lottery.mjs";
 import { handleBot } from "./registry/bot.mjs";
+import { levelForExp } from "./utils.mjs";
+import { checkAchievements } from "./registry/achievements.mjs";
 import { handleEmoji } from "./registry/emoji.mjs";
 import { handleRedeem } from "./registry/redeem.mjs";
 import { handleLog } from "./registry/log.mjs";
@@ -152,6 +155,26 @@ export class RoomRegistry {
     } catch (e) { return []; }
   }
 
+  // ⭐ 经验系统：发放经验（可顺带 +1 对应统计项），并检查成就解锁。
+  // statsKey ∈ {msg, checkin, game, shop}，对应 user.stats.{msgCount, checkinCount, gameWins, shopCount}。
+  // 返回 {exp, level, leveledUp, newLevel, achievements(新解锁数组)}；用户不存在返回 null。
+  async grantExp(name, amount, statsKey) {
+    let user = this.registeredUsers.get(name);
+    if (!user) return null;
+    if (!user.stats) user.stats = { msgCount: 0, checkinCount: 0, gameWins: 0, shopCount: 0 };
+    // statsKey（msg/checkin/game/shop）→ 用户统计字段名映射
+    const STATS_FIELD = { msg: "msgCount", checkin: "checkinCount", game: "gameWins", shop: "shopCount" };
+    let field = STATS_FIELD[statsKey];
+    if (field && field in user.stats) user.stats[field] = (user.stats[field] || 0) + 1;
+    let oldExp = user.exp || 0;
+    let beforeLevel = levelForExp(oldExp).level;
+    user.exp = oldExp + (amount > 0 ? amount : 0);
+    await this.saveRegisteredUsers();
+    let afterLevel = levelForExp(user.exp).level;
+    let achievements = await checkAchievements(this, name, user);
+    return { exp: user.exp, level: afterLevel, leveledUp: afterLevel > beforeLevel, newLevel: afterLevel, achievements };
+  }
+
   // M15：管理鉴权（与 registry/points.mjs 的 adminAuthorized 同源逻辑）
   adminAuthorized(auth) {
     if (!auth) return false;
@@ -187,7 +210,8 @@ export class RoomRegistry {
       "/admin/mute", "/admin/unmute", "/admin/mute-list",
       "/emoji/add", "/emoji/remove",
       "/room/webhook",
-      "/anon/grant", "/anon/log"
+      "/anon/grant", "/anon/log",
+      "/exp/set", "/exp/add", "/exp/batch"
     ]);
     let needsAdmin = adminExactPaths.has(path) || path.startsWith("/lottery/admin/") ||
       (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
@@ -207,10 +231,12 @@ export class RoomRegistry {
       handler = handleAdmin;
     else if (path.startsWith("/tag/"))
       handler = handleTags;
-    else if (path.startsWith("/user-") || path === "/known-users" || path === "/user-init" || path === "/user-bio" || path === "/user-avatar" || path === "/user-profile")
+    else if (path.startsWith("/user-") || path === "/user/achievements" || path.startsWith("/xp/") || path === "/known-users" || path === "/user-init" || path === "/user-bio" || path === "/user-avatar" || path === "/user-profile")
       handler = handleUsers;
     else if (path.startsWith("/points/") || path.startsWith("/game/"))
       handler = handlePoints;
+    else if (path.startsWith("/exp/"))
+      handler = handleExp;
     else if (path.startsWith("/shop/") || path.startsWith("/admin/shop/") || path.startsWith("/anon/"))
       handler = handleShop;
     else if (path.startsWith("/task") || path.startsWith("/tasks") || path.startsWith("/admin/task"))

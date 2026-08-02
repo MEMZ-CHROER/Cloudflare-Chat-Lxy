@@ -40,6 +40,21 @@ export async function handleErrors(request, func) {
   }
 }
 
+// ⭐ 经验等级系统（纯函数）：Lv1 起，每级所需经验从 100 起按 *1.15 递增
+// exp=总经验 → {level: 当前等级, current: 本级已积累, next: 升下一级还需}
+export function levelForExp(exp) {
+  exp = Math.max(0, parseInt(exp) || 0);
+  let level = 1;
+  let need = 100;
+  let current = exp;
+  while (current >= need) {
+    current -= need;
+    level++;
+    need = Math.floor(need * 1.15);
+  }
+  return { level, current, next: need };
+}
+
 // VIP 等级系统
 export function getVipLevel(tag) {
   if (!tag) return null;

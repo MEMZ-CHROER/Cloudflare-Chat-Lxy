@@ -186,6 +186,8 @@ export async function handlePoints(reg, request, url) {
       reg.userPoints.set(name, String(result));
       await Promise.all([reg.saveRegisteredUsers(), reg.savePoints(), reg.saveCheckinByIp()]);
       await reg.addLedger(name, reward, "checkin", "每日签到");
+      // ⭐ 签到经验：每日签到 +10 经验，计入 checkinCount（成就判定用）
+      try { await reg.grantExp(name, 10, "checkin"); } catch (e) {}
       return new Response(JSON.stringify({ok: true, reward: String(reward), total: String(result), anonCoupons: user.anonCoupons, message: "签到成功！获得 " + reward + " 积分 + 1 张匿名券"}), {
         headers: {"Content-Type": "application/json"}
       });
@@ -241,6 +243,8 @@ export async function handlePoints(reg, request, url) {
       await reg.savePoints();
       await reg.addLedger(name, -wager, "game", "游戏下注");
       if (awarded > 0) await reg.addLedger(name, awarded, "game", "游戏获胜");
+      // ⭐ 游戏获胜经验：本局净赢 > 0 时 +5 经验，计入 gameWins（成就判定用）
+      if (awarded > 0) { try { await reg.grantExp(name, 5, "game"); } catch (e) {} }
       return new Response(JSON.stringify({
         ok: true,
         deducted: wager,

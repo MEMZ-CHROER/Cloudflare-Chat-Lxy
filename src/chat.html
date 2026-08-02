@@ -105,6 +105,7 @@
       style="display:none;overflow:hidden;flex-shrink:0;margin:0 8px 6px;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600;color:var(--text);align-items:center;justify-content:flex-end;height:36px;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,0.06);position:relative;z-index:5;background:var(--surface);">
       <span class="welcome-banner-text" style="white-space:nowrap;display:inline-block;"></span>
     </div>
+    <div id="level-banner"></div>
     <div id="pinned-bar"
       style="display:none;overflow:hidden;flex-shrink:0;margin:0 8px 6px;padding:8px 14px;border-radius:8px;font-size:13px;color:var(--text);align-items:center;gap:8px;background:var(--surface);border-left:3px solid #f39c12;box-shadow:0 1px 4px rgba(0,0,0,0.06);cursor:pointer;position:relative;z-index:5;"
       title="点击跳转">
@@ -249,6 +250,8 @@
   <!-- More button + menu for less-used floating buttons -->
   <div class="floating-btn" id="more-menu-btn" title="更多" data-i18n-title="more">···</div>
   <div id="more-menu-panel">
+    <div class="more-menu-item" data-action="achievements"><span class="mm-icon">🏅</span><span
+        class="mm-label">我的成就</span></div>
     <div class="more-menu-item" data-action="favorites"><span class="mm-icon">⭐</span><span
         class="mm-label">收藏的消息</span></div>
     <div class="more-menu-item" data-action="highlights"><span class="mm-icon">🏆</span><span

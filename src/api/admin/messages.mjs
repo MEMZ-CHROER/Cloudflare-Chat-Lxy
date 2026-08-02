@@ -50,6 +50,40 @@ export async function handleAdminMessages(path, request, env, url) {
       }
     }
 
+    case "level-style": {
+      // 🏅 房间等级样式：/api/admin/level-style/<set|clear>/<room>?level=&color=&icon=&text=
+      const lsAction = path[roomIdx];
+      const lsRoom = path[roomIdx + 1];
+      if (!lsRoom) return new Response("请提供房间名", {status: 400});
+      let id;
+      if (lsRoom.match(/^[0-9a-f]{64}$/)) id = env.rooms.idFromString(lsRoom);
+      else if (lsRoom.length <= 32) id = env.rooms.idFromName(lsRoom);
+      else return new Response("无效房间", {status: 400});
+      let roomObj = env.rooms.get(id);
+      let lsLevel = url.searchParams.get("level");
+      if (!lsLevel) return new Response("请提供等级（1-999）", {status: 400});
+      let doUrl;
+      if (lsAction === "set") {
+        let color = url.searchParams.get("color") || "";
+        let icon = url.searchParams.get("icon") || "";
+        let text = url.searchParams.get("text") || "";
+        // 防护：图标 ≤4 字、文字 ≤10 字、拒 HTML；颜色白名单由 DO 层 SAFE_COLOR_RE 统一校验（非法置空）
+        if (icon.length > 4 || /[<>&"']/.test(icon)) return new Response("图标不合法（≤4字符且不含HTML特殊字符）", {status: 400});
+        if (text.length > 10 || /[<>&"']/.test(text)) return new Response("文字不合法（≤10字符且不含HTML特殊字符）", {status: 400});
+        doUrl = new URL("https://dummy-url/set-level-styles?level=" + encodeURIComponent(lsLevel) + "&color=" + encodeURIComponent(color) + "&icon=" + encodeURIComponent(icon) + "&text=" + encodeURIComponent(text));
+      } else if (lsAction === "clear") {
+        doUrl = new URL("https://dummy-url/clear-level-style?level=" + encodeURIComponent(lsLevel));
+      } else {
+        return new Response("未找到该操作", {status: 404});
+      }
+      try {
+        let resp = await roomObj.fetch(doUrl);
+        return new Response(await resp.text(), {status: resp.status});
+      } catch (error) {
+        return new Response("等级样式操作失败: " + "操作失败", {status: 500});
+      }
+    }
+
     case "recall": {
       const recallRoom = path[roomIdx];
       const recallTs = url.searchParams.get("timestamp");

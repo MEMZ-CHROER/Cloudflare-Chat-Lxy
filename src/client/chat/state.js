@@ -63,6 +63,9 @@ export const state = {
 
   // 🕶️ 匿名马甲
   anonMode: false,
+
+  // 🏅 房间等级样式：{ "<level>": {color, icon, text} } — WS level-styles 推送时更新
+  levelStyles: {},
 };
 
 export function loadBlockedUsers() {

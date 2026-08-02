@@ -18,6 +18,8 @@ export async function loadGlobalUsers() {
     if (entries.length === 0) { container.innerHTML = '<div style="color:#888;padding:8px 0">暂无在线用户</div>'; return; }
     let pointsMap = {};
     try { let pr = await fetch("/api/admin/points/all?key=" + encodeURIComponent(state.adminKey)); pointsMap = await pr.json(); } catch (e) {}
+    let expMap = {};
+    try { let er = await fetch("/api/admin/exp/all?key=" + encodeURIComponent(state.adminKey)); expMap = await er.json(); } catch (e) {}
     let html = '';
     entries.forEach(([user, rooms]) => {
       let userTag = tagMap[user] || '';
@@ -26,6 +28,7 @@ export async function loadGlobalUsers() {
       let userIp = userIpMap[user] || '';
       let ipHtml = userIp ? ' <span style="color:#999;font-size:85%">(' + escapeHtml(userIp) + ')</span>' : '';
       let userPoints = pointsMap[user] || 0;
+      let expInfo = expMap[user] || {exp: 0, level: 1};
       let escUser = user.replace(/'/g, "\\'");
       let safeId = user.replace(/[^a-zA-Z0-9]/g, '_');
       let tagHtml = tagText
@@ -34,7 +37,8 @@ export async function loadGlobalUsers() {
             + '<option value="">默认</option>'
             + Object.keys(TAG_COLORS).map(c => '<option value="' + c + '">' + c + '</option>').join('')
             + '</select><button class="tag-set-btn" onclick="setTag(this,\'' + escUser + '\')">设置</button>';
-      html += '<div class="global-user-item"><span class="name">' + escapeHtml(user) + ipHtml + tagHtml + '</span>' +
+      let lvBadge = '<span class="tag-badge" style="background:#9b59b6" title="等级 ' + (expInfo.level || 1) + ' / 经验 ' + (expInfo.exp || 0) + '">Lv.' + (expInfo.level || 1) + '</span>';
+      html += '<div class="global-user-item"><span class="name">' + escapeHtml(user) + ipHtml + lvBadge + tagHtml + '</span>' +
         '<span class="rooms">房间: ' + rooms.map(r => '#' + r).join(', ') + '</span>' +
         '<span style="display:flex;align-items:center;gap:4px">' +
         '<span class="points-badge" style="color:#e67e22;font-weight:bold">' + userPoints + '</span>' +

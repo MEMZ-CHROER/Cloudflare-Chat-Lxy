@@ -5,6 +5,8 @@ import { loadGlobalUsers, loadBannedList, loadIpBannedList, loadGlobalBlacklist 
 import { loadHistoryUsers } from './history.js';
 import { loadUserTags } from './tags.js';
 import { loadPointsSection } from './points.js';
+import { loadExpSection } from './exp.js';
+import { loadLevelStyleSection } from './levelstyle.js';
 import { loadShopSection } from './shop.js';
 import { loadTaskSection } from './tasks.js';
 import { loadLotteryPools } from './lottery.js';
@@ -28,6 +30,8 @@ export const routeToSection = {
   '/admin/blacklist/': 'global-blacklist-section',
   '/admin/kick-protect/': 'kick-protect-section',
   '/admin/points/': 'points-section',
+  '/admin/exp/': 'exp-section',
+  '/admin/level-style/': 'levelstyle-section',
   '/admin/shop/': 'shop-section',
   '/admin/task/': 'task-section',
   '/admin/ip-group/': 'ip-group-section',
@@ -80,6 +84,8 @@ function loadSectionData(sectionId) {
     case 'global-blacklist-section': loadGlobalBlacklist(); break;
     case 'kick-protect-section': loadKickProtected(); break;
     case 'points-section': loadPointsSection(); break;
+    case 'exp-section': loadExpSection(); break;
+    case 'levelstyle-section': loadLevelStyleSection(); break;
     case 'shop-section': loadShopSection(); break;
     case 'task-section': loadTaskSection(); break;
     case 'ip-group-section': loadIpGroup(); break;

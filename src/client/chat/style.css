@@ -542,6 +542,46 @@ body::after {
   line-height: normal;
 }
 
+/* ⭐ 等级徽章（纯展示） */
+.lv-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin: 0 2px;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  line-height: normal;
+}
+
+/* 🎉 升级横幅：全宽渐变，显示约 4 秒 */
+#level-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0 8px 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  position: relative;
+  z-index: 5;
+  animation: levelBannerIn 0.3s ease-out;
+}
+#level-banner.show { display: flex; }
+@keyframes levelBannerIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ---- Room List ---- */
 #room-list-form {
   position: fixed;

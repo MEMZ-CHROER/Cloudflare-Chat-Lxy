@@ -84,17 +84,17 @@ export function switchChannel(name) {
 export function renderChannelMessage(msg) {
   if (!msg) return;
   if (msg.type === "image") {
-    addChatMessage(msg.name, "[图片]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+    addChatMessage(msg.name, "[图片]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar, msg.level);
   } else if (msg.type === "file") {
-    addChatMessage(msg.name, "[文件] " + (msg.fileName || ""), msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+    addChatMessage(msg.name, "[文件] " + (msg.fileName || ""), msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar, msg.level);
   } else if (msg.type === "voice") {
-    addChatMessage(msg.name, "[语音 " + (msg.duration || "") + "s]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+    addChatMessage(msg.name, "[语音 " + (msg.duration || "") + "s]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar, msg.level);
   } else if (msg.type === "gh-card") {
-    addChatMessage(msg.name, "[🐙 " + (msg.repo || "") + "]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+    addChatMessage(msg.name, "[🐙 " + (msg.repo || "") + "]", msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar, msg.level);
   } else if (msg.type === "deleted") {
     addChatMessage(msg.name, "[消息已删除]", msg.tag, msg.tagColor, msg.color, msg.timestamp, null, msg.tagBorder, msg.id);
   } else {
-    addChatMessage(msg.name, msg.message, msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar);
+    addChatMessage(msg.name, msg.message, msg.tag, msg.tagColor, msg.color, msg.timestamp, msg.reply, msg.tagBorder, msg.id, msg.atAll, msg.avatar, msg.level);
   }
 }
 

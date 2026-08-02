@@ -482,6 +482,8 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus { border-colo
     <a class="nav-item nav-super" data-route="/admin/blacklist/" onclick="navigateTo('/admin/blacklist/')">全局黑名单</a>
     <a class="nav-item nav-super" data-route="/admin/kick-protect/" onclick="navigateTo('/admin/kick-protect/')">🛡️ 踢出保护</a>
     <a class="nav-item nav-super" data-route="/admin/points/" onclick="navigateTo('/admin/points/')">积分管理</a>
+    <a class="nav-item nav-super" data-route="/admin/exp/" onclick="navigateTo('/admin/exp/')">⭐ 等级管理</a>
+    <a class="nav-item" data-route="/admin/level-style/" onclick="navigateTo('/admin/level-style/')">🏅 房间样式</a>
 	    <a class="nav-item" data-route="/admin/shop/" onclick="navigateTo('/admin/shop/')">商店管理</a>
     <a class="nav-item" data-route="/admin/user-tags/" onclick="navigateTo('/admin/user-tags/')">用户标签</a>
     <a class="nav-item" data-route="/admin/lottery/" onclick="navigateTo('/admin/lottery/')">抽奖管理</a>
@@ -662,6 +664,57 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus { border-colo
               </table>
               <div class="pts-empty" id="pts-empty">暂无积分数据，在工具栏中输入用户名开始管理</div>
             </div>
+          </div>
+          <div id="exp-section" class="page-section" data-route="/admin/exp/">
+            <h2>⭐ 等级管理</h2>
+            <div class="summary" style="color:#888;font-size:90%;margin-bottom:12px">查看用户经验与等级，可调整经验值（写操作仅超级管理员）</div>
+            <div class="pts-toolbar">
+              <input type="text" id="exp-tb-user" placeholder="用户名" style="width:120px">
+              <button class="btn-primary" onclick="searchExpUser()">查询</button>
+              <span style="color:#ddd">|</span>
+              <input type="number" id="exp-tb-amt" placeholder="经验值" style="width:80px">
+              <button class="btn-primary" onclick="setExpToolbar()">设置</button>
+              <button class="btn-success" onclick="addExpToolbar()">增加</button>
+              <button class="btn-danger" onclick="deductExpToolbar()">扣除</button>
+              <span style="flex:1"></span>
+              <span id="exp-stats" style="color:#888;font-size:90%"></span>
+            </div>
+            <div class="pts-user-info" id="exp-user-info">
+              <span class="pts-label">当前用户:</span>
+              <span class="pts-val" id="exp-info-user"></span>
+              <span class="pts-label">等级:</span>
+              <span class="pts-val pts-p" id="exp-info-level"></span>
+              <span class="pts-label">经验:</span>
+              <span class="pts-val pts-p" id="exp-info-exp"></span>
+            </div>
+            <div class="pts-table-wrap">
+              <table class="pts-table">
+                <thead><tr><th style="width:40%">用户名</th><th style="width:15%">等级</th><th style="width:20%">经验</th><th>操作</th></tr></thead>
+                <tbody id="exp-tbody"></tbody>
+              </table>
+              <div class="pts-empty" id="exp-empty">暂无经验数据，在工具栏中输入用户名开始管理</div>
+            </div>
+          </div>
+          <div id="levelstyle-section" class="page-section" data-route="/admin/level-style/" style="background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:16px;padding:16px">
+            <h2>🏅 房间等级样式</h2>
+            <div class="summary" style="color:#888;font-size:90%;margin-bottom:12px">为每个房间的每个等级自定义徽章样式（颜色白名单 + 图标 ≤4字 + 文字 ≤10字，全程防注入）</div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+              <select id="ls-room" onchange="onLevelStyleRoomChange()" style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:90%;min-width:160px;outline:none">
+                <option value="">选择房间...</option>
+              </select>
+              <span id="ls-room-info" style="color:#888;font-size:90%"></span>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+              <input type="number" id="ls-level" placeholder="等级(1-999)" min="1" max="999" style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:90%;width:110px;outline:none">
+              <select id="ls-color" style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:90%;outline:none">
+                <option value="">默认渐变紫</option>
+              </select>
+              <input type="text" id="ls-icon" placeholder="图标(≤4字)" maxlength="4" style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:90%;width:100px;outline:none">
+              <input type="text" id="ls-text" placeholder="文字(默认Lv.N)" maxlength="10" style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:90%;width:130px;outline:none">
+              <button onclick="setLevelStyle()" style="padding:6px 14px;border:1px solid #27ae60;color:#27ae60;background:#fff;border-radius:4px;cursor:pointer;font-size:90%">设置</button>
+              <button onclick="clearLevelStyle()" style="padding:6px 14px;border:1px solid #e88;color:#c00;background:#fff;border-radius:4px;cursor:pointer;font-size:90%">清除</button>
+            </div>
+            <div id="ls-current" style="font-size:90%"></div>
           </div>
           <div id="shop-section" class="page-section" data-route="/admin/shop/">
             <h2>商店管理</h2>

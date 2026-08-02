@@ -13,6 +13,11 @@ import {
   deductPtsToolbar, setPtsInline, addPtsInline, deductPtsInline,
   toggleAllCheckboxes, updateSelectedCount, batchAdd, batchDeduct, exportPointsCSV
 } from './points.js';
+import {
+  loadExpSection, searchExpUser, setExpToolbar, addExpToolbar,
+  deductExpToolbar, setExpInline, addExpInline, deductExpInline
+} from './exp.js';
+import { loadLevelStyleSection, onLevelStyleRoomChange, setLevelStyle, clearLevelStyle } from './levelstyle.js';
 import { loadShopSection, addShopItem, toggleShopItem, deleteShopItem } from './shop.js';
 import { loadTaskSection, addTaskItem, toggleTaskItem, deleteTaskItem } from './tasks.js';
 import { loadUserTags, setTag, removeTag } from './tags.js';
@@ -66,6 +71,20 @@ window.updateSelectedCount = updateSelectedCount;
 window.batchAdd = batchAdd;
 window.batchDeduct = batchDeduct;
 window.exportPointsCSV = exportPointsCSV;
+
+// 经验等级
+window.searchExpUser = searchExpUser;
+window.setExpToolbar = setExpToolbar;
+window.addExpToolbar = addExpToolbar;
+window.deductExpToolbar = deductExpToolbar;
+window.setExpInline = setExpInline;
+window.addExpInline = addExpInline;
+window.deductExpInline = deductExpInline;
+
+// 房间等级样式
+window.onLevelStyleRoomChange = onLevelStyleRoomChange;
+window.setLevelStyle = setLevelStyle;
+window.clearLevelStyle = clearLevelStyle;
 
 // 商店
 window.addShopItem = addShopItem;
@@ -170,6 +189,7 @@ document.querySelector("#login-btn").addEventListener("click", async () => {
       loadHistoryUsers();
       loadAdminKeyInfo();
       loadPointsSection();
+      loadExpSection();
     }
     startAutoRefresh();
 	    navigateTo(getCurrentRoute(), false);

@@ -6,6 +6,7 @@ import { loadGlobalUsers, loadBannedList, loadIpBannedList } from './users.js';
 import { loadHistoryUsers } from './history.js';
 import { loadAdminKeyInfo } from './key.js';
 import { loadPointsSection } from './points.js';
+import { loadExpSection } from './exp.js';
 import { loadGlobalBlacklist } from './users.js';
 import { startAutoRefresh } from './routing.js';
 
@@ -38,6 +39,7 @@ export async function checkAuthAndLoad() {
       loadHistoryUsers();
       loadAdminKeyInfo();
       loadPointsSection();
+      loadExpSection();
     }
     startAutoRefresh();
     navigateTo(getCurrentRoute(), false);

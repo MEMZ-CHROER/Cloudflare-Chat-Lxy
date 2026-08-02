@@ -47,6 +47,7 @@ import CHAT_GAME_BOARD from "./client/chat/game-board.js";
 import CHAT_GAME_ACTION from "./client/chat/game-action.js";
 import CHAT_GAME_ARCADE from "./client/chat/game-arcade.js";
 import CHAT_CHANNELS from "./client/chat/channels.js";
+import CHAT_ACHIEVEMENTS from "./client/chat/achievements.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -61,6 +62,8 @@ import ADMIN_USERS from "./client/admin/users.js";
 import ADMIN_HISTORY from "./client/admin/history.js";
 import ADMIN_TAGS from "./client/admin/tags.js";
 import ADMIN_POINTS from "./client/admin/points.js";
+import ADMIN_EXP from "./client/admin/exp.js";
+import ADMIN_LEVELSTYLE from "./client/admin/levelstyle.js";
 import ADMIN_SHOP from "./client/admin/shop.js";
 import ADMIN_TASKS from "./client/admin/tasks.js";
 import ADMIN_LOTTERY from "./client/admin/lottery.js";
@@ -115,6 +118,7 @@ const CHAT_MODULES = {
   "chat/game-action.js": CHAT_GAME_ACTION,
   "chat/game-arcade.js": CHAT_GAME_ARCADE,
   "chat/channels.js": CHAT_CHANNELS,
+  "chat/achievements.js": CHAT_ACHIEVEMENTS,
 };
 
 const ADMIN_MODULES = {
@@ -127,6 +131,8 @@ const ADMIN_MODULES = {
   "admin/history.js": ADMIN_HISTORY,
   "admin/tags.js": ADMIN_TAGS,
   "admin/points.js": ADMIN_POINTS,
+  "admin/exp.js": ADMIN_EXP,
+  "admin/levelstyle.js": ADMIN_LEVELSTYLE,
   "admin/shop.js": ADMIN_SHOP,
   "admin/tasks.js": ADMIN_TASKS,
   "admin/lottery.js": ADMIN_LOTTERY,
@@ -524,6 +530,11 @@ async function handleApi(apiPath, request, env) {
 
       if (apiPath[1] === "profile") {
         let r = await stub.fetch(new URL("https://dummy-url/user-profile?name=" + encodeURIComponent(name)));
+        return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
+      }
+      if (apiPath[1] === "achievements") {
+        let token = url.searchParams.get("token") || "";
+        let r = await stub.fetch(new URL("https://dummy-url/user/achievements?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
         return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
       }
       if (apiPath[1] === "avatar" && request.method === "POST") {
