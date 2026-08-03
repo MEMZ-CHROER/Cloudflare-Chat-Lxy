@@ -126,6 +126,17 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.37</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>聊天室在线用户管理操作恢复 — 点击房间在线列表中的用户名（或消息上的用户名）弹出用户菜单，管理操作（踢出 / 禁言 / 封禁 / 封禁IP / 修改标签 / 批量踢出）重新显示。此前因安全加固（密钥改存 httpOnly Cookie、JS 不可读）漏同步前端管理员判定，导致登录后台后菜单仍判断"非管理员"；现已改为以 admin_logged Cookie 为准，管理操作请求由服务端 httpOnly Cookie 鉴权</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.36</span>
     <span class="version-date">2026-08-03</span>
     <span class="version-arrow open">▶</span>

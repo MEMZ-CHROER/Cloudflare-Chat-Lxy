@@ -26,7 +26,7 @@ export function buildChannelBar() {
     bar.appendChild(btn);
   });
   // 管理员显示新建频道入口
-  if (document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "") {
+  if (document.cookie.indexOf("admin_logged=1") !== -1) {
     const add = document.createElement("button");
     add.type = "button";
     add.className = "channel-item";

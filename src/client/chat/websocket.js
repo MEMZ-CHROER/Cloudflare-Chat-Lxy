@@ -23,7 +23,7 @@ function renderPinnedBar() {
     return;
   }
   list.innerHTML = "";
-  let isAdmin = document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "";
+  let isAdmin = document.cookie.indexOf("admin_logged=1") !== -1;
   items.forEach(pin => {
     let row = document.createElement("div");
     row.className = "pinned-item";

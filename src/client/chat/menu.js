@@ -13,7 +13,9 @@ export function showUserMenu(name, x, y) {
   let note = getNote(name);
   nameLabel.textContent = note ? name + " (" + note + ")" : name;
   // L24: 仅当 admin_logged cookie 且存在有效管理 key 时才算管理员（防控制台伪造 cookie 点亮按钮，服务端另有 httpOnly 校验兜底）
-  let hasAdmin = document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "";
+  // v1.37 修复：LD12 后密钥只存 httpOnly cookie（JS 不可读），hasAdmin 仅以 admin_logged cookie 为准，
+  // 管理操作 fetch 靠同源 httpOnly cookie 鉴权（空 ?key= 由服务端 cookie 兜底）；按钮点亮仅 UX，服务端鉴权兜底
+  let hasAdmin = document.cookie.indexOf("admin_logged=1") !== -1;
   menu.querySelectorAll(".user-menu-item").forEach(el => {
     let a = el.dataset.action;
     if (a === "pay" || a === "at" || a === "dm" || a === "batch-kick" || a === "note" || a === "profile") { el.style.display = "block"; }
