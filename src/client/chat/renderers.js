@@ -927,10 +927,10 @@ function buildActionMenu(wrapper, opts) {
     });
   }
 
-  // Pin (admin)
+  // Pin (admin) — v1.35 按频道置顶（后端以 session.channel 为准，带上 channel 防多开错频）
   if (timestamp && isAdmin && hasWs) {
     addItem(t("📌 置顶"), () => {
-      state.currentWebSocket.send(JSON.stringify({type: "pin", text, timestamp, name: name || state.username}));
+      state.currentWebSocket.send(JSON.stringify({type: "pin", text, timestamp, name: name || state.username, channel: state.currentChannel}));
       showSuccess(t("消息已置顶"));
     });
   }

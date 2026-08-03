@@ -31,7 +31,7 @@ import { quickSearch, showUserDetail, closeUserModal } from './usermodal.js';
 import { LIGHT_COLORS, TAG_COLORS } from './utils.js';
 import { navigateTo, getCurrentRoute, startAutoRefresh, stopAutoRefresh } from './routing.js';
 import { loadRooms, kickUser, addBlacklist, removeBlacklist, clearRoom, loadRoomDetail, destroyRoom } from './rooms.js';
-import { toggleRoomMessages, setAnnouncement } from './messages.js';
+import { toggleRoomMessages, setAnnouncement, setPinned, clearPinned } from './messages.js';
 import { addBot, toggleBot, deleteBot } from './bot.js';
 import { sendMessage, quickSendMessage } from './sendmessage.js';
 import { loadRedeemSection, generateRedeemCodes, addRedeemCode, deleteRedeemCode } from './redeem.js';
@@ -118,6 +118,8 @@ window.clearRoom = clearRoom;
 window.destroyRoom = destroyRoom;
 window.toggleRoomMessages = toggleRoomMessages;
 window.setAnnouncement = setAnnouncement;
+window.setPinned = setPinned;
+window.clearPinned = clearPinned;
 
 // 路由
 window.navigateTo = navigateTo;

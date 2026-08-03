@@ -3933,3 +3933,34 @@ body.dark .bubble.redpacket-bubble {
 #mobile-bottom-bar * {
   display: none !important;
 }
+
+/* 📌 置顶消息（v1.35）：置顶条条目悬停高亮 */
+#pinned-list .pinned-item:hover {
+  background: var(--bg);
+}
+
+/* 📌 公告横幅滚动（v1.35）：超长公告横向滚动展示，悬停暂停 */
+#announcement-banner.scrolling {
+  overflow: hidden;
+}
+
+#announcement-banner.scrolling #announcement-text {
+  white-space: nowrap;
+  display: inline-block;
+  animation: announcementScroll 15s linear infinite;
+}
+
+#announcement-banner.scrolling:hover #announcement-text {
+  animation-play-state: paused;
+}
+
+@keyframes announcementScroll {
+  0% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+}

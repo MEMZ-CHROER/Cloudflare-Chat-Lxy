@@ -35,7 +35,10 @@ export async function handleManage(room, session, data, webSocket) {
       } catch (e) {}
     }
     msgs.reverse();
-    webSocket.send(JSON.stringify({type: "channel-history", channel: target, messages: msgs, channels: room.channels}));
+    // 📌 置顶消息（v1.35）：切频道时附带该频道置顶列表，前端立即渲染无需等待广播
+    if (room._loadPinnedMessages) await room._loadPinnedMessages;
+    let pinned = (room.pinnedMessages && room.pinnedMessages[target]) || [];
+    webSocket.send(JSON.stringify({type: "channel-history", channel: target, messages: msgs, channels: room.channels, pinned}));
     return true;
   }
 
@@ -83,20 +86,29 @@ export async function handleManage(room, session, data, webSocket) {
       webSocket.send(JSON.stringify({error: "仅管理员可置顶消息"}));
       return true;
     }
-    if (room._loadPinned) await room._loadPinned;
-    if (room.pinnedMessage && data.unpin) {
-      room.pinnedMessage = null;
-      await room.storage.delete("pinnedMessage");
-      room.broadcast({type: "pinned", pinned: null});
+    let pinChannel = session.channel || "general";
+    if (data.unpin) {
+      // 取消置顶（v1.35 按频道 + timestamp 指定清除）
+      let unpinTs = parseInt(data.timestamp, 10);
+      if (!unpinTs) {
+        webSocket.send(JSON.stringify({error: "置顶参数错误"}));
+        return true;
+      }
+      await room.removePinnedMessage(pinChannel, unpinTs);
       return true;
     }
     if (!data.text || !data.timestamp) {
       webSocket.send(JSON.stringify({error: "置顶参数错误"}));
       return true;
     }
-    room.pinnedMessage = {name: session.name, text: "" + data.text, timestamp: parseInt(data.timestamp), tag: session.tag || "", tagColor: session.tagColor || "", tagBorder: session.tagBorder || "", pinnedAt: Date.now()};
-    await room.storage.put("pinnedMessage", JSON.stringify(room.pinnedMessage));
-    room.broadcast({type: "pinned", pinned: room.pinnedMessage});
+    // v1.35：置顶快照按 session 当前频道存储（addPinnedMessage 内部持久化 + 按频道广播）
+    await room.addPinnedMessage(pinChannel, {
+      name: session.name,
+      text: "" + data.text,
+      timestamp: parseInt(data.timestamp, 10),
+      tag: session.tag || "", tagColor: session.tagColor || "", tagBorder: session.tagBorder || "",
+      channel: pinChannel, pinnedBy: session.name, pinnedAt: Date.now()
+    });
     return true;
   }
 

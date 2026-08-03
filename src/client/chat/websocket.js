@@ -10,6 +10,57 @@ import { checkKeywords } from './keywords.js';
 import { applyWaveEffect, applyCrashEffect } from './commands.js';
 import { buildChannelBar, updateChannelBadges, renderChannelMessage, pushToChannelCache, bumpChannelUnread, updateCachedMessage } from './channels.js';
 
+// 📌 置顶消息（v1.35）：渲染当前频道的置顶条（每频道最多 3 条，管理员显示取消按钮）
+// 全部用 createElement + textContent 渲染，杜绝 XSS
+function renderPinnedBar() {
+  let bar = document.getElementById("pinned-bar");
+  let list = document.getElementById("pinned-list");
+  if (!bar || !list) return;
+  let items = state.pinnedMessages[state.currentChannel] || [];
+  if (!items || items.length === 0) {
+    bar.style.display = "none";
+    list.innerHTML = "";
+    return;
+  }
+  list.innerHTML = "";
+  let isAdmin = document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "";
+  items.forEach(pin => {
+    let row = document.createElement("div");
+    row.className = "pinned-item";
+    row.style.cssText = "display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:6px;";
+    row.title = t("点击跳转");
+    row.addEventListener("click", () => {
+      let el = state.chatlog.querySelector('[data-timestamp="' + pin.timestamp + '"]');
+      if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("msg-ref-highlight"); setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000); }
+    });
+    let pinIcon = document.createElement("span");
+    pinIcon.style.cssText = "flex-shrink:0;font-size:14px;";
+    pinIcon.textContent = "📌";
+    let txt = document.createElement("span");
+    txt.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+    txt.textContent = (pin.name || t("未知")) + ": " + (pin.text || "");
+    row.appendChild(pinIcon);
+    row.appendChild(txt);
+    if (isAdmin) {
+      let cancel = document.createElement("span");
+      cancel.style.cssText = "cursor:pointer;font-size:16px;color:var(--text-secondary);padding:0 4px;flex-shrink:0;";
+      cancel.title = t("取消置顶");
+      cancel.textContent = "×";
+      cancel.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (state.currentWebSocket) {
+          state.currentWebSocket.send(JSON.stringify({type: "pin", unpin: true, timestamp: pin.timestamp}));
+          row.remove();
+          if (list.children.length === 0) bar.style.display = "none";
+        }
+      });
+      row.appendChild(cancel);
+    }
+    list.appendChild(row);
+  });
+  bar.style.display = "flex";
+}
+
 export function join() {
   if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
 
@@ -72,6 +123,8 @@ export function join() {
     }
     if (data.type === "channel-history") {
       state.channels = data.channels || state.channels;
+      // 📌 置顶消息（v1.35）：切频道响应附带该频道置顶，先缓存再渲染（非当前频道仅缓存）
+      if (data.pinned) state.pinnedMessages[data.channel] = data.pinned;
       buildChannelBar();
       if (data.channel !== state.currentChannel) return;
       state.chatlog.innerHTML = '<div id="spacer"></div>';
@@ -82,6 +135,7 @@ export function join() {
       state.chatlog.scrollBy(0, 1e8);
       state.channelUnread[data.channel] = 0;
       updateChannelBadges();
+      renderPinnedBar();
       return;
     }
 
@@ -213,32 +267,20 @@ export function join() {
     } else if (data.type === "announcement") {
       let banner = document.getElementById("announcement-banner");
       let textEl = document.getElementById("announcement-text");
-      if (data.text) { textEl.textContent = data.text; banner.style.display = "flex"; }
-      else { banner.style.display = "none"; }
-    } else if (data.type === "pinned") {
-      let bar = document.getElementById("pinned-bar");
-      let textEl = document.getElementById("pinned-text");
-      let cancelBtn = document.getElementById("pinned-cancel");
-      if (data.pinned) {
-        textEl.textContent = data.pinned.name + ": " + data.pinned.text;
-        bar.style.display = "flex";
-        bar.onclick = () => {
-          let el = state.chatlog.querySelector('[data-timestamp="' + data.pinned.timestamp + '"]');
-          if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("msg-ref-highlight"); setTimeout(() => el.classList.remove("msg-ref-highlight"), 2000); }
-        };
-        if (cancelBtn) {
-          cancelBtn.style.display = document.cookie.indexOf("admin_logged=1") !== -1 && getAdminKey() !== "" ? "inline" : "none";
-          cancelBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (state.currentWebSocket) {
-              state.currentWebSocket.send(JSON.stringify({type: "pin", unpin: true}));
-              bar.style.display = "none";
-            }
-          };
-        }
+      if (data.text) {
+        textEl.textContent = data.text;
+        banner.style.display = "flex";
+        // v1.35：超长公告滚动展示（>40 字符加滚动 class）
+        if (data.text.length > 40) banner.classList.add("scrolling");
+        else banner.classList.remove("scrolling");
       } else {
-        bar.style.display = "none";
+        banner.style.display = "none";
+        banner.classList.remove("scrolling");
       }
+    } else if (data.type === "pinned") {
+      // 📌 置顶消息（v1.35）：按频道数组更新缓存，当前频道则渲染置顶条
+      state.pinnedMessages[data.channel] = data.pinned || [];
+      if (data.channel === state.currentChannel) renderPinnedBar();
     } else if (data.type === "reaction-update") {
       let msgEl = state.chatlog.querySelector('[data-timestamp="' + data.msgTimestamp + '"]');
       if (!msgEl) return;

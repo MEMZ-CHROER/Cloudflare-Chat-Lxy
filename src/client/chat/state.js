@@ -66,6 +66,9 @@ export const state = {
 
   // 🏅 房间等级样式：{ "<level>": {color, icon, text} } — WS level-styles 推送时更新
   levelStyles: {},
+
+  // 📌 置顶消息（v1.35）：{ "<channel>": [pinObj, ...] }，每频道最多 3 条，缓存供切频道即时显示
+  pinnedMessages: {},
 };
 
 export function loadBlockedUsers() {

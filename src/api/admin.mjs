@@ -146,7 +146,7 @@ export async function handleAdmin(path, request, env) {
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
   // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
   // F1/F2 修复：移除 "anon-grant"/"anon-log"——匿名券发放（自助铸券）与匿名真实身份审计日志仅限 super（ADMIN_SECRET_KEY），普通 admin 无权
-  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook"];
+  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -196,7 +196,7 @@ export async function handleAdmin(path, request, env) {
   if (!result && path[1] === "bot")
     result = await handleAdminBot(path, request, env, url);
 
-  if (!result && ["announcement", "blacklist", "message", "send-message", "level-style"].includes(path[1]))
+  if (!result && ["announcement", "blacklist", "message", "send-message", "level-style", "pin"].includes(path[1]))
     result = await handleAdminMessages(path, request, env, url);
 
   if (!result && path[1] === "admin-key")

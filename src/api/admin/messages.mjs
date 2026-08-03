@@ -127,6 +127,50 @@ export async function handleAdminMessages(path, request, env, url) {
       }
     }
 
+    case "pin": {
+      // 📌 置顶消息：/api/admin/pin/<set|clear|get>/<room>?channel=&timestamp=
+      const pinAction = path[roomIdx];
+      const pinRoom = path[roomIdx + 1];
+      if (!pinRoom) return new Response("请提供房间名", {status: 400});
+      let pinId;
+      if (pinRoom.match(/^[0-9a-f]{64}$/)) pinId = env.rooms.idFromString(pinRoom);
+      else if (pinRoom.length <= 32) pinId = env.rooms.idFromName(pinRoom);
+      else return new Response("无效房间", {status: 400});
+      let roomObj = env.rooms.get(pinId);
+      let pinChannel = url.searchParams.get("channel") || "general";
+      if (pinAction === "set") {
+        let pinTs = url.searchParams.get("timestamp");
+        if (!pinTs || !/^\d+$/.test(pinTs)) return new Response("请提供有效消息时间戳", {status: 400});
+        let doUrl = new URL("https://dummy-url/set-pinned?channel=" + encodeURIComponent(pinChannel) + "&timestamp=" + encodeURIComponent(pinTs));
+        try {
+          let resp = await roomObj.fetch(doUrl);
+          return new Response(await resp.text(), {status: resp.status});
+        } catch (e) {
+          return new Response("置顶失败: 操作失败", {status: 500});
+        }
+      } else if (pinAction === "clear") {
+        let pinTs = url.searchParams.get("timestamp");
+        if (!pinTs || !/^\d+$/.test(pinTs)) return new Response("请提供有效消息时间戳", {status: 400});
+        let doUrl = new URL("https://dummy-url/clear-pinned?channel=" + encodeURIComponent(pinChannel) + "&timestamp=" + encodeURIComponent(pinTs));
+        try {
+          let resp = await roomObj.fetch(doUrl);
+          return new Response(await resp.text(), {status: resp.status});
+        } catch (e) {
+          return new Response("取消置顶失败: 操作失败", {status: 500});
+        }
+      } else if (pinAction === "get") {
+        try {
+          let resp = await roomObj.fetch(new URL("https://dummy-url/get-pinned"));
+          let text = await resp.text();
+          return new Response(text, {status: resp.status, headers: {"Content-Type": "application/json"}});
+        } catch (e) {
+          return new Response("读取置顶失败: 操作失败", {status: 500});
+        }
+      } else {
+        return new Response("未找到该操作", {status: 404});
+      }
+    }
+
     default:
       return null;
   }

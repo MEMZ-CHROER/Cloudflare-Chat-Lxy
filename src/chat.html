@@ -107,13 +107,8 @@
     </div>
     <div id="level-banner"></div>
     <div id="pinned-bar"
-      style="display:none;overflow:hidden;flex-shrink:0;margin:0 8px 6px;padding:8px 14px;border-radius:8px;font-size:13px;color:var(--text);align-items:center;gap:8px;background:var(--surface);border-left:3px solid #f39c12;box-shadow:0 1px 4px rgba(0,0,0,0.06);cursor:pointer;position:relative;z-index:5;"
-      title="点击跳转">
-      <span style="font-size:14px;flex-shrink:0;">📌</span>
-      <span id="pinned-text" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-      <span id="pinned-cancel"
-        style="cursor:pointer;font-size:16px;color:var(--text-secondary);padding:0 4px;flex-shrink:0;display:none;"
-        title="取消置顶">&times;</span>
+      style="display:none;flex-direction:column;flex-shrink:0;margin:0 8px 6px;padding:6px 12px;border-radius:8px;font-size:13px;color:var(--text);gap:4px;background:var(--surface);border-left:3px solid #f39c12;box-shadow:0 1px 4px rgba(0,0,0,0.06);position:relative;z-index:5;">
+      <div id="pinned-list" style="display:flex;flex-direction:column;gap:3px;"></div>
     </div>
     <style>
       @keyframes welcomeMarquee {

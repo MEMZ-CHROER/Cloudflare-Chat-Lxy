@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { TAG_COLORS, escapeHtml } from './utils.js';
 import { isSuper } from './auth.js';
 import { banUser } from './users.js';
+import { loadPinnedSection } from './messages.js';
 
 export async function loadRooms() {
   let container = document.querySelector("#room-list-container");
@@ -64,6 +65,16 @@ export async function loadRoomDetail(detail, name) {
     html += '<input type="text" id="ann-input-' + name.replace(/[^a-zA-Z0-9_-]/g, '_') + '" placeholder="输入公告内容（留空清除）" style="flex:1;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-size:13px;">';
     html += '<button onclick="setAnnouncement(\'' + name.replace(/'/g, "\\'") + '\')" style="padding:4px 12px;background:#4a90d9;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">设置</button>';
     html += '</div></div>';
+    // 📌 置顶消息（v1.35）：房间置顶管理（列表 + 设置），普通 admin 可用
+    let safeId = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    html += '<div class="pinned-section" style="margin:8px 0;padding:8px;background:#fef9f0;border-radius:6px;">';
+    html += '<div style="font-size:13px;font-weight:600;margin-bottom:4px;">📌 置顶消息</div>';
+    html += '<div id="pinned-section-' + safeId + '" style="font-size:12px;">加载中...</div>';
+    html += '<div style="display:flex;gap:6px;margin-top:6px;">';
+    html += '<input type="text" id="pin-chan-' + safeId + '" placeholder="频道(general)" style="width:120px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">';
+    html += '<input type="text" id="pin-ts-' + safeId + '" placeholder="消息时间戳(毫秒)" style="flex:1;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">';
+    html += '<button onclick="setPinned(\'' + name.replace(/'/g, "\\'") + '\')" style="padding:4px 12px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">置顶</button>';
+    html += '</div></div>';
     html += '<div class="user-list">';
     if (users.length === 0) html += '<div style="color:#888;font-size:90%">暂无在线用户</div>';
     else {
@@ -101,6 +112,7 @@ export async function loadRoomDetail(detail, name) {
     }
     html += '</div>';
     detail.innerHTML = html;
+    loadPinnedSection(name); // 📌 置顶消息（v1.35）：加载房间各频道置顶列表
   } catch (e) { detail.innerHTML = '<div style="color:#c00">加载失败</div>'; }
 }
 

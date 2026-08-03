@@ -74,11 +74,25 @@ export class ChatRoom {
     this._loadDestroyed = this.storage.get("__destroyed__").then(v => {
       if (v === "1") this.destroyed = true;
     });
-    this.pinnedMessage = null;
-    this._loadPinned = this.storage.get("pinnedMessage").then(data => {
-      if (data) {
-        try { this.pinnedMessage = JSON.parse(data); } catch (e) { this.pinnedMessage = null; }
+    // 📌 置顶消息（v1.35 升级为按频道）：{ "<channel>": [pinObj, ...] }，每频道最多 3 条
+    this.pinnedMessages = {};
+    this._loadPinnedMessages = this.storage.get("pinnedMessages").then(async data => {
+      if (data && typeof data === "object") {
+        this.pinnedMessages = data;
+        return;
       }
+      // 迁移：旧版单条全局置顶（pinnedMessage）并入 general 频道，随后删除旧 key
+      try {
+        let old = await this.storage.get("pinnedMessage");
+        if (old) {
+          let p = JSON.parse(old);
+          if (p && p.timestamp) {
+            this.pinnedMessages["general"] = [p];
+            await this.storage.put("pinnedMessages", this.pinnedMessages);
+            await this.storage.delete("pinnedMessage");
+          }
+        }
+      } catch (e) {}
     });
 
     this.scheduledMessages = [];
@@ -601,8 +615,48 @@ export class ChatRoom {
           return new Response("等级样式已清除", {status: 200});
         }
 
+        // 📌 置顶消息（v1.35）：按频道设置置顶（从 storage 读原消息构造快照，channel 须存在于频道列表）
+        case "/set-pinned": {
+          let pinChannel = "" + (url.searchParams.get("channel") || "general");
+          let pinTs = parseInt(url.searchParams.get("timestamp"), 10);
+          if (!pinTs) return new Response("请提供消息时间戳", {status: 400});
+          if (this._loadChannels) await this._loadChannels;
+          if (!this.channels || !this.channels.some(c => c.name === pinChannel)) {
+            return new Response("频道不存在", {status: 400});
+          }
+          try {
+            let raw = await this.storage.get(new Date(pinTs).toISOString());
+            if (!raw) return new Response("消息不存在", {status: 404});
+            let m = JSON.parse(raw);
+            if ((m.channel || "general") !== pinChannel) return new Response("消息不属于该频道", {status: 400});
+            if (m.type === "deleted" || m.type === "recalled") return new Response("消息已删除或撤回", {status: 400});
+            let safe = stripSensitiveMsg(m);
+            let pinObj = {
+              name: safe.name || "未知",
+              text: safe.message !== undefined ? safe.message : (safe.text || ""),
+              timestamp: pinTs,
+              tag: safe.tag || "", tagColor: safe.tagColor || "", tagBorder: safe.tagBorder || "",
+              channel: pinChannel, pinnedBy: "admin", pinnedAt: Date.now()
+            };
+            await this.addPinnedMessage(pinChannel, pinObj);
+            return new Response("已置顶", {status: 200});
+          } catch (e) {
+            return new Response("消息读取失败", {status: 500});
+          }
+        }
+
+        // 📌 置顶消息（v1.35）：按频道+时间戳取消置顶
+        case "/clear-pinned": {
+          let pinChannel = "" + (url.searchParams.get("channel") || "general");
+          let pinTs = parseInt(url.searchParams.get("timestamp"), 10);
+          if (!pinTs) return new Response("请提供消息时间戳", {status: 400});
+          await this.removePinnedMessage(pinChannel, pinTs);
+          return new Response("已取消置顶", {status: 200});
+        }
+
         case "/get-pinned": {
-          return new Response(JSON.stringify({pinned: this.pinnedMessage}), {
+          if (this._loadPinnedMessages) await this._loadPinnedMessages;
+          return new Response(JSON.stringify({pinned: this.pinnedMessages || {}}), {
             status: 200, headers: {"Content-Type": "application/json"}
           });
         }
@@ -611,6 +665,32 @@ export class ChatRoom {
           return new Response("未找到", {status: 404});
       }
     });
+  }
+
+  // 📌 置顶消息（v1.35）：新增一条置顶到某频道（去重按 timestamp，头部插入，超 3 条淘汰最旧），持久化 + 按频道广播
+  async addPinnedMessage(channel, pinObj) {
+    if (this._loadPinnedMessages) await this._loadPinnedMessages;
+    if (!this.pinnedMessages || typeof this.pinnedMessages !== "object") this.pinnedMessages = {};
+    let arr = Array.isArray(this.pinnedMessages[channel]) ? this.pinnedMessages[channel] : [];
+    arr = arr.filter(p => p && parseInt(p.timestamp) !== parseInt(pinObj.timestamp));
+    arr.unshift(pinObj);
+    if (arr.length > 3) arr.length = 3; // 每频道最多 3 条
+    this.pinnedMessages[channel] = arr;
+    await this.storage.put("pinnedMessages", this.pinnedMessages);
+    this.broadcastToChannel(channel, JSON.stringify({type: "pinned", channel, pinned: arr}));
+    return arr;
+  }
+
+  // 📌 置顶消息（v1.35）：移除某频道的指定置顶（按 timestamp），持久化 + 按频道广播
+  async removePinnedMessage(channel, ts) {
+    if (this._loadPinnedMessages) await this._loadPinnedMessages;
+    if (!this.pinnedMessages || typeof this.pinnedMessages !== "object") this.pinnedMessages = {};
+    let arr = Array.isArray(this.pinnedMessages[channel]) ? this.pinnedMessages[channel] : [];
+    arr = arr.filter(p => !p || parseInt(p.timestamp) !== parseInt(ts));
+    this.pinnedMessages[channel] = arr;
+    await this.storage.put("pinnedMessages", this.pinnedMessages);
+    this.broadcastToChannel(channel, JSON.stringify({type: "pinned", channel, pinned: arr}));
+    return arr;
   }
 
   async clearAllMessages() {
@@ -685,10 +765,12 @@ export class ChatRoom {
       session.blockedMessages.push(JSON.stringify({type: "announcement", text: this.announcement}));
     }
 
-    if (this._loadPinned) await this._loadPinned;
-    if (this.pinnedMessage) {
-      session.blockedMessages.push(JSON.stringify({type: "pinned", pinned: this.pinnedMessage}));
-    }
+    // 📌 置顶消息（v1.35）：加入时推送当前频道置顶列表（数组，可能为空）
+    if (this._loadPinnedMessages) await this._loadPinnedMessages;
+    session.blockedMessages.push(JSON.stringify({
+      type: "pinned", channel: session.channel,
+      pinned: (this.pinnedMessages && this.pinnedMessages[session.channel]) || []
+    }));
 
     if (this._loadPolls) await this._loadPolls;
     if (this.polls && this.polls.size > 0) {
