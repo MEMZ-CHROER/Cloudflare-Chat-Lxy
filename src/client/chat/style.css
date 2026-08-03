@@ -155,9 +155,9 @@ body.theme-flat {
   --primary-light: #3b82f6;
   --primary-dark: #1d4ed8;
   --primary-rgb: 37, 99, 235;
-  --bg: #eef1f6;
-  --surface: #ffffff;
-  --surface-2: #f8fafc;
+  --bg: rgba(255, 255, 255, 0.5);
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-2: rgba(255, 255, 255, 0.88);
   --text: #1e293b;
   --text-secondary: #64748b;
   --border: #cbd5e1;
@@ -170,18 +170,18 @@ body.theme-flat {
   --msg-other: #ffffff;
   --msg-other-text: #1e293b;
   --online-dot: #16a34a;
-  --frosted-r: 238;
-  --frosted-g: 241;
-  --frosted-b: 246;
-  --frosted-a: 1;
-  --frosted-strong-a: 1;
-  --frosted-border-a: 1;
+  --frosted-r: 255;
+  --frosted-g: 255;
+  --frosted-b: 255;
+  --frosted-a: 0.5;
+  --frosted-strong-a: 0.7;
+  --frosted-border-a: 0.55;
   --frosted-blur: none;
   --input-ink: #1e293b;
   --input-ph: #94a3b8;
 }
-/* 扁平化：隐藏背景图；气泡用硬朗边框而非阴影 */
-body.theme-flat::before { display: none; }
+/* 扁平化：保留随机背景图（无模糊清晰显示）；气泡用硬朗边框而非阴影 */
+body.theme-flat::before { filter: none; }
 body.theme-flat .chat-msg .bubble {
   border: 1px solid var(--border);
   box-shadow: none;
@@ -196,9 +196,9 @@ body.dark.theme-flat {
   --primary-light: #60a5fa;
   --primary-dark: #2563eb;
   --primary-rgb: 59, 130, 246;
-  --bg: #111827;
-  --surface: #1f2937;
-  --surface-2: #263449;
+  --bg: rgba(17, 24, 39, 0.55);
+  --surface: rgba(17, 24, 39, 0.7);
+  --surface-2: rgba(17, 24, 39, 0.85);
   --text: #f1f5f9;
   --text-secondary: #94a3b8;
   --border: #374151;
@@ -209,6 +209,9 @@ body.dark.theme-flat {
   --frosted-r: 17;
   --frosted-g: 24;
   --frosted-b: 39;
+  --frosted-a: 0.55;
+  --frosted-strong-a: 0.75;
+  --frosted-border-a: 0.5;
   --input-ink: #f1f5f9;
   --input-ph: #64748b;
 }
