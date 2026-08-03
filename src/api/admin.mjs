@@ -145,7 +145,8 @@ export async function handleAdmin(path, request, env) {
   // destroy-room（销毁房间）、delete-user（删用户）、redeem（兑换码铸币）、log（审计日志）、
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
   // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
-  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "anon-grant", "anon-log"];
+  // F1/F2 修复：移除 "anon-grant"/"anon-log"——匿名券发放（自助铸券）与匿名真实身份审计日志仅限 super（ADMIN_SECRET_KEY），普通 admin 无权
+  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -219,8 +220,14 @@ export async function handleAdmin(path, request, env) {
   if (!result && path[1] === "webhook")
     result = await handleAdminWebhooks(path, request, env, url);
 
-  if (!result && ["anon-grant", "anon-log"].includes(path[1]))
+  if (!result && ["anon-grant", "anon-log"].includes(path[1])) {
+    // 🔒 安全修复（F1/F2）：anon-grant（匿名券铸券）/anon-log（匿名真实身份审计映射）仅限 super（ADMIN_SECRET_KEY）。
+    // 两者已从 adminAllowedPaths 移除（普通 admin 在上方 403），此处 dispatch 再兜底一次防未来路径配置漂移
+    if (permission !== "super") {
+      return new Response("无权限访问此管理功能。", { status: 403 });
+    }
     result = await handleAdminAnon(path, request, env, url);
+  }
 
   if (result) {
     // 🔒 安全修复（A4）：记录管理操作日志（此前 logAdminAction 从未被调用，审计形同虚设）

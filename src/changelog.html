@@ -126,6 +126,21 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.33</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🕶️</span><span class="text"><span class="tag tag-fix">安全</span>匿名功能全面加固 — 匿名发言的 @红点/跨频道提醒不再泄漏真实身份（统一显示「匿名」）；/gh /ai 命令在匿名模式下同样扣券且身份匿名；匿名消息清除自定义颜色（防指纹关联身份）；匿名消息发送者本人可删除自己的消息（真实身份哈希仅存存储不广播，导出日志自动剔除）</span></div>
+    <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-fix">安全</span>权限收紧 — 匿名券发放（anon-grant）与匿名真实身份审计日志（anon-log）仅限超级管理员，普通管理员 403；公开的用户资料接口不再返回匿名券余额与行为统计（发言/签到/游戏/购物次数），完整数据仅登录本人可见</span></div>
+    <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-fix">安全</span>Webhook 加固 — 密钥改由请求头 X-Webhook-Secret 传递（不再拼进 URL，防日志/浏览器历史泄露）；发送者固定为「Webhook」，无法再冒充任意昵称或管理员；广播统一过敏感词过滤；仅允许为真实存在的房间生成密钥；「未开启」与「密钥错误」统一错误文案防枚举；限频修复（非法请求体不再阻塞房间、Map 惰性清理防内存增长）</span></div>
+    <div class="feature-item"><span class="icon">⭐</span><span class="text"><span class="tag tag-fix">安全</span>经验与成就加固 — 发言经验限频从「会话级」升级为「房间内按用户」（断线重连/多会话无法再刷）；等级类成就在管理员降低经验后自动回退撤销；敏感词同音映射回归修复（「草泥马」等词漏检补上）</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-fix">安全</span>其他加固 — 匿名审计日志写入改为原子操作（并发匿名发言不再互相覆盖丢失记录）；版本存档上传增加 Content-Length 预检（防超大请求体拖垮内存）；Webhook 管理面板房间名渲染统一转义；已评估暂保留：经验发放整表写放大（已知限制）</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.32</span>
     <span class="version-date">2026-08-02</span>
     <span class="version-arrow open">▶</span>

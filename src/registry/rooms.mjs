@@ -101,15 +101,19 @@ export async function handleRooms(reg, request, url) {
         return new Response(JSON.stringify(result), {headers: {"Content-Type": "application/json"}});
       }
       if (!roomName) return new Response(JSON.stringify({error: "请提供房间名"}), {status: 400, headers: {"Content-Type": "application/json"}});
-      if (!reg.rooms.has(roomName)) reg.rooms.set(roomName, {count: 0, password: null});
       let room = reg.rooms.get(roomName);
       if (action === "gen") {
+        // 🔒 安全修复（F4）：只允许为真实存在的房间生成 secret，防止用 gen 在注册表自动注入任意房间条目
+        if (!room) return new Response(JSON.stringify({error: "房间不存在"}), {status: 400, headers: {"Content-Type": "application/json"}});
         let buf = crypto.getRandomValues(new Uint8Array(16));
         let secret = Array.from(buf).map(b => b.toString(16).padStart(2, "0")).join("");
         room.webhookSecret = secret;
         await reg.save();
         return new Response(JSON.stringify({ok: true, room: roomName, secret}), {headers: {"Content-Type": "application/json"}});
       }
+      // del/status 保持原有行为：对缺失房间回退建空条目
+      if (!room) reg.rooms.set(roomName, {count: 0, password: null});
+      room = reg.rooms.get(roomName);
       if (action === "del") {
         room.webhookSecret = null;
         await reg.save();
@@ -129,13 +133,14 @@ export async function handleRooms(reg, request, url) {
         let roomName = body.room;
         let secret = String(body.secret || "");
         let room = reg.rooms.get(roomName);
+        // 🔒 安全修复（F2）："未开启Webhook" 与 "密钥错误" 返回相同文案，防攻击者枚举房间 Webhook 开启状态
         if (!room || !room.webhookSecret) {
-          return new Response(JSON.stringify({ok: false, error: "该房间未开启Webhook"}), {status: 403, headers: {"Content-Type": "application/json"}});
+          return new Response(JSON.stringify({ok: false, error: "Webhook校验失败"}), {status: 403, headers: {"Content-Type": "application/json"}});
         }
         if (safeEqual(secret, room.webhookSecret)) {
           return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
         }
-        return new Response(JSON.stringify({ok: false, error: "Webhook密钥错误"}), {status: 403, headers: {"Content-Type": "application/json"}});
+        return new Response(JSON.stringify({ok: false, error: "Webhook校验失败"}), {status: 403, headers: {"Content-Type": "application/json"}});
       } catch (e) {
         return new Response(JSON.stringify({error: "请求解析失败"}), {status: 400, headers: {"Content-Type": "application/json"}});
       }

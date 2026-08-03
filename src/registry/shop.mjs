@@ -232,14 +232,18 @@ export async function handleShop(reg, request, url) {
       user.anonCoupons = coupons - 1;
       await reg.saveRegisteredUsers();
       // 审计日志：记录真实身份（上限 200 条，防 storage 膨胀）
+      // 🔒 安全修复（F3）：get→push→put 跨两个 await 的读改写，DO 并发匿名消息会互相覆盖丢审计条目；
+      // 用 state.blockConcurrencyWhile 包裹，保证读改写期间阻塞其他并发请求进入本 DO，写入原子化
       try {
-        let channel = String(body.channel || "general").slice(0, 24);
-        let raw = await reg.storage.get("anonLog");
-        let arr = [];
-        if (raw) { let p = JSON.parse(raw); if (Array.isArray(p)) arr = p; }
-        arr.push({ts: Date.now(), realName: name, channel});
-        if (arr.length > 200) arr = arr.slice(-200);
-        await reg.storage.put("anonLog", JSON.stringify(arr));
+        await reg.state.blockConcurrencyWhile(async () => {
+          let channel = String(body.channel || "general").slice(0, 24);
+          let raw = await reg.storage.get("anonLog");
+          let arr = [];
+          if (raw) { let p = JSON.parse(raw); if (Array.isArray(p)) arr = p; }
+          arr.push({ts: Date.now(), realName: name, channel});
+          if (arr.length > 200) arr = arr.slice(-200);
+          await reg.storage.put("anonLog", JSON.stringify(arr));
+        });
       } catch (e) {}
       return new Response(JSON.stringify({ok: true, anonCoupons: user.anonCoupons}), {headers: {"Content-Type": "application/json"}});
     }

@@ -418,7 +418,8 @@ async function handleApi(apiPath, request, env) {
       if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405, headers: {"Content-Type": "application/json"}});
       let rid = env.registry.idFromName("global");
       let stub = env.registry.get(rid);
-      let secret = url.searchParams.get("secret") || request.headers.get("X-Webhook-Secret") || "";
+      // 🔒 安全修复（F1）：优先从请求头取 secret，query 仅作兼容降级（前端已不再拼接 ?secret= URL）
+      let secret = request.headers.get("X-Webhook-Secret") || url.searchParams.get("secret") || "";
       // 校验房间 webhook secret（常量时间比较在 registry 层）
       let verify = await stub.fetch(new URL("https://dummy-url/room/webhook-verify"), {
         method: "POST",
@@ -428,17 +429,19 @@ async function handleApi(apiPath, request, env) {
       let vd;
       try { vd = await verify.json(); } catch (e) { vd = {}; }
       if (!vd.ok) return new Response(JSON.stringify({error: vd.error || "Webhook校验失败"}), {status: 403, headers: {"Content-Type": "application/json"}});
-      // 限频：每房间每 5 秒 1 条
-      let now = Date.now();
-      if (now - (webhookRate.get(roomName) || 0) < 5000) {
-        return new Response(JSON.stringify({error: "发送过于频繁，请5秒后再试"}), {status: 429, headers: {"Content-Type": "application/json"}});
-      }
-      webhookRate.set(roomName, now);
-      // 解析 body
+      // 解析 body（🔒 F3：先解析成功再记限频，非法 body 直接返回、不写限频标记，防合法 secret+非法 body 阻塞该房间 5 秒）
       let body;
       try { body = await request.json(); } catch (e) {
         return new Response(JSON.stringify({error: "请求体不是合法JSON"}), {status: 400, headers: {"Content-Type": "application/json"}});
       }
+      // 限频：每房间每 5 秒 1 条（标记在 body 成功解析后才设置）
+      let now = Date.now();
+      // 🔒 F3：惰性清理超过 60 秒的限频条目，防 webhookRate Map 无限增长
+      for (let [k, t] of webhookRate) { if (now - t > 60000) webhookRate.delete(k); }
+      if (now - (webhookRate.get(roomName) || 0) < 5000) {
+        return new Response(JSON.stringify({error: "发送过于频繁，请5秒后再试"}), {status: 429, headers: {"Content-Type": "application/json"}});
+      }
+      webhookRate.set(roomName, now);
       let content = (body.content === undefined ? "" : String(body.content)).slice(0, 500);
       if (!content.trim()) return new Response(JSON.stringify({error: "缺少消息内容"}), {status: 400, headers: {"Content-Type": "application/json"}});
       let sender = (body.sender === undefined ? "Webhook" : String(body.sender)).slice(0, 30);

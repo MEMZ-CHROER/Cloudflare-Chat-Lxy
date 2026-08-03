@@ -169,6 +169,9 @@ export class RoomRegistry {
     let oldExp = user.exp || 0;
     let beforeLevel = levelForExp(oldExp).level;
     user.exp = oldExp + (amount > 0 ? amount : 0);
+    // ⚠️ 已知限制（F6）：此处全量写 registeredUsers（storage 写放大）。改为按用户 key 增量写
+    // （storage.put("user:"+name)）需同步改造 loadAll 读取路径与 persistence.mjs（不属本次改动范围），
+    // 且多读路径依赖整表 Map，改动大、风险高。评估后决定不重构，暂接受现状。
     await this.saveRegisteredUsers();
     let afterLevel = levelForExp(user.exp).level;
     let achievements = await checkAchievements(this, name, user);

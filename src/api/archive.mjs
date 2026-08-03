@@ -43,6 +43,12 @@ export async function handleArchive(apiPath, request, env) {
 
     // 🔒 M4 修复：体积限制改为读取实际 body 字节数校验（不再依赖可被 Transfer-Encoding: chunked 绕过的 Content-Length 头）。
     // request.arrayBuffer() 由运行时聚合完整请求体（含 chunked），byteLength 即真实大小。
+    // 🔒 安全修复（F7）：先做 Content-Length 预检——头声明 >50MB 直接 413，避免把超大请求体读入内存（DoS 缓解）。
+    // Content-Length 可缺失/伪造，故仍以下方实际 byteLength 校验为最终依据，两层防护。
+    let contentLength = parseInt(request.headers.get("Content-Length") || "0", 10);
+    if (contentLength > 50 * 1024 * 1024) {
+      return new Response(JSON.stringify({error: "存档文件过大（最大50MB）"}), {status: 413, headers: {"Content-Type": "application/json"}});
+    }
     let bodyBuf = await request.arrayBuffer();
     if (bodyBuf.byteLength > 50 * 1024 * 1024) {
       return new Response(JSON.stringify({error: "存档文件过大（最大50MB）"}), {status: 413, headers: {"Content-Type": "application/json"}});

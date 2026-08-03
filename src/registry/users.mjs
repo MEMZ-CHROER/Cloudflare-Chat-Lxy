@@ -197,6 +197,9 @@ export async function handleUsers(reg, request, url) {
       let vip = getVipLevel(tag);
       let uExp = user ? (user.exp || 0) : 0;
       let lvl = levelForExp(uExp);
+      // 🔒 安全修复（F4）：/user-profile 为无鉴权公开端点，不返回 anonCoupons 与 stats（msgCount/checkinCount/gameWins/shopCount 行为统计属隐私）。
+      // Lv 徽章（exp/level/expCurrent/expNext）本就公开显示故保留；完整数据由需 token 的 /user/achievements 端点提供；
+      // achievements 仅返回已解锁成就 id 数组（不含行为统计）
       return new Response(JSON.stringify({
         name,
         avatar: user ? (user.avatar || "") : "",
@@ -205,13 +208,11 @@ export async function handleUsers(reg, request, url) {
         points: pts,
         registered: !!user,
         registeredAt: user ? (user.registeredAt || null) : null,
-        anonCoupons: user ? (user.anonCoupons || 0) : 0,
         exp: uExp,
         level: lvl.level,
         expCurrent: lvl.current,
         expNext: lvl.next,
         achievements: user ? (Array.isArray(user.achievements) ? user.achievements : []) : [],
-        stats: user ? (user.stats || {msgCount: 0, checkinCount: 0, gameWins: 0, shopCount: 0}) : {msgCount: 0, checkinCount: 0, gameWins: 0, shopCount: 0},
         vip: vip ? {level: vip.id, label: vip.label, tier: vip.tier} : null
       }), {headers: {"Content-Type": "application/json"}});
     }

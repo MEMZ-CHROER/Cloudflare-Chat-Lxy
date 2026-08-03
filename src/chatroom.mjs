@@ -5,6 +5,19 @@ import { handleManage } from "./chatroom/manage.mjs";
 // 🔒 安全修复（W20）：颜色白名单（色名 + #hex），消息颜色/房间等级样式统一使用
 const SAFE_COLOR_RE = /^(red|blue|green|purple|pink|cyan|gray|grey|orange|yellow|teal|indigo|brown|lime|deeporange|rose|crimson|coral|gold|amber|forest|seagreen|turquoise|steel|royalblue|mediumpurple|darkviolet|chocolate|olive|firebrick|slateblue|darkcyan|mediumseagreen|indianred|cadetblue|#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?)$/;
 
+// 🔒 安全修复（F7）：匿名消息存储时附带的"真实身份指纹"——真实 name 的 32 位 FNV-1a 哈希。
+// 只存 storage（不广播、不进 /messages /search 白名单字段、export 时剔除），供本人删除自己的匿名消息；
+// 存哈希而非明文昵称，避免导出日志/历史泄漏真实身份。
+function hashAnonOwner(nameStr) {
+  let h = 0x811c9dc5;
+  const s = String(nameStr || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return "anon:" + h.toString(16);
+}
+
 // ⚠️ 安全说明（L12）：本 DO 的 /blacklist/*、/do-kick、/do-clear、/do-destroy、/broadcast-message、
 // /tag-update、/set-announcement、/message/recall 等端点无自身鉴权，仅依赖 api/ 层路由白名单单点兜底，
 // 当前房间名+DO id 不可枚举，无法被外部直接连到。纵深防御需 api/admin 层配合改造，本次保留现状不动。
@@ -339,6 +352,8 @@ export class ChatRoom {
             try {
               let msg = JSON.parse(val);
               if (msg && (msg.type === undefined || msg.type === "text" || msg.type === "image" || msg.type === "file" || msg.type === "zifu" || msg.type === "voice" || msg.type === "gh-card") && (!channel || (msg.channel || "general") === channel)) {
+                // 🔒 安全修复（F7）：导出日志剔除匿名身份指纹字段，防真实身份经 export 泄漏
+                delete msg._anonOwner;
                 msgs.push(msg);
               }
             } catch (e) {}
@@ -364,8 +379,13 @@ export class ChatRoom {
 
         case "/broadcast-message": {
           let text = url.searchParams.get("text");
-          let sender = url.searchParams.get("sender") || "系统公告";
           if (!text) return new Response("请提供消息内容", {status: 400});
+          // 🔒 安全修复（F4）：webhook 广播同样过敏感词过滤，防绕过 WebSocket 文本路径的敏感词审查
+          if (this.containsProfanity(text)) {
+            return new Response("消息包含违规内容，已拦截", {status: 403});
+          }
+          // 🔒 安全修复（F3）：sender 固定为 "Webhook"，忽略请求体提供的 sender 字段（防冒充任意用户/管理员昵称）
+          let sender = "Webhook";
           // 🔗 通用 Webhook 增强：可选 channel 参数（合法且存在的频道才生效，否则 general）+ webhook 来源标记
           let channelParam = url.searchParams.get("channel") || "";
           let isWebhook = url.searchParams.get("webhook") === "1";
@@ -386,7 +406,8 @@ export class ChatRoom {
             tag: "📢",
             tagColor: "red",
             tagBorder: "",
-            admin: true,
+            // 🔒 安全修复（F3）：移除 admin 标记——sender 已固定为 "Webhook"，保留 admin:true 会渲染出"管理员"身份误导；
+            // roomwide 如实描述广播范围，予以保留
             channel: targetChannel,
             roomwide: true
           };
@@ -1475,6 +1496,12 @@ export class ChatRoom {
       }
       // 🐙 /gh 仓库卡片（旧版前端兼容）：部分旧前端会直接发 {type:"gh-card"}，此处校验后广播
       if (data.type === "gh-card") {
+        // 🔒 安全修复（F2 补漏）：旧版直接发 {type:"gh-card"} 的分支在匿名块之前 return、不处理 anonFlag，
+        // 匿名用户走此路径会以真实用户名广播且不扣券。拒绝匿名走旧路径（当前前端用 /gh 命令，匿名 /gh 已正确匿名化+扣券）。
+        if (data.anon) {
+          webSocket.send(JSON.stringify({error: "匿名模式请使用 /gh 命令发送仓库卡片"}));
+          return;
+        }
         let ghRepo = "" + (data.repo || "");
         let ghUrl = "" + (data.repoUrl || "");
         if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(ghRepo)) {
@@ -1521,7 +1548,10 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "该消息已被撤回或删除"})); return;
         }
         let isDelAdmin = this.isAdminSession(session);
-        if (!isDelAdmin && (!session.name || delOrig.name !== session.name)) {
+        // 🔒 安全修复（F7）：匿名消息存储时 name="匿名"，原判定使真实发送者永远删不掉自己的匿名消息；
+        // 增加对 storage 中 _anonOwner（真实 name 哈希）的校验，允许本人删除且不向他人泄露身份
+        let isAnonOwner = !session.name ? false : (delOrig.name === "匿名" && !!delOrig._anonOwner && delOrig._anonOwner === hashAnonOwner(session.name));
+        if (!isDelAdmin && (!session.name || (delOrig.name !== session.name && !isAnonOwner))) {
           webSocket.send(JSON.stringify({error: "无权删除他人的消息"})); return;
         }
         let delMsg = {type: "deleted", name: delOrig.name || "", timestamp: delTs, channel: delOrig.channel || "general"};
@@ -1563,6 +1593,43 @@ export class ChatRoom {
         // 因用户名可冒名，自动封禁会被恶意利用来封禁任何人的昵称，封禁应由管理员手动执行
         webSocket.send(JSON.stringify({error: "消息包含违规内容，已拦截。请注意言辞，严重违规将被管理员封禁。"}));
         return;
+      }
+
+      // 🕶️ 匿名马甲：消耗一张匿名券，消息以「匿名」身份展示（真实身份由 registry /anon/use 写审计日志）。
+      // 🔒 安全修复（F2）：券校验+身份替换提前到命令（/gh /ai /bot 等）分支之前——原逻辑放在命令全部 return
+      // 之后，匿名用户发 /gh /ai 会以真实用户名广播且不扣券，绕过匿名。命令消息同样扣券校验，广播身份统一匿名。
+      // 🔒 安全修复（F6）：匿名消息清除发送者自定义颜色，防个性化颜色作身份指纹。
+      if (anonFlag) {
+        if (!session.authenticated) {
+          webSocket.send(JSON.stringify({error: "请先登录后再使用匿名发言"}));
+          return;
+        }
+        try {
+          let rid = this.env.registry.idFromName("global");
+          let stub = this.env.registry.get(rid);
+          let useResp = await stub.fetch("https://dummy-url/anon/use", {
+            method: "POST",
+            body: JSON.stringify({name: session.name, token: session.token || "", channel: msgChannel}),
+            headers: {"Content-Type": "application/json"}
+          });
+          if (!useResp.ok) {
+            let errText = await useResp.text();
+            let errObj = {};
+            try { errObj = JSON.parse(errText); } catch (e) {}
+            webSocket.send(JSON.stringify({error: errObj.error || "匿名券不足，可在商店购买"}));
+            return;
+          }
+        } catch (e) {
+          webSocket.send(JSON.stringify({error: "匿名服务暂时不可用"}));
+          return;
+        }
+        data.name = "匿名";
+        data.tag = "🕶️";
+        data.tagColor = "purple";
+        data.tagBorder = "";
+        data.avatar = "";
+        data.color = "";
+        data.anon = true;
       }
 
       // 检测 @bot 或 /bot 命令
@@ -1708,21 +1775,25 @@ export class ChatRoom {
             try { await this.storage.put(ghCacheKey, JSON.stringify(ghData), {expirationTtl: 3600}); } catch (e) {}
           }
           let ghCard = {
-            name: session.name, type: "gh-card", channel: session.channel || "general",
+            // 🔒 安全修复（F2）：匿名模式下用 data.name/data.tag*（已替换为"匿名"+🕶️），防 /gh 卡片泄漏真实用户名与标签
+            name: data.name, type: "gh-card", channel: session.channel || "general",
             repo: ghData.repo, repoUrl: ghData.repoUrl, description: ghData.description,
             stars: ghData.stars, forks: ghData.forks, language: ghData.language,
             ownerAvatar: ghData.ownerAvatar,
             timestamp: Math.max(Date.now(), this.lastTimestamp + 1)
           };
-          if (session.tag) ghCard.tag = session.tag;
-          if (session.tagColor) ghCard.tagColor = session.tagColor;
-          if (session.tagBorder) ghCard.tagBorder = session.tagBorder;
-          if (session.avatar) ghCard.avatar = session.avatar;
+          if (data.tag) ghCard.tag = data.tag;
+          if (data.tagColor) ghCard.tagColor = data.tagColor;
+          if (data.tagBorder) ghCard.tagBorder = data.tagBorder;
+          if (data.avatar) ghCard.avatar = data.avatar;
           this.lastTimestamp = ghCard.timestamp;
           ghCard.id = ++this.msgCounter;
           this.messages.set(ghCard.id, ghCard);
           this.broadcastToChannel(session.channel || "general", JSON.stringify(ghCard));
-          await this.storage.put(new Date(ghCard.timestamp).toISOString(), JSON.stringify(ghCard));
+          // 🔒 安全修复（F7）：匿名 /gh 卡片存储同样附带真实身份指纹（不广播），供本人删除
+          let ghCardKey = new Date(ghCard.timestamp).toISOString();
+          let ghCardStr = anonFlag && session.name ? JSON.stringify({...ghCard, _anonOwner: hashAnonOwner(session.name)}) : JSON.stringify(ghCard);
+          await this.storage.put(ghCardKey, ghCardStr);
         } catch (e) {
           webSocket.send(JSON.stringify({error: "查询 GitHub 失败: " + (e && e.message || String(e))}));
         }
@@ -1745,7 +1816,10 @@ export class ChatRoom {
           this.messages.set(data.id, data);
           let dataStr = JSON.stringify(data);
           this.broadcastToChannel(data.channel || "general", dataStr);
-          await this.storage.put(new Date(data.timestamp).toISOString(), dataStr);
+          // 🔒 安全修复（F7）：匿名 /ai 的用户消息存储同样附带真实身份指纹（不广播），供本人删除
+          let aiUserKey = new Date(data.timestamp).toISOString();
+          let aiUserStr = anonFlag && session.name ? JSON.stringify({...data, _anonOwner: hashAnonOwner(session.name)}) : dataStr;
+          await this.storage.put(aiUserKey, aiUserStr);
 
           let userPrompt = aiMatch[1].trim();
           if (!userPrompt) {
@@ -1816,46 +1890,15 @@ export class ChatRoom {
         return;
       }
 
-      // 🕶️ 匿名马甲：消耗一张匿名券，消息以「匿名」身份展示（真实身份由 registry /anon/use 写审计日志）。
-      // 放在命令（/bot /ai /gh /destroy /rollback）全部 return 之后，命令消息不消耗匿名券。
-      if (anonFlag) {
-        if (!session.authenticated) {
-          webSocket.send(JSON.stringify({error: "请先登录后再使用匿名发言"}));
-          return;
-        }
-        try {
-          let rid = this.env.registry.idFromName("global");
-          let stub = this.env.registry.get(rid);
-          let useResp = await stub.fetch("https://dummy-url/anon/use", {
-            method: "POST",
-            body: JSON.stringify({name: session.name, token: session.token || "", channel: msgChannel}),
-            headers: {"Content-Type": "application/json"}
-          });
-          if (!useResp.ok) {
-            let errText = await useResp.text();
-            let errObj = {};
-            try { errObj = JSON.parse(errText); } catch (e) {}
-            webSocket.send(JSON.stringify({error: errObj.error || "匿名券不足，可在商店购买"}));
-            return;
-          }
-        } catch (e) {
-          webSocket.send(JSON.stringify({error: "匿名服务暂时不可用"}));
-          return;
-        }
-        data.name = "匿名";
-        data.tag = "🕶️";
-        data.tagColor = "purple";
-        data.tagBorder = "";
-        data.avatar = "";
-        data.anon = true;
-      }
-
-      // ⭐ 发言经验：注册用户发言 +1 经验（每 session 15 秒限频），升级/新成就通过 WS 推送。
-      // 广播消息带 level 字段，前端在用户名旁显示 Lv 徽章。
+      // 🕶️ 匿名马甲：券校验+身份替换已提前到命令分支之前（见上），此处不再重复处理。
+      // ⭐ 发言经验：注册用户发言 +1 经验（房间内按 name 用户级 15 秒限频，重连不重置、换 session 不可刷），
+      // 升级/新成就通过 WS 推送。广播消息带 level 字段，前端在用户名旁显示 Lv 徽章。
       if (session.authenticated && session.name && session.token) {
         let nowExp = Date.now();
-        if (!session.lastExpTs || nowExp - session.lastExpTs >= 15000) {
-          session.lastExpTs = nowExp;
+        if (!this.userExpTs) this.userExpTs = {};
+        let lastExpTs = this.userExpTs[session.name] || 0;
+        if (nowExp - lastExpTs >= 15000) {
+          this.userExpTs[session.name] = nowExp;
           try {
             let rid = this.env.registry.idFromName("global");
             let stub = this.env.registry.get(rid);
@@ -1900,7 +1943,8 @@ export class ChatRoom {
         if (pingTarget !== null) {
           let pingStr = JSON.stringify({
             type: "channel-ping",
-            name: session.name,
+            // 🔒 安全修复（F1）：匿名模式下用 data.name（"匿名"）代替 session.name，防跨频道 ping 泄漏真实身份
+            name: data.name,
             fromChannel: msgChannel,
             targetChannel: pingTarget === "__all__" ? null : pingTarget,
             atAll: isAtAll
@@ -1931,15 +1975,20 @@ export class ChatRoom {
         for (let tn of atTargets) {
           this.sessions.forEach((s, ws) => {
             if (s.name === tn) {
-              try { ws.send(JSON.stringify({type: "at-mention", from: session.name, message: msgText.slice(0, 100), timestamp: data.timestamp, channel: msgChannel})); } catch (_) {}
+              // 🔒 安全修复（F1）：匿名模式下 from 用 data.name（"匿名"）代替 session.name，防在线@红点泄漏真实身份
+              try { ws.send(JSON.stringify({type: "at-mention", from: data.name, message: msgText.slice(0, 100), timestamp: data.timestamp, channel: msgChannel})); } catch (_) {}
             }
           });
-          await this.recordAtMention(tn, session.name, msgText, data.timestamp, msgChannel);
+          // 🔒 安全修复（F1）：at-mention 持久化同样匿名化 from，防离线补显时泄漏真实身份
+          await this.recordAtMention(tn, data.name, msgText, data.timestamp, msgChannel);
         }
       }
 
       let key = new Date(data.timestamp).toISOString();
-      await this.storage.put(key, dataStr);
+      // 🔒 安全修复（F7）：匿名消息存储时附带真实身份指纹（_anonOwner，真实 name 哈希）供本人删除；
+      // 只写 storage 不进广播 dataStr，避免真实身份经 WS 泄漏给其他客户端
+      let storeStr = anonFlag && session.name ? JSON.stringify({...data, _anonOwner: hashAnonOwner(session.name)}) : dataStr;
+      await this.storage.put(key, storeStr);
     } catch (err) {
       console.error("webSocketMessage 异常:", err.stack || err);
       webSocket.send(JSON.stringify({error: "消息处理错误"}));
@@ -2041,6 +2090,11 @@ export class ChatRoom {
     let normalized = "";
     for (const ch of t) {
       normalized += homophones[ch] || ch;
+    }
+    // 🔒 安全修复（v1.33）：先对原文（同音映射前）做 root 匹配——homophones 把"草"→"操"会改写原文，
+    // 使"草泥马"→"操泥马"反而漏检 root"草泥马"（M9 引入的回归）。原文直接匹配补上此漏检。
+    for (const root of roots) {
+      if (t.includes(root)) return true;
     }
     // 🔒 安全修复（M9）：leetspeak 归一化匹配 —— 对词根每个拉丁字母构建含常见数字变体的字符类，
     // 使 sh1t/f0ck 等插入数字的变体也命中（仅影响检测，不改变消息内容）
