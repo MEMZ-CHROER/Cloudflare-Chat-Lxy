@@ -8,6 +8,7 @@ import { TAG_COLORS, getVipLevel, createVipBadge } from './vip.js';
 import { showWelcomeBanner } from './banner.js';
 import { checkKeywords } from './keywords.js';
 import { applyWaveEffect, applyCrashEffect } from './commands.js';
+import { applyIccoEffect } from './icco.js';
 import { buildChannelBar, updateChannelBadges, renderChannelMessage, pushToChannelCache, bumpChannelUnread, updateCachedMessage } from './channels.js';
 
 // 📌 置顶消息（v1.35）：渲染当前频道的置顶条（每频道最多 3 条，管理员显示取消按钮）
@@ -429,6 +430,7 @@ export function join() {
     } else if (data.type === "effect") {
       if (data.effect === "wave") applyWaveEffect();
       else if (data.effect === "crash") applyCrashEffect();
+      else if (data.effect === "icco") applyIccoEffect();
     } else if (data.type === "redpacket") {
       if (data.action === "new") {
         // 新红包（按频道隔离）

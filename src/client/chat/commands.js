@@ -22,13 +22,19 @@ export async function handleCommand(text) {
     if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
     return;
   }
+  // 🚨 全屏入侵警告命令（公开功能，仿 /rollback 服务端透传）：/icco
+  // 服务端识别后广播 {type:"effect", effect:"icco"}，所有在线用户（含发起者）同时触发
+  if (/^\/icco\b/i.test(text)) {
+    if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
+    return;
+  }
   let parts = text.split(/\s+/);
   let cmd = parts[0].toLowerCase();
   let arg = parts.slice(1).join(" ");
 
   switch (cmd) {
     case "/help":
-      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
+      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /icco 全员触发入侵警告特效 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
       break;
 
     case "/kick": {

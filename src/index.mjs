@@ -48,6 +48,8 @@ import CHAT_GAME_ACTION from "./client/chat/game-action.js";
 import CHAT_GAME_ARCADE from "./client/chat/game-arcade.js";
 import CHAT_CHANNELS from "./client/chat/channels.js";
 import CHAT_ACHIEVEMENTS from "./client/chat/achievements.js";
+import CHAT_ICCO from "./client/chat/icco.js";
+import CHAT_ICCO_ASSETS from "./client/chat/icco-assets.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -119,6 +121,8 @@ const CHAT_MODULES = {
   "chat/game-arcade.js": CHAT_GAME_ARCADE,
   "chat/channels.js": CHAT_CHANNELS,
   "chat/achievements.js": CHAT_ACHIEVEMENTS,
+  "chat/icco.js": CHAT_ICCO,
+  "chat/icco-assets.js": CHAT_ICCO_ASSETS,
 };
 
 const ADMIN_MODULES = {

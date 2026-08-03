@@ -1804,6 +1804,13 @@ export class ChatRoom {
         return;
       }
 
+      // 🚨 全屏入侵警告命令（公开功能，仿 /rollback 服务端透传）：/icco
+      // 服务端统一广播，所有在线用户（含发起者，任意频道）同时触发全屏警告动画
+      if (/^\/icco\b/i.test(data.message)) {
+        this.broadcast({type: "effect", effect: "icco"});
+        return;
+      }
+
       // 应急回滚命令（公开管理功能）：/rollback <版本号> <超管密钥>
       // 用于聊天室出问题时，超管在手机上快速把线上 worker 回滚部署到 archive 中的稳定版本
       let rbMatch = data.message.match(/^\/rollback\s+(\S+)\s+(\S+)/i);

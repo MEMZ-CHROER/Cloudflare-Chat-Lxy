@@ -197,14 +197,11 @@ export async function handleManage(room, session, data, webSocket) {
   }
 
   if (data.type === "effect") {
-    // 🔒 安全修复：全屏特效限频（每用户10秒1次），防刷屏骚扰
-    if (!room.lastEffect) room.lastEffect = new Map();
-    let last = room.lastEffect.get(session.name) || 0;
-    if (Date.now() - last < 10000) {
-      webSocket.send(JSON.stringify({error: "特效触发太频繁"}));
-      return true;
-    }
-    room.lastEffect.set(session.name, Date.now());
+    // v1.39 临时移除限频（用户初期测试）。若需防刷屏，可恢复原限频块：
+    //   if (!room.lastEffect) room.lastEffect = new Map();
+    //   let last = room.lastEffect.get(session.name) || 0;
+    //   if (Date.now() - last < 10000) { webSocket.send(JSON.stringify({error: "特效触发太频繁"})); return true; }
+    //   room.lastEffect.set(session.name, Date.now());
     room.broadcast(JSON.stringify({type: "effect", effect: data.effect}));
     return true;
   }

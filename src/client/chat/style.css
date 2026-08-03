@@ -4244,3 +4244,62 @@ body.dark .bubble.redpacket-bubble {
   }
 }
 }
+/* ===== 全屏 "INCOMING CONNECTION" 入侵警告特效（v1.39 /icco） ===== */
+#icco-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000001;
+  pointer-events: none;
+}
+#icco-overlay,
+#icco-overlay * {
+  box-sizing: border-box;
+  user-select: none;
+}
+.icco-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+}
+.icco-stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  background-color: #000;
+  background-repeat: repeat;
+  background-size: 40px 40px;
+}
+/* 素材加载前占位：稀疏红黑斜线（真实 40px tile 一条斜线的近似） */
+.icco-stripe:not(.icco-stripe-real) {
+  background-image: repeating-linear-gradient(45deg, #e02020 0 2px, #000 2px 40px);
+}
+.icco-stripe-top {
+  top: 0;
+}
+.icco-stripe-bottom {
+  bottom: 0;
+}
+.icco-icon-bg,
+.icco-icon {
+  position: absolute;
+  display: block;
+}
+.icco-title {
+  position: absolute;
+  font-family: "Kremlin", Impact, "Arial Narrow", sans-serif;
+  color: #ff2020;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.icco-detail {
+  position: absolute;
+  font-family: Consolas, Menlo, monospace;
+  color: #fff;
+  white-space: pre-line;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
