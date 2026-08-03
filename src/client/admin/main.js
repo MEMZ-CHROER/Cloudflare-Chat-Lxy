@@ -27,7 +27,7 @@ import {
   closeLotteryPrizeModal, addLotteryPrize, deletePrize, restockPrize
 } from './lottery.js';
 import { loadIpGroup, toggleIpGroup } from './ipgroup.js';
-import { quickSearch, showUserDetail, closeUserModal } from './usermodal.js';
+import { quickSearch, showUserDetail, closeUserModal, muteUser } from './usermodal.js';
 import { LIGHT_COLORS, TAG_COLORS } from './utils.js';
 import { navigateTo, getCurrentRoute, startAutoRefresh, stopAutoRefresh } from './routing.js';
 import { loadRooms, kickUser, addBlacklist, removeBlacklist, clearRoom, loadRoomDetail, destroyRoom } from './rooms.js';
@@ -145,6 +145,7 @@ window.toggleIpGroup = toggleIpGroup;
 window.quickSearch = quickSearch;
 window.showUserDetail = showUserDetail;
 window.closeUserModal = closeUserModal;
+window.muteUser = muteUser;
 
 // 密钥
 window.changeAdminKey = changeAdminKey;

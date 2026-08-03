@@ -50,6 +50,8 @@ export async function showUserDetail(username) {
     if (isOnline) {
       actionsHtml += '<button class="btn-danger" onclick="closeUserModal();globalKick(\'' + escUser + '\')">全局踢出</button>';
     }
+    // v1.36 修复：用户弹窗补「禁言」操作（此前只有积分/踢/封/封IP，缺禁言）
+    actionsHtml += '<button class="btn-p" onclick="closeUserModal();muteUser(\'' + escUser + '\')">禁言</button>';
     if (!isBanned) {
       actionsHtml += '<button class="btn-danger" onclick="closeUserModal();banUser(\'' + escUser + '\')">封禁</button>';
     } else {
@@ -75,6 +77,30 @@ export async function showUserDetail(username) {
   } catch (e) {
     document.querySelector("#um-body").innerHTML = '<div style="color:#c00;text-align:center;padding:20px">加载失败</div>';
   }
+}
+
+// v1.36 修复：管理后台禁言（registry 级，POST /api/admin/mute，仿聊天前端 menu.js 的 mute 逻辑）
+export function muteUser(name) {
+  let choice = prompt("选择禁言时长：\n1 - 1分钟\n2 - 10分钟\n3 - 1小时\n4 - 永久\n\n输入数字");
+  if (!choice) return;
+  let duration;
+  if (choice === "1") duration = "1m";
+  else if (choice === "2") duration = "10m";
+  else if (choice === "3") duration = "1h";
+  else if (choice === "4") duration = "permanent";
+  else { alert("无效时长"); return; }
+  let reason = prompt("禁言原因（可选，留空跳过）", "");
+  fetch("/api/admin/mute", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({name, duration, reason: reason || ""})
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok) alert("已禁言 " + name + (duration === "permanent" ? "（永久）" : ""));
+      else alert("禁言失败: " + (res.error || ""));
+    })
+    .catch(() => alert("禁言失败: 网络错误"));
 }
 
 export function closeUserModal() {

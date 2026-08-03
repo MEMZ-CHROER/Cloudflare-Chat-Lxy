@@ -38,7 +38,7 @@ export async function loadGlobalUsers() {
             + Object.keys(TAG_COLORS).map(c => '<option value="' + c + '">' + c + '</option>').join('')
             + '</select><button class="tag-set-btn" onclick="setTag(this,\'' + escUser + '\')">设置</button>';
       let lvBadge = '<span class="tag-badge" style="background:#9b59b6" title="等级 ' + (expInfo.level || 1) + ' / 经验 ' + (expInfo.exp || 0) + '">Lv.' + (expInfo.level || 1) + '</span>';
-      html += '<div class="global-user-item"><span class="name">' + escapeHtml(user) + ipHtml + lvBadge + tagHtml + '</span>' +
+      html += '<div class="global-user-item"><span class="name" style="cursor:pointer;color:var(--primary)" title="点击查看管理操作" onclick="showUserDetail(\'' + escUser + '\')">' + escapeHtml(user) + ipHtml + lvBadge + tagHtml + '</span>' +
         '<span class="rooms">房间: ' + rooms.map(r => '#' + r).join(', ') + '</span>' +
         '<span style="display:flex;align-items:center;gap:4px">' +
         '<span class="points-badge" style="color:#e67e22;font-weight:bold">' + userPoints + '</span>' +

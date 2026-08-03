@@ -81,7 +81,7 @@ export async function loadRoomDetail(detail, name) {
       users.forEach(u => {
         let userIp = isSuper() ? (ipMap[u] || "") : "";
         let ipBadge = userIp ? ' <span style="color:#999;font-size:85%">(' + escapeHtml(userIp) + ')</span>' : '';
-        html += '<div class="user-item"><span class="name">' + escapeHtml(u) + ipBadge + '</span><span>' +
+        html += '<div class="user-item"><span class="name" style="cursor:pointer;color:var(--primary)" title="点击查看管理操作" onclick="showUserDetail(\'' + u.replace(/'/g, "\\'") + '\')">' + escapeHtml(u) + ipBadge + '</span><span>' +
           '<button class="kick-btn" onclick="kickUser(\'' + name.replace(/'/g, "\\'") + '\', \'' + u.replace(/'/g, "\\'") + '\')">踢出</button>' +
           '<button class="ban-btn" onclick="blacklistUser(\'' + u.replace(/'/g, "\\'") + '\')">拉黑</button>';
         if (isSuper()) {
