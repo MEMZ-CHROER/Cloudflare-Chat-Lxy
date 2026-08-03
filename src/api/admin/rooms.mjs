@@ -141,13 +141,17 @@ export async function handleAdminRooms(path, request, env, url) {
           try {
             let bucketId = env.filebucket.idFromName("primary");
             let bucket = env.filebucket.get(bucketId);
-            let bResp = await bucket.fetch("https://dummy-url/download?fid=" + encodeURIComponent(data.fid));
+            // 🔒 安全修复（F2）：filebucket 为内部服务，下载必须携带内部密钥
+            let bResp = await bucket.fetch("https://dummy-url/download?fid=" + encodeURIComponent(data.fid), {
+              headers: {"X-Internal-Key": env.ADMIN_SECRET_KEY || ""}
+            });
             if (bResp.ok) {
               let buf = await bResp.arrayBuffer();
               return new Response(buf, {
                 status: 200,
                 headers: {
-                  "Content-Type": fileType,
+                  // 🔒 安全修复（F5）：Content-Type 固定为 octet-stream，不使用客户端声明的 fileType
+                  "Content-Type": "application/octet-stream",
                   "Content-Disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(fileName)
                 }
               });
@@ -160,7 +164,8 @@ export async function handleAdminRooms(path, request, env, url) {
           return new Response(raw, {
             status: 200,
             headers: {
-              "Content-Type": fileType,
+              // 🔒 安全修复（F5）：Content-Type 固定为 octet-stream，不使用客户端声明的 fileType
+              "Content-Type": "application/octet-stream",
               "Content-Disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(fileName)
             }
           });

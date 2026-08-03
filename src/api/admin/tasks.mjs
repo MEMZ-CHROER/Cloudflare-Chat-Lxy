@@ -17,6 +17,11 @@ export async function handleAdminTasks(path, request, env, url) {
     if (taskAction === "task" && path[3] === "add") {
       if (request.method !== "POST") return new Response("方法不允许", {status: 405});
       let body = await request.json();
+      // 🔒 安全修复（F3）：转发层双保险——reward 必须正整数且 ≤ 100000，防铸币
+      let reward = parseInt(body.reward, 10);
+      if (!body.name || !(reward >= 1 && reward <= 100000)) {
+        return new Response(JSON.stringify({error: "任务奖励积分无效"}), {status: 400, headers: {"Content-Type": "application/json"}});
+      }
       let r = await registryStub.fetch("https://dummy-url/admin/task/add?auth=" + auth, {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
       return new Response(await r.text(), { status: r.status });
     }

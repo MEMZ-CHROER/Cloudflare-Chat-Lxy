@@ -1,6 +1,6 @@
 import { handleErrors } from "./utils.mjs";
 import { handleMedia } from "./chatroom/media.mjs";
-import { handleManage } from "./chatroom/manage.mjs";
+import { handleManage, stripSensitiveMsg } from "./chatroom/manage.mjs";
 
 // 🔒 安全修复（W20）：颜色白名单（色名 + #hex），消息颜色/房间等级样式统一使用
 const SAFE_COLOR_RE = /^(red|blue|green|purple|pink|cyan|gray|grey|orange|yellow|teal|indigo|brown|lime|deeporange|rose|crimson|coral|gold|amber|forest|seagreen|turquoise|steel|royalblue|mediumpurple|darkviolet|chocolate|olive|firebrick|slateblue|darkcyan|mediumseagreen|indianred|cadetblue|#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?)$/;
@@ -48,6 +48,10 @@ export class ChatRoom {
     });
     // 红包所在频道（id → channel），供 grab 广播隔离
     this.redpacketChannels = new Map();
+    // 🔒 安全修复（v1.34）：红包频道映射持久化，防 DO 重启后丢失导致 grab 广播回落到 general
+    this._loadRedpacketChannels = this.storage.get("redpacketChannels").then(arr => {
+      if (Array.isArray(arr)) this.redpacketChannels = new Map(arr);
+    });
 
     this.blacklist = new Set();
     this._loadBlacklist = this.storage.get("blacklist").then(list => {
@@ -254,7 +258,12 @@ export class ChatRoom {
           let key = new Date(parseInt(ts)).toISOString();
           let val = await this.storage.get(key);
           if (!val) return new Response("未找到文件", {status: 404});
-          return new Response(val, {
+          // 🔒 安全修复（v1.34）：文件公开端只给元数据——非 file 消息返回 404，并剔除 base64 正文与敏感字段
+          let m;
+          try { m = JSON.parse(val); } catch (e) { return new Response(JSON.stringify({error: "数据异常"}), {status: 500, headers: {"Content-Type": "application/json"}}); }
+          if (!m || m.type !== "file") return new Response(JSON.stringify({error: "该消息不是文件"}), {status: 404, headers: {"Content-Type": "application/json"}});
+          delete m.data;
+          return new Response(JSON.stringify(stripSensitiveMsg(m)), {
             status: 200, headers: {"Content-Type": "application/json"}
           });
         }
@@ -662,7 +671,8 @@ export class ChatRoom {
     for (let value of backlog) {
       try {
         let m = JSON.parse(value);
-        if ((m.channel || "general") === session.channel) chBacklog.push(value);
+        // 🔒 安全修复（v1.34）：backlog 推送前剔除 _anonOwner/fid，防匿名身份哈希经历史回放泄漏
+        if ((m.channel || "general") === session.channel) chBacklog.push(JSON.stringify(stripSensitiveMsg(m)));
       } catch (e) {}
       if (chBacklog.length >= 50) break;
     }
@@ -1024,6 +1034,11 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "私聊格式错误"}));
           return;
         }
+        // 🔒 安全修复（v1.34）：私信仅限已登录用户（防游客冒名发私信骚扰/钓鱼）
+        if (!session.authenticated) {
+          webSocket.send(JSON.stringify({error: "请先登录后再发送私信"}));
+          return;
+        }
         let whisperMax = (session.vip && session.vip.features ? session.vip.features.maxMsgLen : 256);
         if (whisperMsg.length > whisperMax) {
           webSocket.send(JSON.stringify({error: "消息过长（VIP最高 " + whisperMax + " 字）"}));
@@ -1149,6 +1164,11 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "投票不存在"}));
           return;
         }
+        // 🔒 安全修复（v1.34）：投票仅限已登录用户（防游客换名换IP刷票，已注册用户按 name 去重 + votedIps 辅助）
+        if (!session.authenticated) {
+          webSocket.send(JSON.stringify({error: "请先登录后再投票"}));
+          return;
+        }
         if (poll.voters[session.name] !== undefined) {
           webSocket.send(JSON.stringify({error: "你已经投过票了"}));
           return;
@@ -1220,6 +1240,14 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "房间定时消息已达上限（50条）"}));
           return;
         }
+        // 🔒 安全修复（v1.34）：公告频道仅管理员可发定时消息（防游客 switch-channel 到 announcement 再 schedule 绕过公告只读检查）
+        if (this._loadChannels) await this._loadChannels;
+        let schedChanName = session.channel || "general";
+        let schedChanObj = this.channels.find(c => c.name === schedChanName);
+        if (schedChanObj && schedChanObj.type === "announcement" && !this.isAdminSession(session)) {
+          webSocket.send(JSON.stringify({error: "公告频道仅管理员可发"}));
+          return;
+        }
         let schedEntry = {
           id: "sched_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
           name: session.name,
@@ -1227,6 +1255,7 @@ export class ChatRoom {
           time: schedTime,
           createdAt: Date.now(),
           channel: session.channel || "general",
+          admin: this.isAdminSession(session),
           tag: session.tag || "",
           tagColor: session.tagColor || "",
           tagBorder: session.tagBorder || ""
@@ -1319,6 +1348,19 @@ export class ChatRoom {
         // 🔒 安全修复（W7）：接龙内容过敏感词过滤
         if (this.containsProfanity(content)) {
           webSocket.send(JSON.stringify({error: "接龙内容包含违规词汇，已拦截"}));
+          return;
+        }
+        // 🔒 安全修复（v1.34）：接龙每用户限频（2秒1条），防连发刷屏
+        if (!this.lastRelayAdd) this.lastRelayAdd = new Map();
+        let lastRelayAddAt = this.lastRelayAdd.get(session.name) || 0;
+        if (Date.now() - lastRelayAddAt < 2000) {
+          webSocket.send(JSON.stringify({error: "接龙操作太频繁，请稍后再试"}));
+          return;
+        }
+        this.lastRelayAdd.set(session.name, Date.now());
+        // 接龙条目总数上限，防无限堆积
+        if (relay.entries.length >= 500) {
+          webSocket.send(JSON.stringify({error: "接龙条目已达上限（500条）"}));
           return;
         }
         relay.entries.push({number, user: session.name, content, timestamp: Date.now()});
@@ -1425,6 +1467,12 @@ export class ChatRoom {
             if (result.ok) {
               let rp = result.redpacket;
               this.redpacketChannels.set(rp.id, session.channel || "general");
+              // 持久化并限容（红包为一次性，映射只保留最近300条）
+              if (this.redpacketChannels.size > 300) {
+                let oldestId = this.redpacketChannels.keys().next().value;
+                if (oldestId) this.redpacketChannels.delete(oldestId);
+              }
+              await this.storage.put("redpacketChannels", [...this.redpacketChannels]);
               let msg = {
                 type: "redpacket",
                 action: "new",
@@ -1457,6 +1505,7 @@ export class ChatRoom {
             let result = await r.json();
             if (result.ok) {
               // 抢到红包，按红包所在频道广播结果
+              if (this._loadRedpacketChannels) await this._loadRedpacketChannels; // 防 DO 重启后映射未加载完
               let rpCh = this.redpacketChannels.get(rpId) || "general";
               this.broadcastToChannel(rpCh, {
                 type: "redpacket",
@@ -2117,10 +2166,14 @@ export class ChatRoom {
 
   async alarm() {
     if (this._loadScheduled) await this._loadScheduled;
+    if (this._loadChannels) await this._loadChannels;
     let now = Date.now();
     let toSend = this.scheduledMessages.filter(s => s.time <= now);
     this.scheduledMessages = this.scheduledMessages.filter(s => s.time > now);
     for (let s of toSend) {
+      // 🔒 安全修复（v1.34）：公告频道定时消息仅管理员来源可投递（防御旧数据/绕过 schedule 创建校验）
+      let schedChanObj = this.channels.find(c => c.name === (s.channel || "general"));
+      if (schedChanObj && schedChanObj.type === "announcement" && !s.admin) continue;
       let data = {
         name: s.name,
         message: s.message,

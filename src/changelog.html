@@ -126,6 +126,21 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.34</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-fix">安全</span>文件功能高危修复 — 公开的 /file-data 端点不再返回原始存储消息（仅文件消息且只回元数据，历史文件正文不再可公开回拉）；游客禁止上传文件（需登录）；共享文件桶增加每用户配额（200MB/50 个）与单文件硬上限（20MB），防拖垮全站文件功能</span></div>
+    <div class="feature-item"><span class="icon">🕶️</span><span class="text"><span class="tag tag-fix">安全</span>匿名身份彻底封堵 — 匿名消息的真实身份哈希（_anonOwner）此前可经加入房间的历史消息、切换频道、file-data 三条路径泄露，现统一经 stripSensitiveMsg 剥离，匿名马甲不再可被推算还原</span></div>
+    <div class="feature-item"><span class="icon">💰</span><span class="text"><span class="tag tag-fix">安全</span>铸币边界补齐 — 商店商品价格必须为正整数（负价商品反向加积分被封堵）、任务奖励限 1~100000、抽奖奖池成本限 1~100000，三者均在管理员层与服务端双重校验，普通管理员无法再绕过「积分写入仅限超级管理员」</span></div>
+    <div class="feature-item"><span class="icon">🎫</span><span class="text"><span class="tag tag-fix">安全</span>权限与逻辑加固 — 打特权标签（管理员色/VIP）与灰色封禁仅限超级管理员（堵住 M16 绕过）；定时消息不可投递只读公告频道（普通用户）；投票与私信需登录（堵刷票与冒名）；接龙/字符画加频率限制；红包频道映射持久化（重启不再错播频道）</span></div>
+    <div class="feature-item"><span class="icon">📁</span><span class="text"><span class="tag tag-fix">安全</span>文件存储加固 — 文件桶各端点增加内部签名鉴权（防被外部直连）；文件 ID 检测重复拒绝覆盖（防跨房间数据损坏）；上传增加魔数校验（伪装类型文件被拒）；链接预览限制 256KB；管理端下载文件类型强制为二进制流；兑换码尝试限频、自定义表情大小上限、禁言状态/背包接口脱敏，管理密钥比较改为常量时间</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.33</span>
     <span class="version-date">2026-08-03</span>
     <span class="version-arrow open">▶</span>

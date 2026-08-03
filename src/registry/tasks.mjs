@@ -150,9 +150,11 @@ export async function handleTasks(reg, request, url) {
     case "/admin/task/add": {
       if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
       let body = await request.json();
-      if (!body.name || !body.reward) return new Response(JSON.stringify({error: "请提供任务名称和奖励积分"}), {status: 400});
+      // 🔒 安全修复（F3）：reward 必须是正整数且 ≤ 100000，防普通 admin 设超大值铸币
+      let reward = parseInt(body.reward, 10);
+      if (!body.name || !(reward >= 1 && reward <= 100000)) return new Response(JSON.stringify({error: "任务奖励积分无效"}), {status: 400});
       let taskId = "task_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
-      reg.tasks.set(taskId, {name: body.name, description: body.description || "", reward: parseInt(body.reward, 10), enabled: true});
+      reg.tasks.set(taskId, {name: body.name, description: body.description || "", reward: reward, enabled: true});
       await reg.saveTasks();
       return new Response(JSON.stringify({ok: true, taskId}), {headers: {"Content-Type": "application/json"}});
     }

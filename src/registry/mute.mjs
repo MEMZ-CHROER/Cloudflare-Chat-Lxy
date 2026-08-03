@@ -46,7 +46,8 @@ export async function handleMute(reg, request, url) {
       await reg.saveMutes();
       return new Response(JSON.stringify({muted: false}), {status: 200, headers: {"Content-Type": "application/json"}});
     }
-    return new Response(JSON.stringify({muted: true, until: rec.until, remainingMs: remaining, permanent: rec.until === Number.MAX_SAFE_INTEGER, reason: rec.reason || "", mutedBy: rec.mutedBy || ""}), {status: 200, headers: {"Content-Type": "application/json"}});
+    // 🔒 安全修复（F7）：脱敏——不向公开端点返回 mutedBy（禁言操作者身份仅管理端可见）
+    return new Response(JSON.stringify({muted: true, until: rec.until, remainingMs: remaining, permanent: rec.until === Number.MAX_SAFE_INTEGER, reason: rec.reason || ""}), {status: 200, headers: {"Content-Type": "application/json"}});
   }
 
   // 查询所有禁言列表（admin 校验在 api 层）

@@ -73,7 +73,8 @@ export async function handleLottery(reg, request, url) {
       await reg.addLedger(name, -cost, "lottery", "抽奖 " + pool.name);
       let prizePool = [];
       for (let [prizeId, prize] of pool.prizes) {
-        if (prize.stock > 0) prizePool.push({id: prizeId, ...prize, weight: prize.probability});
+        // 🔒 安全修复（F1）：过滤 weight <= 0 的奖品，防概率 0 奖品恒被抽中
+        if (prize.stock > 0 && prize.probability > 0) prizePool.push({id: prizeId, ...prize, weight: prize.probability});
       }
       if (prizePool.length === 0) {
         reg.userPoints.set(name, pts);
@@ -81,6 +82,11 @@ export async function handleLottery(reg, request, url) {
         return new Response(JSON.stringify({error: "奖品已抽完"}), {status: 400});
       }
       let totalWeight = prizePool.reduce((s, p) => s + p.weight, 0);
+      if (totalWeight <= 0) {
+        reg.userPoints.set(name, pts);
+        await reg.savePoints();
+        return new Response(JSON.stringify({error: "奖池未配置"}), {status: 400});
+      }
       let rand = Math.random() * totalWeight;
       let chosen = null;
       for (let p of prizePool) { rand -= p.weight; if (rand <= 0) { chosen = p; break; } }
@@ -129,8 +135,11 @@ export async function handleLottery(reg, request, url) {
     case "/lottery/admin/pool/create": {
       if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
       let body = await request.json();
+      // 🔒 安全修复（F1）：cost 必须是正整数且有上限，防普通 admin 设负数铸币
+      let cost = parseInt(body.cost, 10);
+      if (!(cost >= 1 && cost <= 100000)) return new Response(JSON.stringify({error: "奖池成本无效"}), {status: 400});
       let poolId = "pool_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
-      reg.lotteryPools.set(poolId, {name: body.name, description: body.description || "", cost: parseInt(body.cost) || 0, enabled: true, prizes: new Map()});
+      reg.lotteryPools.set(poolId, {name: body.name, description: body.description || "", cost: cost, enabled: true, prizes: new Map()});
       await reg.saveLotteryPools();
       return new Response(JSON.stringify({ok: true, id: poolId}));
     }
@@ -142,7 +151,12 @@ export async function handleLottery(reg, request, url) {
       if (!pool) return new Response(JSON.stringify({error: "奖池不存在"}), {status: 404});
       if (body.name !== undefined) pool.name = body.name;
       if (body.description !== undefined) pool.description = body.description;
-      if (body.cost !== undefined) pool.cost = parseInt(body.cost) || 0;
+      if (body.cost !== undefined) {
+        // 🔒 安全修复（F1）：cost 校验同 create，防负数铸币
+        let cost = parseInt(body.cost, 10);
+        if (!(cost >= 1 && cost <= 100000)) return new Response(JSON.stringify({error: "奖池成本无效"}), {status: 400});
+        pool.cost = cost;
+      }
       await reg.saveLotteryPools();
       return new Response(JSON.stringify({ok: true}));
     }

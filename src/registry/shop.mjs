@@ -62,7 +62,7 @@ export async function handleShop(reg, request, url) {
             tag: item ? item.tag : "",
             color: item ? item.color : "",
             border: item ? (item.border || "") : "",
-            purchasedAt: info.purchasedAt,
+            // 🔒 安全修复（F7）：脱敏，不返回 purchasedAt（购买时间戳会泄露用户活跃时段）
             equipped: info.equipped || false
           });
         }
@@ -109,9 +109,11 @@ export async function handleShop(reg, request, url) {
       let inv = reg.userInventory.get(name);
       if (inv.has(itemId)) return new Response(JSON.stringify({error: "已拥有此商品"}), {status: 400});
       reg.userPoints.set(name, String(pts - price));
+      // 🔒 安全修复（F2）：inv.set 提前到首个 await 之前——DO input gate 在 await 处打开，
+      // 若 set 留在 await 之后，并发购买会双双通过 inv.has 检查导致重复发放/双扣。
+      inv.set(itemId, {purchasedAt: Date.now(), equipped: false});
       await reg.savePoints();
       await reg.addLedger(name, -price, "shop", "购买商品 #" + itemId);
-      inv.set(itemId, {purchasedAt: Date.now(), equipped: false});
       await reg.saveUserInventory();
       // ⭐ 购物经验：成功购买 +2 经验，计入 shopCount（成就判定用）
       try { await reg.grantExp(name, 2, "shop"); } catch (e) {}
@@ -189,7 +191,9 @@ export async function handleShop(reg, request, url) {
     case "/admin/shop/item/add": {
       if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
       let body = await request.json();
-      if (!body.name || !body.price || !body.tag) return new Response(JSON.stringify({error: "请提供商品名称、价格和标签"}), {status: 400});
+      if (!body.name || !body.tag) return new Response(JSON.stringify({error: "请提供商品名称和标签"}), {status: 400});
+      // 🔒 安全修复（F2）：price 必须是正整数（拒绝 0/负数/非数字），防负价铸币
+      if (!/^[1-9]\d*$/.test(String(body.price || "").trim())) return new Response(JSON.stringify({error: "商品价格无效"}), {status: 400});
       let itemId = "shop_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
       reg.shopItems.set(itemId, {name: body.name, description: body.description || "", price: parseInt(body.price, 10), tag: body.tag, color: body.color || "", border: body.border || "", enabled: true});
       await reg.saveShopItems();

@@ -17,6 +17,10 @@ export async function handleAdminShop(path, request, env, url) {
     if (shopAction === "item" && path[3] === "add") {
       if (request.method !== "POST") return new Response("方法不允许", {status: 405});
       let body = await request.json();
+      // 🔒 安全修复（F2）：转发层双保险——price 必须是正整数（拒绝 0/负数/非数字），防负价铸币
+      if (!body.name || !body.tag || !/^[1-9]\d*$/.test(String(body.price || "").trim())) {
+        return new Response(JSON.stringify({error: "商品价格无效"}), {status: 400, headers: {"Content-Type": "application/json"}});
+      }
       let r = await registryStub.fetch("https://dummy-url/admin/shop/item/add?auth=" + auth, {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
       return new Response(await r.text(), { status: r.status });
     }

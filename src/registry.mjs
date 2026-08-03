@@ -10,7 +10,7 @@ import { handleExp } from "./registry/exp.mjs";
 import { handleTasks } from "./registry/tasks.mjs";
 import { handleLottery } from "./registry/lottery.mjs";
 import { handleBot } from "./registry/bot.mjs";
-import { levelForExp } from "./utils.mjs";
+import { levelForExp, safeEqual } from "./utils.mjs";
 import { checkAchievements } from "./registry/achievements.mjs";
 import { handleEmoji } from "./registry/emoji.mjs";
 import { handleRedeem } from "./registry/redeem.mjs";
@@ -179,12 +179,13 @@ export class RoomRegistry {
   }
 
   // M15：管理鉴权（与 registry/points.mjs 的 adminAuthorized 同源逻辑）
+  // 🔒 安全修复（F8）：改用常量时间比较 safeEqual，降低密钥时序测信道风险
   adminAuthorized(auth) {
     if (!auth) return false;
-    if (this.adminKey && auth === this.adminKey) return true;
+    if (this.adminKey && safeEqual(auth, this.adminKey)) return true;
     if (this.env) {
-      if (this.env.ADMIN_SECRET_KEY && auth === this.env.ADMIN_SECRET_KEY) return true;
-      if (this.env.ADMIN_KEY && auth === this.env.ADMIN_KEY) return true;
+      if (this.env.ADMIN_SECRET_KEY && safeEqual(auth, this.env.ADMIN_SECRET_KEY)) return true;
+      if (this.env.ADMIN_KEY && safeEqual(auth, this.env.ADMIN_KEY)) return true;
     }
     return false;
   }

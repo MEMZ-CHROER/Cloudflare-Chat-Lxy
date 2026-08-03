@@ -27,6 +27,10 @@ export async function handleEmoji(reg, request, url) {
         if (!/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(data) || /^data:image\/svg\+xml/i.test(data)) {
           return new Response(JSON.stringify({error: "表情图片格式不合法，仅支持 png/jpg/gif/webp"}), {status: 400});
         }
+        // 🔒 安全修复（F6）：base64 数据大小上限 200KB，防超大体量数据塞爆 storage
+        if (data.length > 200 * 1024) {
+          return new Response(JSON.stringify({error: "表情图片过大（超过 200KB）"}), {status: 400});
+        }
         reg.emoji.set(name, data);
         await reg.saveEmoji();
         return new Response(JSON.stringify({ok: true, name}), {

@@ -1,6 +1,30 @@
 // URL 预览 - 获取链接的标题和描述
 // ⚠️ 安全限制：禁止 SSRF（禁止访问内网地址和元数据接口）
 
+// 🔒 安全修复（F4）：外链页面正文读取上限 256KB，防整页读入内存导致 DoS
+const MAX_PREVIEW_BYTES = 256 * 1024;
+
+// 🔒 安全修复（F4）：流式读取响应体，超过 limit 立即中断并返回 null（不抛未捕获异常）
+async function readLimited(resp, limit) {
+  if (!resp.body) return "";
+  let reader = resp.body.getReader();
+  let decoder = new TextDecoder("utf-8");
+  let out = "";
+  let total = 0;
+  while (true) {
+    let {done, value} = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > limit) {
+      try { await reader.cancel(); } catch (e) {}
+      return null;
+    }
+    out += decoder.decode(value, {stream: true});
+  }
+  out += decoder.decode();
+  return out;
+}
+
 // 🔒 安全修复（A3）：IPv4 私有/保留地址判断（非法格式一律视为私有，拒绝访问）
 function isPrivateIPv4(hostname) {
   let parts = hostname.split('.');
@@ -141,7 +165,20 @@ export async function handlePreview(apiPath, request, env) {
   } catch (e) {
     return new Response(JSON.stringify({error: e.message}), {status: 403, headers: {"Content-Type": "application/json"}});
   }
-  let html = await resp.text();
+  // 🔒 安全修复（F4）：先按 Content-Length 快速拒绝超大页面，再流式读取限制大小
+  let contentLength = parseInt(resp.headers.get("Content-Length") || "", 10);
+  if (contentLength && contentLength > MAX_PREVIEW_BYTES) {
+    return new Response(JSON.stringify({error: "页面过大，无法预览"}), {status: 413, headers: {"Content-Type": "application/json"}});
+  }
+  let html;
+  try {
+    html = await readLimited(resp, MAX_PREVIEW_BYTES);
+  } catch (e) {
+    return new Response(JSON.stringify({error: "读取页面内容失败"}), {status: 502, headers: {"Content-Type": "application/json"}});
+  }
+  if (html === null) {
+    return new Response(JSON.stringify({error: "页面过大，无法预览"}), {status: 413, headers: {"Content-Type": "application/json"}});
+  }
   let title = "", description = "", icon = "";
   let titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
   if (titleMatch) title = titleMatch[1].trim();

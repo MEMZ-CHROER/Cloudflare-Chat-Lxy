@@ -5,6 +5,11 @@ import { tokenValid } from "../utils.mjs";
 
 import { saveRedeemCodes } from "./persistence.mjs";
 
+// 🔒 安全修复（F5）：兑换尝试限频——registry 是单 DO，内存计数可行（每用户+IP 10 分钟 30 次）
+const redeemAttempts = new Map();
+const REDEEM_LIMIT = 30;
+const REDEEM_WINDOW = 10 * 60 * 1000;
+
 function toBigInt(val) {
   if (val == null) return 0n;
   try {
@@ -54,6 +59,21 @@ export async function handleRedeem(reg, request, url) {
       let regUser = reg.registeredUsers.get(user);
       if (!tokenValid(regUser, body.token || "")) {
         return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      }
+
+      // 🔒 安全修复（F5）：兑换尝试限频，防兑换码暴力枚举
+      let ip = request.headers.get("CF-Connecting-IP") || request.headers.get("x-forwarded-for") || "unknown";
+      let limKey = user + "|" + ip;
+      let now = Date.now();
+      let rl = redeemAttempts.get(limKey);
+      if (!rl || now > rl.resetTs) rl = {count: 0, resetTs: now + REDEEM_WINDOW};
+      if (rl.count >= REDEEM_LIMIT) {
+        return new Response(JSON.stringify({error: "尝试过于频繁，请 10 分钟后再试"}), {status: 429});
+      }
+      rl.count++;
+      redeemAttempts.set(limKey, rl);
+      if (redeemAttempts.size > 1000) { // 简单防内存膨胀：清理过期条目
+        for (let [k, v] of redeemAttempts) { if (now > v.resetTs) redeemAttempts.delete(k); }
       }
 
       let info = reg.redeemCodes.get(code);

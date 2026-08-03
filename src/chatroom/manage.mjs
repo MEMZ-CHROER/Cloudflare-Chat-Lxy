@@ -1,5 +1,15 @@
 // 管理类消息处理（pin/edit/highlight/effect/get-scheduled）— 从 chatroom.mjs 提取
 
+// 🔒 安全修复（v1.34）：对外输出消息前剔除敏感字段——_anonOwner（真实身份哈希，防反推匿名者）与
+// fid（文件存储标识）。其余字段全部保留（勿用白名单，防止破坏 redpacket/gh-card 等消息类型）。
+export function stripSensitiveMsg(msg) {
+  if (!msg || typeof msg !== "object") return msg;
+  const m = { ...msg };
+  delete m._anonOwner;
+  delete m.fid;
+  return m;
+}
+
 export async function handleManage(room, session, data, webSocket) {
   // ====== 频道体系：切换频道 ======
   if (data.type === "switch-channel") {
@@ -18,7 +28,8 @@ export async function handleManage(room, session, data, webSocket) {
       try {
         let m = JSON.parse(val);
         if ((m.channel || "general") === target) {
-          msgs.push(m);
+          // 🔒 安全修复（v1.34）：频道历史同样剔除 _anonOwner/fid，防匿名身份哈希经切换频道泄漏
+          msgs.push(stripSensitiveMsg(m));
           if (msgs.length >= 50) break;
         }
       } catch (e) {}
