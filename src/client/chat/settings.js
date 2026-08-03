@@ -351,4 +351,200 @@ export function initSettings() {
   };
   bindLangBtn("lang-zh", "zh");
   bindLangBtn("lang-en", "en");
+
+  // 主题系统（v1.38）
+  initTheme();
+}
+
+// ==================== 主题系统（v1.38）====================
+// 预设：classic(经典/默认) / liquid(液态玻璃) / flat(扁平化) / neon(深空霓虹) / custom(自定义)
+// 与明暗模式（body.dark，main.js 控制）正交：body.theme-* 覆盖 CSS 变量即可整体换肤
+const THEME_KEY = "chatTheme";
+const CUSTOM_KEY = "customTheme";
+const PRESET_CLASSES = ["theme-liquid", "theme-flat", "theme-neon"];
+
+const CUSTOM_DEFAULTS = {
+  primary: "#4a6cf7",
+  text: "#1f2940",
+  textSecondary: "#5f6f93",
+  bg: "#ffffff",
+  border: "#d0d6e3",
+  radius: 16,
+  msgSelf: "#4a6cf7",
+  msgOther: "#ffffff"
+};
+
+// hex -> rgba() 字符串（alpha 0~1）
+function hexToRgba(hex, alpha) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
+// 提亮/压暗：pct>0 向白，pct<0 向黑
+function shadeColor(hex, pct) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const mix = (c) => (pct >= 0 ? Math.round(c + (255 - c) * pct) : Math.round(c * (1 + pct)));
+  const r = Math.max(0, Math.min(255, mix(rgb.r)));
+  const g = Math.max(0, Math.min(255, mix(rgb.g)));
+  const b = Math.max(0, Math.min(255, mix(rgb.b)));
+  return rgbToHex(r, g, b);
+}
+
+// 读取并校验 localStorage 自定义主题（防注入：全部 hex 白名单 + radius 夹取）
+function loadCustomTheme() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CUSTOM_KEY) || "null");
+    if (!c || typeof c !== "object") return null;
+    const clean = {};
+    for (const key of ["primary", "text", "textSecondary", "bg", "border", "msgSelf", "msgOther"]) {
+      clean[key] = hexToRgb(c[key]) ? String(c[key]) : CUSTOM_DEFAULTS[key];
+    }
+    clean.radius = Math.max(4, Math.min(24, Number(c.radius) || CUSTOM_DEFAULTS.radius));
+    return clean;
+  } catch (e) { return null; }
+}
+
+function removeCustomThemeVars() {
+  const s = document.getElementById("custom-theme-vars");
+  if (s) s.remove();
+}
+
+// 注入/更新 body.custom-theme 变量（style 插 head 末尾，后声明覆盖 body.dark）
+export function applyCustomThemeVars(c) {
+  if (!c) { removeCustomThemeVars(); return; }
+  let style = document.getElementById("custom-theme-vars");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "custom-theme-vars";
+    document.head.appendChild(style);
+  }
+  const radius = Math.max(4, Math.min(24, Number(c.radius) || 16));
+  const p = hexToRgb(c.primary) || { r: 74, g: 108, b: 247 };
+  const bg = hexToRgb(c.bg) || { r: 255, g: 255, b: 255 };
+  style.textContent = `body.custom-theme{
+  --primary:${c.primary};
+  --primary-light:${shadeColor(c.primary, 0.25)};
+  --primary-dark:${shadeColor(c.primary, -0.2)};
+  --primary-rgb:${p.r},${p.g},${p.b};
+  --text:${c.text};
+  --text-secondary:${c.textSecondary};
+  --bg:${hexToRgba(c.bg, 0.45)};
+  --surface:${hexToRgba(c.bg, 0.66)};
+  --surface-2:${hexToRgba(c.bg, 0.82)};
+  --border:${c.border};
+  --radius:${radius}px;
+  --radius-sm:${Math.max(4, Math.round(radius * 0.65))}px;
+  --msg-self:${c.msgSelf};
+  --msg-self-text:#ffffff;
+  --msg-other:${hexToRgba(c.msgOther, 0.66)};
+  --msg-other-text:${c.text};
+  --frosted-r:${bg.r};
+  --frosted-g:${bg.g};
+  --frosted-b:${bg.b};
+  --frosted-a:0.5;
+  --frosted-strong-a:0.72;
+  --frosted-border-a:0.5;
+}`;
+}
+
+// 应用主题预设（classic/liquid/flat/neon/custom）
+export function applyTheme(preset) {
+  preset = ["classic", "liquid", "flat", "neon", "custom"].includes(preset) ? preset : "classic";
+  document.body.classList.remove(...PRESET_CLASSES, "custom-theme");
+  if (preset === "custom") {
+    document.body.classList.add("custom-theme");
+    const custom = loadCustomTheme();
+    if (custom) { populateCustomControls(custom); applyCustomThemeVars(custom); }
+    else { populateCustomControls(CUSTOM_DEFAULTS); removeCustomThemeVars(); }
+  } else if (preset !== "classic") {
+    document.body.classList.add("theme-" + preset);
+  }
+  try { localStorage.setItem(THEME_KEY, preset); } catch (e) {}
+  // 同步选择器 UI
+  document.querySelectorAll("#theme-picker .theme-card").forEach(el => {
+    el.classList.toggle("theme-card-active", el.dataset.theme === preset);
+  });
+  const customSection = document.getElementById("custom-theme-section");
+  if (customSection) customSection.style.display = preset === "custom" ? "" : "none";
+}
+
+// 收集自定义控件当前值
+function collectCustomControls() {
+  const getVal = (id) => (document.getElementById(id) || {}).value || "";
+  const radiusEl = document.getElementById("ct-radius");
+  const radius = radiusEl ? Math.max(4, Math.min(24, Number(radiusEl.value) || 16)) : 16;
+  return {
+    primary: getVal("ct-primary") || CUSTOM_DEFAULTS.primary,
+    text: getVal("ct-text") || CUSTOM_DEFAULTS.text,
+    textSecondary: getVal("ct-text-secondary") || CUSTOM_DEFAULTS.textSecondary,
+    bg: getVal("ct-bg") || CUSTOM_DEFAULTS.bg,
+    border: getVal("ct-border") || CUSTOM_DEFAULTS.border,
+    radius,
+    msgSelf: getVal("ct-msg-self") || CUSTOM_DEFAULTS.msgSelf,
+    msgOther: getVal("ct-msg-other") || CUSTOM_DEFAULTS.msgOther
+  };
+}
+
+function saveCustomTheme(c) {
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); } catch (e) { showError(t("保存失败")); }
+}
+
+// 把自定义值填回控件
+function populateCustomControls(c) {
+  if (!c) c = CUSTOM_DEFAULTS;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  set("ct-primary", c.primary);
+  set("ct-text", c.text);
+  set("ct-text-secondary", c.textSecondary);
+  set("ct-bg", c.bg);
+  set("ct-border", c.border);
+  set("ct-msg-self", c.msgSelf);
+  set("ct-msg-other", c.msgOther);
+  const radiusEl = document.getElementById("ct-radius");
+  if (radiusEl) radiusEl.value = c.radius;
+  const radiusVal = document.getElementById("ct-radius-value");
+  if (radiusVal) radiusVal.textContent = c.radius + "px";
+}
+
+function updateCustomFromControls() {
+  const c = collectCustomControls();
+  saveCustomTheme(c);
+  applyCustomThemeVars(c);
+}
+
+function resetCustomTheme() {
+  localStorage.removeItem(CUSTOM_KEY);
+  removeCustomThemeVars();
+  populateCustomControls(CUSTOM_DEFAULTS);
+  applyTheme("classic");
+}
+
+// 初始化主题系统（initSettings 末尾调用）
+export function initTheme() {
+  const custom = loadCustomTheme();
+  if (custom) populateCustomControls(custom);
+  applyTheme(localStorage.getItem(THEME_KEY) || "classic");
+
+  // 绑定主题卡片点击
+  document.querySelectorAll("#theme-picker .theme-card").forEach(el => {
+    el.addEventListener("click", () => applyTheme(el.dataset.theme));
+  });
+
+  // 绑定自定义控件（仅当处于自定义主题时实时生效）
+  ["ct-primary", "ct-text", "ct-text-secondary", "ct-bg", "ct-border", "ct-msg-self", "ct-msg-other"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("input", () => {
+      if (document.body.classList.contains("custom-theme")) updateCustomFromControls();
+    });
+  });
+  const radiusEl = document.getElementById("ct-radius");
+  if (radiusEl) radiusEl.addEventListener("input", () => {
+    const val = document.getElementById("ct-radius-value");
+    if (val) val.textContent = radiusEl.value + "px";
+    if (document.body.classList.contains("custom-theme")) updateCustomFromControls();
+  });
+  const resetBtn = document.getElementById("ct-reset");
+  if (resetBtn) resetBtn.addEventListener("click", resetCustomTheme);
 }

@@ -77,6 +77,283 @@ body.dark #chat-input::placeholder {
   color: #6a7a98;
 }
 
+/* =====================================================================
+   v1.38 主题系统 — 预设 3 套（液态玻璃 / 扁平化 / 深空霓虹）
+   明暗（body.dark）与主题正交：body.theme-* 覆盖全部 CSS 变量即可整体换肤
+   ===================================================================== */
+
+/* ---------- 液态玻璃 Liquid Glass：通透玻璃 + 强模糊 + 大圆角 + 高光 ---------- */
+body.theme-liquid {
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --primary-rgb: 99, 102, 241;
+  --bg: rgba(255, 255, 255, 0.24);
+  --surface: rgba(255, 255, 255, 0.32);
+  --surface-2: rgba(255, 255, 255, 0.52);
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --border: rgba(255, 255, 255, 0.6);
+  --shadow: 0 16px 48px rgba(99, 102, 241, 0.16);
+  --shadow-sm: 0 8px 24px rgba(99, 102, 241, 0.1);
+  --radius: 22px;
+  --radius-sm: 14px;
+  --msg-self: linear-gradient(135deg, #6366f1, #a855f7);
+  --msg-self-text: #fff;
+  --msg-other: rgba(255, 255, 255, 0.42);
+  --msg-other-text: #0f172a;
+  --online-dot: #34d399;
+  --frosted-r: 255;
+  --frosted-g: 255;
+  --frosted-b: 255;
+  --frosted-a: 0.26;
+  --frosted-strong-a: 0.5;
+  --frosted-border-a: 0.7;
+  --frosted-blur: blur(28px);
+  --input-ink: #0f172a;
+  --input-ph: #64748b;
+}
+/* 玻璃光泽：气泡内高光 + 柔和投影 */
+body.theme-liquid .chat-msg .bubble {
+  box-shadow: 0 8px 28px rgba(99, 102, 241, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+body.theme-liquid .chat-msg.self .bubble {
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+body.dark.theme-liquid {
+  --primary: #818cf8;
+  --primary-light: #a5b4fc;
+  --primary-dark: #6366f1;
+  --primary-rgb: 129, 140, 248;
+  --bg: rgba(15, 23, 42, 0.32);
+  --surface: rgba(15, 23, 42, 0.42);
+  --surface-2: rgba(15, 23, 42, 0.56);
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --border: rgba(255, 255, 255, 0.16);
+  --shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --msg-other: rgba(30, 41, 59, 0.5);
+  --msg-other-text: #e2e8f0;
+  --frosted-r: 30;
+  --frosted-g: 41;
+  --frosted-b: 82;
+  --frosted-a: 0.32;
+  --frosted-strong-a: 0.56;
+  --frosted-border-a: 0.18;
+  --input-ink: #e2e8f0;
+  --input-ph: #64748b;
+}
+body.dark.theme-liquid .chat-msg .bubble {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ---------- 扁平化 Flat：纯色实底 + 无阴影 + 关磨砂 + 硬朗边框 ---------- */
+body.theme-flat {
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --primary-dark: #1d4ed8;
+  --primary-rgb: 37, 99, 235;
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --text: #1e293b;
+  --text-secondary: #64748b;
+  --border: #cbd5e1;
+  --shadow: none;
+  --shadow-sm: none;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --msg-self: #2563eb;
+  --msg-self-text: #fff;
+  --msg-other: #ffffff;
+  --msg-other-text: #1e293b;
+  --online-dot: #16a34a;
+  --frosted-r: 238;
+  --frosted-g: 241;
+  --frosted-b: 246;
+  --frosted-a: 1;
+  --frosted-strong-a: 1;
+  --frosted-border-a: 1;
+  --frosted-blur: none;
+  --input-ink: #1e293b;
+  --input-ph: #94a3b8;
+}
+/* 扁平化：隐藏背景图；气泡用硬朗边框而非阴影 */
+body.theme-flat::before { display: none; }
+body.theme-flat .chat-msg .bubble {
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+body.theme-flat .chat-msg.self .bubble {
+  border-color: var(--primary);
+  box-shadow: none;
+}
+
+body.dark.theme-flat {
+  --primary: #3b82f6;
+  --primary-light: #60a5fa;
+  --primary-dark: #2563eb;
+  --primary-rgb: 59, 130, 246;
+  --bg: #111827;
+  --surface: #1f2937;
+  --surface-2: #263449;
+  --text: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border: #374151;
+  --msg-self: #3b82f6;
+  --msg-other: #1f2937;
+  --msg-other-text: #f1f5f9;
+  --online-dot: #22c55e;
+  --frosted-r: 17;
+  --frosted-g: 24;
+  --frosted-b: 39;
+  --input-ink: #f1f5f9;
+  --input-ph: #64748b;
+}
+
+/* ---------- 深空霓虹 Neon：品红→紫→青渐变 + 发光边框 ---------- */
+body.theme-neon {
+  --primary: #a855f7;
+  --primary-light: #c084fc;
+  --primary-dark: #7e22ce;
+  --primary-rgb: 168, 85, 247;
+  --bg: rgba(255, 255, 255, 0.4);
+  --surface: rgba(255, 255, 255, 0.55);
+  --surface-2: rgba(255, 255, 255, 0.72);
+  --text: #2a1a3a;
+  --text-secondary: #6b5b7a;
+  --border: rgba(168, 85, 247, 0.25);
+  --shadow: 0 12px 40px rgba(168, 85, 247, 0.18);
+  --shadow-sm: 0 6px 20px rgba(168, 85, 247, 0.12);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --msg-self: linear-gradient(135deg, #ec4899, #a855f7, #06b6d4);
+  --msg-self-text: #fff;
+  --msg-other: rgba(255, 255, 255, 0.55);
+  --msg-other-text: #2a1a3a;
+  --online-dot: #22d3ee;
+  --frosted-r: 255;
+  --frosted-g: 255;
+  --frosted-b: 255;
+  --frosted-a: 0.38;
+  --frosted-strong-a: 0.6;
+  --frosted-border-a: 0.5;
+  --frosted-blur: blur(22px);
+  --input-ink: #2a1a3a;
+  --input-ph: #7a6a8a;
+}
+body.theme-neon .chat-msg .bubble {
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.18), 0 4px 18px rgba(168, 85, 247, 0.14);
+}
+body.theme-neon .chat-msg.self .bubble {
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.3), 0 0 0 1px rgba(236, 72, 153, 0.4);
+}
+
+body.dark.theme-neon {
+  --primary: #c084fc;
+  --primary-light: #d8b4fe;
+  --primary-dark: #a855f7;
+  --primary-rgb: 192, 132, 252;
+  --bg: rgba(12, 10, 30, 0.5);
+  --surface: rgba(18, 14, 40, 0.6);
+  --surface-2: rgba(24, 18, 50, 0.72);
+  --text: #ece7ff;
+  --text-secondary: #a99fc4;
+  --border: rgba(168, 85, 247, 0.3);
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --msg-other: rgba(24, 18, 50, 0.7);
+  --msg-other-text: #ece7ff;
+  --online-dot: #22d3ee;
+  --frosted-r: 12;
+  --frosted-g: 10;
+  --frosted-b: 30;
+  --frosted-a: 0.5;
+  --frosted-strong-a: 0.72;
+  --frosted-border-a: 0.4;
+  --input-ink: #ece7ff;
+  --input-ph: #8b81a8;
+}
+body.dark.theme-neon .channel-item.active {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25), rgba(168, 85, 247, 0.3));
+}
+body.dark.theme-neon .chat-msg .bubble {
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.25), 0 0 16px rgba(168, 85, 247, 0.18);
+}
+body.dark.theme-neon .chat-msg.self .bubble {
+  box-shadow: 0 0 22px rgba(236, 72, 153, 0.35), 0 0 0 1px rgba(236, 72, 153, 0.45);
+}
+
+/* ---------- 主题选择器（设置面板） ---------- */
+#theme-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.theme-card {
+  flex: 1 1 72px;
+  min-width: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.2;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.theme-card:hover { border-color: var(--primary); color: var(--text); }
+.theme-card-active {
+  border-color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.theme-card-icon { font-size: 22px; }
+
+/* 自定义主题控件 */
+#custom-theme-section .ct-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+#custom-theme-section .ct-row label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+#custom-theme-section .ct-row input[type="color"] {
+  width: 44px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+#custom-theme-section .ct-radius-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+#custom-theme-section .ct-radius-row input[type="range"] { flex: 1; }
+#ct-radius-value {
+  min-width: 34px;
+  text-align: right;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

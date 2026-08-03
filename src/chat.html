@@ -334,6 +334,35 @@
         <button class="settings-close" onclick="closeSettings()">&times;</button>
       </div>
       <div class="settings-content">
+        <!-- 主题选择（v1.38）-->
+        <div class="settings-item">
+          <div class="settings-label">
+            <span data-i18n="theme">🎨 主题</span>
+          </div>
+          <div id="theme-picker">
+            <button type="button" class="theme-card" data-theme="classic"><span class="theme-card-icon">🎨</span><span data-i18n="themeClassic">经典</span></button>
+            <button type="button" class="theme-card" data-theme="liquid"><span class="theme-card-icon">💧</span><span data-i18n="themeLiquid">液态玻璃</span></button>
+            <button type="button" class="theme-card" data-theme="flat"><span class="theme-card-icon">📐</span><span data-i18n="themeFlat">扁平化</span></button>
+            <button type="button" class="theme-card" data-theme="neon"><span class="theme-card-icon">🌌</span><span data-i18n="themeNeon">深空霓虹</span></button>
+            <button type="button" class="theme-card" data-theme="custom"><span class="theme-card-icon">✏️</span><span data-i18n="themeCustom">自定义</span></button>
+          </div>
+          <p class="settings-hint" data-i18n="themeHint">主题与明暗模式独立，可自由组合。</p>
+        </div>
+        <div class="settings-item" id="custom-theme-section" style="display:none">
+          <div class="settings-label">
+            <span data-i18n="customTheme">✏️ 自定义主题</span>
+            <button id="ct-reset" type="button" class="settings-btn-danger" data-i18n="ctReset">重置自定义</button>
+          </div>
+          <div class="ct-row"><label data-i18n="ctPrimary">主色</label><input type="color" id="ct-primary" value="#4a6cf7"></div>
+          <div class="ct-row"><label data-i18n="ctText">文字色</label><input type="color" id="ct-text" value="#1f2940"></div>
+          <div class="ct-row"><label data-i18n="ctTextSecondary">次级文字色</label><input type="color" id="ct-text-secondary" value="#5f6f93"></div>
+          <div class="ct-row"><label data-i18n="ctBg">背景色</label><input type="color" id="ct-bg" value="#ffffff"></div>
+          <div class="ct-row"><label data-i18n="ctBorder">边框色</label><input type="color" id="ct-border" value="#d0d6e3"></div>
+          <div class="ct-radius-row"><label data-i18n="ctRadius">圆角</label><input type="range" id="ct-radius" min="4" max="24" value="16"><span id="ct-radius-value">16px</span></div>
+          <div class="ct-row"><label data-i18n="ctMsgSelf">自己气泡色</label><input type="color" id="ct-msg-self" value="#4a6cf7"></div>
+          <div class="ct-row"><label data-i18n="ctMsgOther">他人气泡色</label><input type="color" id="ct-msg-other" value="#ffffff"></div>
+          <p class="settings-hint" data-i18n="themeHint">主题与明暗模式独立，可自由组合。</p>
+        </div>
         <div class="settings-item">
           <div class="settings-label">
             <span data-i18n="language">语言</span>
