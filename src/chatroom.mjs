@@ -883,21 +883,6 @@ export class ChatRoom {
         session.name = rawName;
         webSocket.serializeAttachment({ ...webSocket.deserializeAttachment(), name: session.name });
 
-        // 🔒 安全修复（L8）：同名检测前置到设名后立即执行（无 await 的原子区间），
-        // 并发同名加入时先到者保留、后到者被拒，杜绝"检查-设名"竞态把先到者踢掉
-        {
-          let nameTaken = false;
-          for (let [ws, s] of this.sessions) {
-            if (ws !== webSocket && s.name === session.name) { nameTaken = true; break; }
-          }
-          if (nameTaken) {
-            webSocket.send(JSON.stringify({error: "该名字已在房间内在线，请更换名字后再加入"}));
-            this.sessions.delete(webSocket);
-            webSocket.close(1008, "名字已被占用");
-            return;
-          }
-        }
-
         try {
           let registryId = this.env.registry.idFromName("global");
           let stub = this.env.registry.get(registryId);
@@ -955,18 +940,6 @@ export class ChatRoom {
           webSocket.send(queued);
         });
         delete session.blockedMessages;
-
-        // 🔒 安全修复：同名检测 — 同一名字仅允许一个在线会话，防止冒名截获私信（whisper 按名投递）与冒名投票/操作
-        let nameTaken = false;
-        for (let [ws, s] of this.sessions) {
-          if (ws !== webSocket && s.name === session.name) { nameTaken = true; break; }
-        }
-        if (nameTaken) {
-          webSocket.send(JSON.stringify({error: "该名字已在房间内在线，请更换名字后再加入"}));
-          this.sessions.delete(webSocket);
-          webSocket.close(1008, "名字已被占用");
-          return;
-        }
 
         let joinMsg = {joined: session.name};
         if (session.tag) joinMsg.tag = session.tag;

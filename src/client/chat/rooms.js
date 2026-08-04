@@ -62,7 +62,8 @@ export function switchRoom(name) {
     document.location.hash = "#" + name;
     state.chatlog.innerHTML = "";
     state.roster.querySelectorAll("[data-name]").forEach(el => el.remove());
-    // 先关旧连接并等它在服务端清理（同房间同名字判重），再连新房间
+    // 手动切房：先抑制旧 WS 的 rejoin（join() 开头会复位标志），再关旧连接等它清理，最后连新房间
+    state._manualDisconnect = true;
     if (state.currentWebSocket) {
       try {
         const old = state.currentWebSocket;

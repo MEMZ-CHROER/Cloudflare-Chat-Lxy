@@ -63,6 +63,7 @@ function renderPinnedBar() {
 }
 
 export function join() {
+  state._manualDisconnect = false; // 新的连接请求复位手动断开标志（/dc 或切房后由新 join 接管）
   if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
 
   const wss = document.location.protocol === "http:" ? "ws://" : "wss://";
@@ -76,6 +77,7 @@ export function join() {
   let rejoin = async () => {
     if (!rejoined) {
       rejoined = true;
+      if (state._manualDisconnect) return; // 手动退出(/dc)或切房：不自动重连，由新连接接管
       state.currentWebSocket = null;
       document.getElementById("reconnect-banner").classList.add("show");
       state.roster.querySelectorAll('[data-name]').forEach(el => el.remove());

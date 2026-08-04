@@ -337,6 +337,7 @@ export async function handleCommand(text) {
     case "/dc":
     case "/disconnect": {
       if (!window._chatStarted) { showInfo(t("当前未在聊天室中")); break; }
+      state._manualDisconnect = true; // 手动退出：抑制 websocket rejoin 自动重连
       if (state.currentWebSocket) { try { state.currentWebSocket.close(); } catch (e) {} }
       state.currentWebSocket = null;
       state.chatlog.innerHTML = "";
