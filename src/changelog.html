@@ -126,6 +126,19 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.41</span>
+    <span class="version-date">2026-08-04</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🧩</span><span class="text"><span class="tag tag-improve">重构</span><b>前端聊天代码模块化重构</b>（纯重构，行为零变化）。<b>消息渲染去重</b>：renderers.js 提取 5 个公共助手 <code>attachUserClick / buildMsgHeader / openMsgActions / appendMsgTime / finishMsg</code>，五个消息渲染函数（文本/图片/语音/GitHub 卡片/文件）的<b>头像·昵称·徽章头部构建与操作菜单完全统一复用</b>，文件 1135 → 987 行，消除"改一处用户菜单绑定需同步 5 处"的维护坑</span></div>
+    <div class="feature-item"><span class="icon">📦</span><span class="text"><span class="tag tag-improve">重构</span><b>工具条拆分</b>：core.js 的 <code>startChat()</code> 内联逻辑拆成 6 个独立模块 —— <code>upload</code>（上传进度条 + 回复引用附加，图片/文件/语音共用）、<code>image-upload</code>（图片按钮/粘贴发图/AI 快捷钮）、<code>voice-record</code>（录音）、<code>file-upload</code>（文件上传）、<code>mention</code>（@提及下拉）、<code>emoji-panel</code>（表情面板），core.js 620 → 341 行，各功能独立文件维护</span></div>
+    <div class="feature-item"><span class="icon">✂️</span><span class="text"><span class="tag tag-improve">重构</span><b>escapeHtml 去重</b>：music.js 删除内部重复定义，复用 renderers.js 的共享工具（该工具已被 14 个模块引用）</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.40</span>
     <span class="version-date">2026-08-04</span>
     <span class="version-arrow open">▶</span>

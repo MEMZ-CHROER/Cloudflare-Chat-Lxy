@@ -408,26 +408,25 @@ function renderIrcMessage(name, text, isSelf, timestamp) {
   state.chatlog.scrollBy(0, 1e8);
 }
 
-export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, reply, tagBorder, msgId, atAll, avatar, level) {
-  if (!name) {
-    if (systemMessageHook) { systemMessageHook(text); return; }
-    let p = document.createElement("p");
-    p.className = "system-msg";
-    p.textContent = text;
-    trimChatlog();
-    state.chatlog.appendChild(p);
-    state.chatlog.scrollBy(0, 1e8);
-    return;
-  }
-  let isSelf = name === state.username;
-  if (hacknetIRC) { renderIrcMessage(name, text, isSelf, timestamp); return; }
-  maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
+// ---- 消息渲染公共助手（模块化去重）----
+// 统一绑定"点击用户菜单"（头像/昵称）
+function attachUserClick(el, name) {
+  el.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+}
+
+// 创建消息 wrapper：chat-msg 容器 + 时间戳/消息ID/全员提醒 data 属性
+function createMsgWrapper(name, isSelf, timestamp, msgId, atAll) {
   let wrapper = document.createElement("p");
   wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
   if (timestamp) wrapper.dataset.timestamp = timestamp;
   wrapper.dataset.msgName = name || "";
   if (msgId) wrapper.dataset.msgId = msgId;
   if (atAll) wrapper.classList.add("ping-all");
+  return wrapper;
+}
+
+// 构建消息头部：tag徽章 + VIP徽章 + 头像 + 昵称 + 等级徽章 + 回复引用
+function buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply }) {
   let header = document.createElement("span");
   header.className = "msg-header";
   if (tag) {
@@ -442,7 +441,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     av.className = "msg-avatar";
     av.src = avatar;
     av.alt = "";
-    av.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+    attachUserClick(av, name);
     wrapper.appendChild(av);
   }
   if (!isSelf) {
@@ -450,7 +449,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     nameSpan.className = "username";
     nameSpan.textContent = name;
     nameSpan.style.cursor = "pointer";
-    nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+    attachUserClick(nameSpan, name);
     header.appendChild(nameSpan);
     attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
   }
@@ -458,6 +457,53 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
   if (lb) header.appendChild(lb);
   wrapper.appendChild(header);
   if (reply) wrapper.appendChild(buildReplyQuote(reply));
+  return header;
+}
+
+// 追加消息时间戳
+function appendMsgTime(wrapper, timestamp) {
+  if (timestamp) {
+    let timeSpan = document.createElement("span");
+    timeSpan.className = "msg-time";
+    timeSpan.textContent = formatTime(timestamp);
+    wrapper.appendChild(timeSpan);
+  }
+}
+
+// 打开消息操作菜单（公共参数集：是否管理员/有无 WS 统一由这里判定）
+function openMsgActions(wrapper, { name, text, timestamp, msgId, tag, tagColor, tagBorder, isSelf }) {
+  buildActionMenu(wrapper, {
+    name, text, timestamp, msgId, tag, tagColor, tagBorder,
+    isSelf,
+    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+    hasWs: !!state.currentWebSocket,
+    roomname: state.roomname
+  });
+}
+
+// 公共收尾：裁剪 + 上屏 + 滚动到底
+function finishMsg(wrapper) {
+  trimChatlog();
+  state.chatlog.appendChild(wrapper);
+  state.chatlog.scrollBy(0, 1e8);
+}
+
+export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, reply, tagBorder, msgId, atAll, avatar, level) {
+  if (!name) {
+    if (systemMessageHook) { systemMessageHook(text); return; }
+    let p = document.createElement("p");
+    p.className = "system-msg";
+    p.textContent = text;
+    trimChatlog();
+    state.chatlog.appendChild(p);
+    state.chatlog.scrollBy(0, 1e8);
+    return;
+  }
+  let isSelf = name === state.username;
+  if (hacknetIRC) { renderIrcMessage(name, text, isSelf, timestamp); return; }
+  maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
+  let wrapper = createMsgWrapper(name, isSelf, timestamp, msgId, atAll);
+  buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply });
   let bubble = document.createElement("span");
   bubble.className = "bubble";
   if (msgColor && msgColor !== "#000000") bubble.style.color = msgColor;
@@ -500,19 +546,8 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     }).catch(() => { urlPreviewCache.set(previewUrl, null); });
     }
   }
-  buildActionMenu(wrapper, {
-    name, text, timestamp, msgId, tag, tagColor, tagBorder,
-    isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
-    hasWs: !!state.currentWebSocket,
-    roomname: state.roomname
-  });
-  if (timestamp) {
-    let timeSpan = document.createElement("span");
-    timeSpan.className = "msg-time";
-    timeSpan.textContent = formatTime(timestamp);
-    wrapper.appendChild(timeSpan);
-  }
+  openMsgActions(wrapper, { name, text, timestamp, msgId, tag, tagColor, tagBorder, isSelf });
+  appendMsgTime(wrapper, timestamp);
   if (isSelf) {
     initReadObserver();
     let ri = document.createElement("span");
@@ -535,41 +570,8 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let isSelf = name === state.username;
-  let wrapper = document.createElement("p");
-  wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
-  if (timestamp) wrapper.dataset.timestamp = timestamp;
-  wrapper.dataset.msgName = name || "";
-  if (msgId) wrapper.dataset.msgId = msgId;
-  let header = document.createElement("span");
-  header.className = "msg-header";
-  if (tag) {
-    let badge = createColoredTag(tag, tagColor, tagBorder, isSelf);
-    header.appendChild(badge);
-    let cleanTag = tag.replace(/\[\w+\]/g, "");
-    let vb = createVipBadge(getVipLevel(cleanTag));
-    if (vb) header.appendChild(vb);
-  }
-  if (avatar) {
-    let av = document.createElement("img");
-    av.className = "msg-avatar";
-    av.src = avatar;
-    av.alt = "";
-    av.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    wrapper.appendChild(av);
-  }
-  if (!isSelf) {
-    let nameSpan = document.createElement("span");
-    nameSpan.className = "username";
-    nameSpan.textContent = name;
-    nameSpan.style.cursor = "pointer";
-    nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    header.appendChild(nameSpan);
-    attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
-  }
-  let lb = createLevelBadge(level);
-  if (lb) header.appendChild(lb);
-  wrapper.appendChild(header);
-  if (reply) wrapper.appendChild(buildReplyQuote(reply));
+  let wrapper = createMsgWrapper(name, isSelf, timestamp, msgId);
+  buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply });
   let bubble = document.createElement("span");
   bubble.className = "bubble";
   if (!data) {
@@ -584,63 +586,17 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
     bubble.appendChild(img);
   }
   wrapper.appendChild(bubble);
-  buildActionMenu(wrapper, {
-    name, text: t("[图片]"), timestamp, msgId, tag, tagColor, tagBorder,
-    isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
-    hasWs: !!state.currentWebSocket,
-    roomname: state.roomname
-  });
-  if (timestamp) {
-    let timeSpan = document.createElement("span");
-    timeSpan.className = "msg-time";
-    timeSpan.textContent = formatTime(timestamp);
-    wrapper.appendChild(timeSpan);
-  }
-  trimChatlog();
-  state.chatlog.appendChild(wrapper);
-  state.chatlog.scrollBy(0, 1e8);
+  openMsgActions(wrapper, { name, text: t("[图片]"), timestamp, msgId, tag, tagColor, tagBorder, isSelf });
+  appendMsgTime(wrapper, timestamp);
+  finishMsg(wrapper);
 }
 
 export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar, level) {
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let isSelf = name === state.username;
-  let wrapper = document.createElement("p");
-  wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
-  if (timestamp) wrapper.dataset.timestamp = timestamp;
-  wrapper.dataset.msgName = name || "";
-  if (msgId) wrapper.dataset.msgId = msgId;
-  let header = document.createElement("span");
-  header.className = "msg-header";
-  if (tag) {
-    let badge = createColoredTag(tag, tagColor, tagBorder, isSelf);
-    header.appendChild(badge);
-    let cleanTag = tag.replace(/\[\w+\]/g, "");
-    let vb = createVipBadge(getVipLevel(cleanTag));
-    if (vb) header.appendChild(vb);
-  }
-  if (avatar) {
-    let av = document.createElement("img");
-    av.className = "msg-avatar";
-    av.src = avatar;
-    av.alt = "";
-    av.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    wrapper.appendChild(av);
-  }
-  if (!isSelf) {
-    let nameSpan = document.createElement("span");
-    nameSpan.className = "username";
-    nameSpan.textContent = name;
-    nameSpan.style.cursor = "pointer";
-    nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    header.appendChild(nameSpan);
-    attachSignature(nameSpan, name); // 个人签名
-  }
-  let lb = createLevelBadge(level);
-  if (lb) header.appendChild(lb);
-  wrapper.appendChild(header);
-  if (reply) wrapper.appendChild(buildReplyQuote(reply));
+  let wrapper = createMsgWrapper(name, isSelf, timestamp, msgId);
+  buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply });
   let bubble = document.createElement("span");
   bubble.className = "bubble voice-bubble";
   if (!data) {
@@ -667,62 +623,17 @@ export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tag
     bubble.appendChild(voiceWrap);
   }
   wrapper.appendChild(bubble);
-  buildActionMenu(wrapper, {
-    name, text: t("[语音]"), timestamp, msgId, tag, tagColor, tagBorder,
-    isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
-    hasWs: !!state.currentWebSocket,
-    roomname: state.roomname
-  });
-  if (timestamp) {
-    let timeSpan = document.createElement("span");
-    timeSpan.className = "msg-time";
-    timeSpan.textContent = formatTime(timestamp);
-    wrapper.appendChild(timeSpan);
-  }
-  trimChatlog();
-  state.chatlog.appendChild(wrapper);
-  state.chatlog.scrollBy(0, 1e8);
+  openMsgActions(wrapper, { name, text: t("[语音]"), timestamp, msgId, tag, tagColor, tagBorder, isSelf });
+  appendMsgTime(wrapper, timestamp);
+  finishMsg(wrapper);
 }
 
 export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, msgId, avatar, level) {
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let isSelf = name === state.username;
-  let wrapper = document.createElement("p");
-  wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
-  if (timestamp) wrapper.dataset.timestamp = timestamp;
-  wrapper.dataset.msgName = name || "";
-  if (msgId) wrapper.dataset.msgId = msgId;
-  let header = document.createElement("span");
-  header.className = "msg-header";
-  if (tag) {
-    let badge = createColoredTag(tag, tagColor, tagBorder, isSelf);
-    header.appendChild(badge);
-    let cleanTag = tag.replace(/\[\w+\]/g, "");
-    let vb = createVipBadge(getVipLevel(cleanTag));
-    if (vb) header.appendChild(vb);
-  }
-  if (avatar) {
-    let av = document.createElement("img");
-    av.className = "msg-avatar";
-    av.src = avatar;
-    av.alt = "";
-    av.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    wrapper.appendChild(av);
-  }
-  if (!isSelf) {
-    let nameSpan = document.createElement("span");
-    nameSpan.className = "username";
-    nameSpan.textContent = name;
-    nameSpan.style.cursor = "pointer";
-    nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    header.appendChild(nameSpan);
-    attachSignature(nameSpan, name); // 个人签名
-  }
-  let lb = createLevelBadge(level);
-  if (lb) header.appendChild(lb);
-  wrapper.appendChild(header);
+  let wrapper = createMsgWrapper(name, isSelf, timestamp, msgId);
+  buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply: null });
   let bubble = document.createElement("span");
   bubble.className = "bubble gh-card";
   bubble.style.cssText = "display:block;padding:0;overflow:hidden;cursor:pointer;max-width:360px;";
@@ -746,63 +657,17 @@ export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, m
     if (data && data.repoUrl) window.open(data.repoUrl, "_blank", "noopener");
   });
   wrapper.appendChild(bubble);
-  buildActionMenu(wrapper, {
-    name, text: "[" + repo + "] ", timestamp, msgId, tag, tagColor, tagBorder,
-    isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
-    hasWs: !!state.currentWebSocket,
-    roomname: state.roomname
-  });
-  if (timestamp) {
-    let timeSpan = document.createElement("span");
-    timeSpan.className = "msg-time";
-    timeSpan.textContent = formatTime(timestamp);
-    wrapper.appendChild(timeSpan);
-  }
-  trimChatlog();
-  state.chatlog.appendChild(wrapper);
-  state.chatlog.scrollBy(0, 1e8);
+  openMsgActions(wrapper, { name, text: "[" + repo + "] ", timestamp, msgId, tag, tagColor, tagBorder, isSelf });
+  appendMsgTime(wrapper, timestamp);
+  finishMsg(wrapper);
 }
 
 export function addChatFile(name, data, fileName, fileSize, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar, level) {
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let isSelf = name === state.username;
-  let wrapper = document.createElement("p");
-  wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
-  if (timestamp) wrapper.dataset.timestamp = timestamp;
-  wrapper.dataset.msgName = name || "";
-  if (msgId) wrapper.dataset.msgId = msgId;
-  let header = document.createElement("span");
-  header.className = "msg-header";
-  if (tag) {
-    let badge = createColoredTag(tag, tagColor, tagBorder, isSelf);
-    header.appendChild(badge);
-    let cleanTag = tag.replace(/\[\w+\]/g, "");
-    let vb = createVipBadge(getVipLevel(cleanTag));
-    if (vb) header.appendChild(vb);
-  }
-  if (avatar) {
-    let av = document.createElement("img");
-    av.className = "msg-avatar";
-    av.src = avatar;
-    av.alt = "";
-    av.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    wrapper.appendChild(av);
-  }
-  if (!isSelf) {
-    let nameSpan = document.createElement("span");
-    nameSpan.className = "username";
-    nameSpan.textContent = name;
-    nameSpan.style.cursor = "pointer";
-    nameSpan.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
-    header.appendChild(nameSpan);
-    attachSignature(nameSpan, name); // 个人签名：消息旁展示 + 悬停
-  }
-  let lb = createLevelBadge(level);
-  if (lb) header.appendChild(lb);
-  wrapper.appendChild(header);
-  if (reply) wrapper.appendChild(buildReplyQuote(reply));
+  let wrapper = createMsgWrapper(name, isSelf, timestamp, msgId);
+  buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply });
   let bubble = document.createElement("span");
   bubble.className = "bubble";
   // 文件未缓存时（历史消息），不显示下载链接
@@ -855,22 +720,9 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
     bubble.appendChild(a);
   }
   wrapper.appendChild(bubble);
-  buildActionMenu(wrapper, {
-    name, text: t("[文件]"), timestamp, msgId, tag, tagColor, tagBorder,
-    isSelf,
-    isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
-    hasWs: !!state.currentWebSocket,
-    roomname: state.roomname
-  });
-  if (timestamp) {
-    let timeSpan = document.createElement("span");
-    timeSpan.className = "msg-time";
-    timeSpan.textContent = formatTime(timestamp);
-    wrapper.appendChild(timeSpan);
-  }
-  trimChatlog();
-  state.chatlog.appendChild(wrapper);
-  state.chatlog.scrollBy(0, 1e8);
+  openMsgActions(wrapper, { name, text: t("[文件]"), timestamp, msgId, tag, tagColor, tagBorder, isSelf });
+  appendMsgTime(wrapper, timestamp);
+  finishMsg(wrapper);
 }
 
 // Close any open action menus when clicking elsewhere

@@ -51,6 +51,12 @@ import CHAT_ACHIEVEMENTS from "./client/chat/achievements.js";
 import CHAT_ICCO from "./client/chat/icco.js";
 import CHAT_ICCO_ASSETS from "./client/chat/icco-assets.js";
 import CHAT_HACKNET from "./client/chat/hacknet.js";
+import CHAT_UPLOAD from "./client/chat/upload.js";
+import CHAT_IMAGE_UPLOAD from "./client/chat/image-upload.js";
+import CHAT_VOICE_RECORD from "./client/chat/voice-record.js";
+import CHAT_FILE_UPLOAD from "./client/chat/file-upload.js";
+import CHAT_MENTION from "./client/chat/mention.js";
+import CHAT_EMOJI_PANEL from "./client/chat/emoji-panel.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -125,6 +131,12 @@ const CHAT_MODULES = {
   "chat/icco.js": CHAT_ICCO,
   "chat/icco-assets.js": CHAT_ICCO_ASSETS,
   "chat/hacknet.js": CHAT_HACKNET,
+  "chat/upload.js": CHAT_UPLOAD,
+  "chat/image-upload.js": CHAT_IMAGE_UPLOAD,
+  "chat/voice-record.js": CHAT_VOICE_RECORD,
+  "chat/file-upload.js": CHAT_FILE_UPLOAD,
+  "chat/mention.js": CHAT_MENTION,
+  "chat/emoji-panel.js": CHAT_EMOJI_PANEL,
 };
 
 const ADMIN_MODULES = {

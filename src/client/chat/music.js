@@ -1,6 +1,7 @@
 // 音乐播放器 — 基于 Meting API（参考 Firefly 项目）
 // Meting API 统一接口，支持网易云音乐等多平台，返回直接可播放的 URL
 import { showError, showInfo, t } from './state.js';
+import { escapeHtml } from './renderers.js';
 
 // Meting API 地址列表（主 + 备用），按顺序尝试
 const METING_APIS = [
@@ -20,12 +21,6 @@ function fmtTime(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return m + ":" + (s < 10 ? "0" : "") + s;
-}
-
-function escapeHtml(str) {
-  return String(str || "").replace(/[&<>"']/g, c => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
 }
 
 // ---- Meting API 请求 ----
