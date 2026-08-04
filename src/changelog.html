@@ -126,6 +126,19 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.42</span>
+    <span class="version-date">2026-08-04</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-feature">功能</span><b>/connect 切换房间命令</b> — 输入 <code>/connect #房间名</code>（也可不带 #）立即<b>连接或切换到指定聊天室</b>：房间名自动规范化（仅字母数字连字符/小写），密码房自动弹窗校验，已在聊天室时<b>无缝断旧连新</b>，未启动时完整初始化；Hacknet 终端与聊天输入框均可使用</span></div>
+    <div class="feature-item"><span class="icon">📤</span><span class="text"><span class="tag tag-feature">功能</span><b>/dc 退出当前房间</b> — 输入 <code>/dc</code>（或 /disconnect）<b>断开当前连接并回到房间列表</b>：清空聊天记录、停止轮询、恢复房间列表展示，之后可点击任意房间重新进入</span></div>
+    <div class="feature-item"><span class="icon">🧩</span><span class="text"><span class="tag tag-improve">重构</span>切房逻辑<b>泛化为通用 <code>switchRoom(name)</code></b>（密码校验 <code>resolveRoomPassword</code> 提取共享），房间列表点击、Hacknet 节点地图、/connect 命令三处切房统一走同一套逻辑，消除重复</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.41</span>
     <span class="version-date">2026-08-04</span>
     <span class="version-arrow open">▶</span>

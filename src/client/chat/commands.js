@@ -5,6 +5,7 @@ import { renderTextToAsciiCanvas } from './ascii.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
 import { switchChannel } from './channels.js';
 import { getAdminKey } from './ui.js';
+import { switchRoom, loadRoomList } from './rooms.js';
 
 export async function handleCommand(text) {
   // 应急回滚命令（公开管理功能）：透传给服务端处理，不拦截为前端命令
@@ -34,7 +35,7 @@ export async function handleCommand(text) {
 
   switch (cmd) {
     case "/help":
-      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /icco 全员触发入侵警告特效 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
+      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /connect #房间 切换房间 | /dc 退出当前房间 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /icco 全员触发入侵警告特效 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
       break;
 
     case "/kick": {
@@ -319,6 +320,38 @@ export async function handleCommand(text) {
       else showError(t("用法: /switch <频道名>"));
       break;
     }
+
+    // 🔗 连接房间：/connect #abc 或 /connect abc，进入/切换到指定聊天室
+    case "/connect": {
+      let name = (arg || "").replace(/^#/, "").trim();
+      if (!name) { showError(t("用法: /connect #房间名")); break; }
+      // 房间名规范化（与 startChat 一致：仅字母数字连字符、下划线转连字符、小写）
+      name = name.replace(/[^a-zA-Z0-9_-]/g, "").replace(/_/g, "-").toLowerCase();
+      if (!name) { showError(t("无效的房间名")); break; }
+      showInfo(t("正在连接到 #") + name + " ...");
+      switchRoom(name);
+      break;
+    }
+
+    // 📤 退出当前房间：断开连接并回到房间列表
+    case "/dc":
+    case "/disconnect": {
+      if (!window._chatStarted) { showInfo(t("当前未在聊天室中")); break; }
+      if (state.currentWebSocket) { try { state.currentWebSocket.close(); } catch (e) {} }
+      state.currentWebSocket = null;
+      state.chatlog.innerHTML = "";
+      state.roster.querySelectorAll("[data-name]").forEach(el => el.remove());
+      state.chatroom.style.display = "none";
+      let roomListForm = document.querySelector("#room-list-form");
+      if (roomListForm) roomListForm.style.display = "block";
+      try { history.replaceState(null, "", window.location.pathname + window.location.search); } catch (e) {}
+      loadRoomList();
+      if (state.roomListInterval) { clearInterval(state.roomListInterval); state.roomListInterval = null; }
+      state.roomListInterval = setInterval(loadRoomList, 5000);
+      showSuccess(t("已退出当前房间"));
+      break;
+    }
+
     default:
       showError(t("未知命令: ") + cmd + t("，输入 /help 查看可用命令"));
   }

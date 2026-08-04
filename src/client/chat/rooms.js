@@ -3,6 +3,7 @@ import { state, t } from './state.js';
 import { escapeHtml } from './renderers.js';
 import { updateAccountBar } from './auth.js';
 import { startChat } from './core.js';
+import { join } from './websocket.js';
 
 // 置顶房间管理
 function getPinnedRooms() {
@@ -17,25 +18,66 @@ function togglePinRoom(name) {
   return idx < 0; // true = pinned, false = unpinned
 }
 
-export async function checkAndJoinRoom(name) {
-  // L34: state.roomname 只在密码校验通过/无需密码后才赋值，取消或密码错误不残留脏值
+// 密码校验：有密码则弹窗确认，返回是否允许进入；通过后记录 state.roomPassword
+async function resolveRoomPassword(name) {
   try {
     let r = await fetch("/api/room/" + encodeURIComponent(name) + "/password-status");
     let data = await r.json();
     if (data.hasPassword) {
       let pwd = prompt("此房间需要密码才能进入：\n（留空取消）");
-      if (!pwd) return;
+      if (!pwd) return false;
       let vr = await fetch("/api/room/" + encodeURIComponent(name) + "/verify-password", {
         method: "POST",
         body: JSON.stringify({password: pwd}),
         headers: {"Content-Type": "application/json"}
       });
-      if (!vr.ok) { alert("密码错误"); return; }
+      if (!vr.ok) { alert("密码错误"); return false; }
       state.roomPassword = pwd;
     }
   } catch (e) {}
+  return true;
+}
+
+export async function checkAndJoinRoom(name) {
+  // 已在聊天室中（含 /dc 退出后）：走通用切房重连；startChat 幂等，二次调用直接 return
+  if (window._chatStarted) { switchRoom(name); return; }
+  // 首次进入：密码校验通过后完整初始化
+  // L34: state.roomname 只在密码校验通过/无需密码后才赋值，取消或密码错误不残留脏值
+  if (!(await resolveRoomPassword(name))) return;
   state.roomname = name;
   startChat();
+}
+
+// 通用切房：已初始化时手动关旧连接重连，未初始化时完整 startChat
+// startChat 幂等不会二次初始化，故二次切房必须手动关闭旧 WS 并重新 join
+export function switchRoom(name) {
+  return (async () => {
+    if (!(await resolveRoomPassword(name))) return;
+    if (!window._chatStarted) {
+      state.roomname = name;
+      startChat();
+      return;
+    }
+    state.roomname = name;
+    document.location.hash = "#" + name;
+    state.chatlog.innerHTML = "";
+    state.roster.querySelectorAll("[data-name]").forEach(el => el.remove());
+    // 先关旧连接并等它在服务端清理（同房间同名字判重），再连新房间
+    if (state.currentWebSocket) {
+      try {
+        const old = state.currentWebSocket;
+        old.close();
+        await new Promise(res => {
+          let done = false;
+          const fin = () => { if (!done) { done = true; res(); } };
+          old.addEventListener("close", () => setTimeout(fin, 150), { once: true });
+          setTimeout(fin, 800); // 兜底超时，防止服务端关闭通知丢失
+        });
+      } catch (e) {}
+    }
+    state.currentWebSocket = null;
+    join();
+  })();
 }
 
 export function startRoomList() {

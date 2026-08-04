@@ -5,8 +5,7 @@
 //   #080808 深底 · #D5F5FF 终端文字 · #DEC918 shell黄 · #FF0000 警告红 · #5A5A5A 弱化
 // 贴图均为 .xnb 二进制不可内嵌 → 全 CSS/SVG 复刻
 import { state } from './state.js';
-import { checkAndJoinRoom } from './rooms.js';
-import { join } from './websocket.js';
+import { checkAndJoinRoom, switchRoom } from './rooms.js';
 import { handleCommand } from './commands.js';
 import { setSystemMessageHook, setHacknetIRC } from './renderers.js';
 
@@ -298,43 +297,11 @@ async function renderNetmap() {
   }
 }
 
-// 已初始化后的切房：startChat 幂等不会二次初始化，需手动关闭旧连接并重连到新房间
+// 已初始化后的切房：复用 rooms.js 通用 switchRoom（密码校验 + 关旧 WS + 重连），再同步房间名横条
 function switchHacknetRoom(name) {
   (async () => {
-    try {
-      const r = await fetch("/api/room/" + encodeURIComponent(name) + "/password-status");
-      const data = await r.json();
-      if (data.hasPassword) {
-        const pwd = prompt("此房间需要密码才能进入：\n（留空取消）");
-        if (!pwd) return;
-        const vr = await fetch("/api/room/" + encodeURIComponent(name) + "/verify-password", {
-          method: "POST", body: JSON.stringify({password: pwd}),
-          headers: {"Content-Type": "application/json"}
-        });
-        if (!vr.ok) { alert("密码错误"); return; }
-        state.roomPassword = pwd;
-      }
-    } catch (e) {}
-    state.roomname = name;
-    document.location.hash = "#" + name;
+    await switchRoom(name);
     updateRoomBar();
-    state.chatlog.innerHTML = "";
-    state.roster.querySelectorAll("[data-name]").forEach(el => el.remove());
-    // 先关旧连接并等它在服务端清理（同房间同名字判重），再连新房间
-    if (state.currentWebSocket) {
-      try {
-        const old = state.currentWebSocket;
-        old.close();
-        await new Promise(res => {
-          let done = false;
-          const fin = () => { if (!done) { done = true; res(); } };
-          old.addEventListener("close", () => setTimeout(fin, 150), { once: true });
-          setTimeout(fin, 800); // 兜底超时，防止服务端关闭通知丢失
-        });
-      } catch (e) {}
-    }
-    state.currentWebSocket = null;
-    join();
   })();
 }
 
