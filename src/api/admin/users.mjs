@@ -103,7 +103,7 @@ export async function handleAdminUsers(path, request, env, url) {
           else continue;
 
           let roomObject = env.rooms.get(id);
-          let response = await roomObject.fetch(new URL("https://dummy-url/do-kick-all"));
+          let response = await roomObject.fetch(new URL("https://dummy-url/do-kick-all?key=" + auth));
           if (response.ok) cleared.push(name);
         }
 
@@ -112,6 +112,24 @@ export async function handleAdminUsers(path, request, env, url) {
         });
       } catch (error) {
         return new Response("全局清场失败: " + "操作失败", { status: 500 });
+      }
+    }
+
+    case "room-kick-all": {
+      // v1.42 /kickall 命令管理专用：踢出指定房间除 except 外的所有在线用户（普通 admin 即可）
+      const roomName = url.searchParams.get("room");
+      const except = url.searchParams.get("except") || "";
+      if (!roomName) return new Response("请提供房间名", { status: 400 });
+      try {
+        let id;
+        if (roomName.match(/^[0-9a-f]{64}$/)) id = env.rooms.idFromString(roomName);
+        else if (roomName.length <= 32) id = env.rooms.idFromName(roomName);
+        else return new Response("无效房间名", { status: 400 });
+        let roomObject = env.rooms.get(id);
+        let response = await roomObject.fetch(new URL("https://dummy-url/do-kick-all?key=" + auth + "&except=" + encodeURIComponent(except)));
+        return new Response(await response.text(), { status: response.status });
+      } catch (error) {
+        return new Response("踢出失败: " + "操作失败", { status: 500 });
       }
     }
 

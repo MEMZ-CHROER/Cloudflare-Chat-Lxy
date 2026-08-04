@@ -50,11 +50,13 @@ export async function handleCommand(text) {
     }
 
     case "/kickall": {
-      // 一键踢出本房间其他所有人（触发者自己留下），房间内任何用户可触发
+      // 一键踢出本房间其他所有人（触发者自己留下）—— 管理专用（admin_logged + 服务端 admin.mjs 鉴权 + /do-kick-all 密钥校验三层）
       if (!state.roomname) { showError(t("未在聊天室中")); break; }
+      if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）后使用 /kickall")); break; }
       if (!confirm(t("确定要踢出本房间其他所有人吗？（你自己留在房间）"))) break;
       try {
-        let r = await fetch("/api/room/" + encodeURIComponent(state.roomname) + "/do-kick-all?except=" + encodeURIComponent(state.username || ""));
+        let r = await fetch("/api/admin/room-kick-all?room=" + encodeURIComponent(state.roomname) + "&except=" + encodeURIComponent(state.username || ""));
+        if (r.status === 401 || r.status === 403) { addChatMessage(null, "* " + t("无权限：请以管理员身份登录 /admin")); break; }
         addChatMessage(null, "* " + await r.text());
       } catch (e) { addChatMessage(null, t("* 操作失败: ") + e.message); }
       break;

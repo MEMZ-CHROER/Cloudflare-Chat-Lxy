@@ -146,7 +146,7 @@ export async function handleAdmin(path, request, env) {
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
   // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
   // F1/F2 修复：移除 "anon-grant"/"anon-log"——匿名券发放（自助铸券）与匿名真实身份审计日志仅限 super（ADMIN_SECRET_KEY），普通 admin 无权
-  const adminAllowedPaths = ["clear-room", "kick-user", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin"];
+  const adminAllowedPaths = ["clear-room", "kick-user", "room-kick-all", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -168,8 +168,8 @@ export async function handleAdmin(path, request, env) {
   if (["clear-room", "destroy-room", "room-users", "kick-user", "room-users-detail", "room-files", "room-file-data", "room-messages"].includes(path[1]))
     result = await handleAdminRooms(path, request, env, url);
 
-  // users: all-users, global-kick, global-kick-all, users, user-ips, ban, global-blacklist, delete-user
-  if (!result && ["all-users", "global-kick", "global-kick-all", "users", "user-ips", "ban", "global-blacklist", "kick-protect", "delete-user"].includes(path[1]))
+  // users: all-users, global-kick, global-kick-all, room-kick-all, users, user-ips, ban, global-blacklist, delete-user
+  if (!result && ["all-users", "global-kick", "global-kick-all", "room-kick-all", "users", "user-ips", "ban", "global-blacklist", "kick-protect", "delete-user"].includes(path[1]))
     result = await handleAdminUsers(path, request, env, url);
 
   if (!result && path[1] === "ip-ban")

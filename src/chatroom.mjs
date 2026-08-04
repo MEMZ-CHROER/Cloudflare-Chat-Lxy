@@ -1,4 +1,4 @@
-import { handleErrors } from "./utils.mjs";
+import { handleErrors, safeEqual } from "./utils.mjs";
 import { handleMedia } from "./chatroom/media.mjs";
 import { handleManage, stripSensitiveMsg } from "./chatroom/manage.mjs";
 
@@ -512,6 +512,10 @@ export class ChatRoom {
         case "/do-kick-all": {
           // v1.40 运维：踢出本房间全部在线用户（不销毁房间/不清消息），供 admin 全局清场
           // v1.42 /kickall 命令：支持 ?except=用户名 排除触发者自己（房间清场但自己留下）
+          // 🔒 v1.42 管理专用：校验管理密钥（ADMIN_KEY 或 super），防止绕过前端直接调用端点踢人
+          let k = url.searchParams.get("key") || "";
+          let isKeyOk = (this.env.ADMIN_KEY && safeEqual(k, this.env.ADMIN_KEY)) || (this.env.ADMIN_SECRET_KEY && safeEqual(k, this.env.ADMIN_SECRET_KEY));
+          if (!isKeyOk) return new Response("未经授权", { status: 401 });
           let except = url.searchParams.get("except") || "";
           let count = 0;
           for (let [webSocket, session] of this.sessions) {
