@@ -35,7 +35,7 @@ export async function handleCommand(text) {
 
   switch (cmd) {
     case "/help":
-      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /connect #房间 切换房间 | /dc 退出当前房间 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /icco 全员触发入侵警告特效 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
+      addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /connect #房间 切换房间 | /dc 退出当前房间 | /kick <用户> 踢出 | /kickall 踢出本房间其他人(自己留下) | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /icco 全员触发入侵警告特效 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
       break;
 
     case "/kick": {
@@ -44,6 +44,17 @@ export async function handleCommand(text) {
       if (document.cookie.indexOf("admin_logged=1") === -1) { showError(t("请先登录管理后台（访问 /admin）")); break; }
       try {
         let r = await fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKey) + "&name=" + encodeURIComponent(arg) + "&caller=" + encodeURIComponent(state.username));
+        addChatMessage(null, "* " + await r.text());
+      } catch (e) { addChatMessage(null, t("* 操作失败: ") + e.message); }
+      break;
+    }
+
+    case "/kickall": {
+      // 一键踢出本房间其他所有人（触发者自己留下），房间内任何用户可触发
+      if (!state.roomname) { showError(t("未在聊天室中")); break; }
+      if (!confirm(t("确定要踢出本房间其他所有人吗？（你自己留在房间）"))) break;
+      try {
+        let r = await fetch("/api/room/" + encodeURIComponent(state.roomname) + "/do-kick-all?except=" + encodeURIComponent(state.username || ""));
         addChatMessage(null, "* " + await r.text());
       } catch (e) { addChatMessage(null, t("* 操作失败: ") + e.message); }
       break;

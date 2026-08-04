@@ -137,6 +137,7 @@ body {
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><b>/dc 退出后被自动重连拉回</b> — 新增 <code>_manualDisconnect</code> 标志：websocket 的 rejoin 自动重连检查该标志，<b>/dc 手动退出与 /connect 切房时抑制旧连接重连</b>，由新连接接管，不再"过一会儿自动连回去"</span></div>
     <div class="feature-item"><span class="icon">👥</span><span class="text"><span class="tag tag-improve">调整</span><b>移除"同房间同名用户"限制</b> — 一个聊天室允许多个<b>同名用户同时在线</b>（删除服务端两处"该名字已在房间内在线"检测），同名用户可自由进出不再被拒</span></div>
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><b>/dc 退出后再连接界面不显示</b> — chatlog/roster 区域消失（/dc 隐藏了 <code>#chatroom</code> 容器，重连走 switchRoom 未恢复显示）。重连时恢复 <code>#chatroom</code> 显示、隐藏房间列表、停掉列表轮询</span></div>
+    <div class="feature-item"><span class="icon">👢</span><span class="text"><span class="tag tag-feature">功能</span><b>/kickall 一键踢出本房间其他人</b> — 房间内输入 <code>/kickall</code> 立即<b>踢出除自己外的全部在线用户</b>（触发者留在房间，不销毁房间/不清消息），任何房间内用户可触发，有确认弹窗防误触；服务端 /do-kick-all 支持 <code>?except=用户名</code> 排除自己</span></div>
   </div>
 </div>
 

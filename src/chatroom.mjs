@@ -511,12 +511,18 @@ export class ChatRoom {
 
         case "/do-kick-all": {
           // v1.40 运维：踢出本房间全部在线用户（不销毁房间/不清消息），供 admin 全局清场
+          // v1.42 /kickall 命令：支持 ?except=用户名 排除触发者自己（房间清场但自己留下）
+          let except = url.searchParams.get("except") || "";
           let count = 0;
-          this.sessions.forEach((session, webSocket) => {
+          for (let [webSocket, session] of this.sessions) {
+            if (except && session.name === except) continue;
             try { webSocket.close(1000, "kicked"); } catch (e) {}
             count++;
-          });
-          this.sessions.clear();
+          }
+          for (let [webSocket, session] of this.sessions) {
+            if (except && session.name === except) continue;
+            this.sessions.delete(webSocket);
+          }
           await this.updateRegistry();
           return new Response("已踢出 " + count + " 人", { status: 200 });
         }
