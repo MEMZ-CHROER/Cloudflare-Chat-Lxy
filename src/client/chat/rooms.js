@@ -60,6 +60,11 @@ export function switchRoom(name) {
     }
     state.roomname = name;
     document.location.hash = "#" + name;
+    // /dc 退出后 chatroom 被隐藏、房间列表轮询在跑：重连时恢复显示并停掉列表轮询（switchRoom 不调 startChat）
+    state.chatroom.style.display = "block";
+    let roomListFormEl = document.querySelector("#room-list-form");
+    if (roomListFormEl) roomListFormEl.style.display = "none";
+    if (state.roomListInterval) { clearInterval(state.roomListInterval); state.roomListInterval = null; }
     state.chatlog.innerHTML = "";
     state.roster.querySelectorAll("[data-name]").forEach(el => el.remove());
     // 手动切房：先抑制旧 WS 的 rejoin（join() 开头会复位标志），再关旧连接等它清理，最后连新房间

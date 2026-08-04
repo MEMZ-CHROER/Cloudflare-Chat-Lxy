@@ -136,6 +136,7 @@ body {
     <div class="feature-item"><span class="icon">🧩</span><span class="text"><span class="tag tag-improve">重构</span>切房逻辑<b>泛化为通用 <code>switchRoom(name)</code></b>（密码校验 <code>resolveRoomPassword</code> 提取共享），房间列表点击、Hacknet 节点地图、/connect 命令三处切房统一走同一套逻辑，消除重复</span></div>
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><b>/dc 退出后被自动重连拉回</b> — 新增 <code>_manualDisconnect</code> 标志：websocket 的 rejoin 自动重连检查该标志，<b>/dc 手动退出与 /connect 切房时抑制旧连接重连</b>，由新连接接管，不再"过一会儿自动连回去"</span></div>
     <div class="feature-item"><span class="icon">👥</span><span class="text"><span class="tag tag-improve">调整</span><b>移除"同房间同名用户"限制</b> — 一个聊天室允许多个<b>同名用户同时在线</b>（删除服务端两处"该名字已在房间内在线"检测），同名用户可自由进出不再被拒</span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><b>/dc 退出后再连接界面不显示</b> — chatlog/roster 区域消失（/dc 隐藏了 <code>#chatroom</code> 容器，重连走 switchRoom 未恢复显示）。重连时恢复 <code>#chatroom</code> 显示、隐藏房间列表、停掉列表轮询</span></div>
   </div>
 </div>
 
