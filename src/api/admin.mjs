@@ -168,8 +168,8 @@ export async function handleAdmin(path, request, env) {
   if (["clear-room", "destroy-room", "room-users", "kick-user", "room-users-detail", "room-files", "room-file-data", "room-messages"].includes(path[1]))
     result = await handleAdminRooms(path, request, env, url);
 
-  // users: all-users, global-kick, users, user-ips, ban, global-blacklist, delete-user
-  if (!result && ["all-users", "global-kick", "users", "user-ips", "ban", "global-blacklist", "kick-protect", "delete-user"].includes(path[1]))
+  // users: all-users, global-kick, global-kick-all, users, user-ips, ban, global-blacklist, delete-user
+  if (!result && ["all-users", "global-kick", "global-kick-all", "users", "user-ips", "ban", "global-blacklist", "kick-protect", "delete-user"].includes(path[1]))
     result = await handleAdminUsers(path, request, env, url);
 
   if (!result && path[1] === "ip-ban")

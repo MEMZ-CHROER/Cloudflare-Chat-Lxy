@@ -87,6 +87,34 @@ export async function handleAdminUsers(path, request, env, url) {
       }
     }
 
+    case "global-kick-all": {
+      // v1.40 运维：把所有在线用户从所有聊天室踢出（仅 super），不销毁房间不清消息
+      try {
+        let registryId = env.registry.idFromName("global");
+        let registryStub = env.registry.get(registryId);
+        let roomsResponse = await registryStub.fetch(new URL("https://dummy-url/list"));
+        let rooms = await roomsResponse.json();
+
+        let cleared = [];
+        for (let [name] of Object.entries(rooms)) {
+          let id;
+          if (name.match(/^[0-9a-f]{64}$/)) id = env.rooms.idFromString(name);
+          else if (name.length <= 32) id = env.rooms.idFromName(name);
+          else continue;
+
+          let roomObject = env.rooms.get(id);
+          let response = await roomObject.fetch(new URL("https://dummy-url/do-kick-all"));
+          if (response.ok) cleared.push(name);
+        }
+
+        return new Response(JSON.stringify({clearedRooms: cleared, totalRooms: Object.keys(rooms).length}), {
+          status: 200, headers: {"Content-Type": "application/json"}
+        });
+      } catch (error) {
+        return new Response("全局清场失败: " + "操作失败", { status: 500 });
+      }
+    }
+
     case "users": {
       try {
         let registryId = env.registry.idFromName("global");

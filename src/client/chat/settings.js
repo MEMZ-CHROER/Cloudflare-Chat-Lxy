@@ -361,7 +361,7 @@ export function initSettings() {
 // 与明暗模式（body.dark，main.js 控制）正交：body.theme-* 覆盖 CSS 变量即可整体换肤
 const THEME_KEY = "chatTheme";
 const CUSTOM_KEY = "customTheme";
-const PRESET_CLASSES = ["theme-liquid", "theme-flat", "theme-neon"];
+const PRESET_CLASSES = ["theme-liquid", "theme-flat", "theme-neon", "theme-hacknet"];
 
 const CUSTOM_DEFAULTS = {
   primary: "#4a6cf7",
@@ -449,10 +449,16 @@ export function applyCustomThemeVars(c) {
 }`;
 }
 
-// 应用主题预设（classic/liquid/flat/neon/custom）
+// 应用主题预设（classic/liquid/flat/neon/hacknet/custom）
 export function applyTheme(preset) {
-  preset = ["classic", "liquid", "flat", "neon", "custom"].includes(preset) ? preset : "classic";
+  preset = ["classic", "liquid", "flat", "neon", "hacknet", "custom"].includes(preset) ? preset : "classic";
   document.body.classList.remove(...PRESET_CLASSES, "custom-theme");
+  // v1.40 Hacknet：布局级主题，JS 注入节点地图 + 命令终端（非 hacknet 一律清理，幂等）
+  if (preset === "hacknet") {
+    import('./hacknet.js').then(m => m.applyHacknetLayout()).catch(() => {});
+  } else {
+    import('./hacknet.js').then(m => m.removeHacknetLayout()).catch(() => {});
+  }
   if (preset === "custom") {
     document.body.classList.add("custom-theme");
     const custom = loadCustomTheme();

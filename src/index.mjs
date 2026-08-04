@@ -50,6 +50,7 @@ import CHAT_CHANNELS from "./client/chat/channels.js";
 import CHAT_ACHIEVEMENTS from "./client/chat/achievements.js";
 import CHAT_ICCO from "./client/chat/icco.js";
 import CHAT_ICCO_ASSETS from "./client/chat/icco-assets.js";
+import CHAT_HACKNET from "./client/chat/hacknet.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -123,6 +124,7 @@ const CHAT_MODULES = {
   "chat/achievements.js": CHAT_ACHIEVEMENTS,
   "chat/icco.js": CHAT_ICCO,
   "chat/icco-assets.js": CHAT_ICCO_ASSETS,
+  "chat/hacknet.js": CHAT_HACKNET,
 };
 
 const ADMIN_MODULES = {

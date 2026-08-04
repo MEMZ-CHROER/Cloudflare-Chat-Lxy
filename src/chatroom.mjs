@@ -509,6 +509,18 @@ export class ChatRoom {
           return new Response("聊天记录已清空。", { status: 200 });
         }
 
+        case "/do-kick-all": {
+          // v1.40 运维：踢出本房间全部在线用户（不销毁房间/不清消息），供 admin 全局清场
+          let count = 0;
+          this.sessions.forEach((session, webSocket) => {
+            try { webSocket.close(1000, "kicked"); } catch (e) {}
+            count++;
+          });
+          this.sessions.clear();
+          await this.updateRegistry();
+          return new Response("已踢出 " + count + " 人", { status: 200 });
+        }
+
         case "/do-destroy": {
           // 一键销毁房间：清空消息、断开所有连接
           this.destroyed = true;

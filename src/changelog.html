@@ -126,6 +126,23 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.40</span>
+    <span class="version-date">2026-08-04</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🖥️</span><span class="text"><span class="tag tag-feature">功能</span><b>Hacknet 主题 — 极客终端四大块布局</b>（区别于 v1.38 仅换肤，本次<b>重构界面结构</b>）。布局：左 1/5 <b>在线成员列表</b>、中 3/5 上 3/4 <b>聊天历史</b> + 下 1/4 <b>节点地图</b>、右 1/5 <b>命令终端</b>。配色与视觉元素<b>完全复刻《Hacknet》游戏源码</b>（OpenHacknet）：#008BC7 高亮蓝顶栏、#5FDC53 当前节点绿、等宽字体 + 扫描线 + 黑底，贴图全 CSS/SVG 复刻</span></div>
+    <div class="feature-item"><span class="icon">🗺️</span><span class="text"><span class="tag tag-feature">功能</span><b>节点地图</b> — 每个聊天室一个<b>Hacknet 圆环节点</b>（外光晕 + 深底描边双环 + 中心高光，当前房间绿色 + 白心 + 呼吸脉动），随机散落在整块区域 + 错综复杂的<b>多对多交叉连线</b>（复刻 NetworkMap 拓扑）；每 5 秒自动刷新在线数，<b>点击圆点即进入该房间</b>，可连续切换任意房间</span></div>
+    <div class="feature-item"><span class="icon">💻</span><span class="text"><span class="tag tag-feature">功能</span><b>右侧命令终端</b> — 专门输入斜杠命令（复用全部 / 命令），结果实时回显；<b>命令历史 ↑↓ 翻看</b>、Enter 执行；聊天室所有<b>系统消息（进/退房、封禁、系统指令）分流显示在终端</b>，不再占聊天区</span></div>
+    <div class="feature-item"><span class="icon">💬</span><span class="text"><span class="tag tag-feature">功能</span><b>IRC 化消息</b> — Hacknet 下聊天消息按 IRC 客户端渲染（复刻 IRCSystem.DrawLogEntry）：<b>无气泡文本行</b>「[昵称] 消息」，昵称按用户名哈希取色（10 色板）、消息白色、行底极淡白条纹，自己消息同样显示昵称</span></div>
+    <div class="feature-item"><span class="icon">📌</span><span class="text"><span class="tag tag-feature">功能</span>频道条下方新增<b>灰白房间名横条</b>（显示当前聊天室名，切房实时更新）</span></div>
+    <div class="feature-item"><span class="icon">🎨</span><span class="text"><span class="tag tag-feature">功能</span>主题选择器新增第 6 套预设「Hacknet」；切回其他主题布局完全还原（Hacknet 全部样式限定在 body.theme-hacknet 前缀内，不影响原有主题）。窄屏自动回退经典布局，保证移动端可用</span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-feature">功能</span>管理 API 新增 <b>global-kick-all</b>：把所有在线用户从所有聊天室踢出（仅 super 密钥，不销毁房间、不清聊天记录）；同时支持连续切房、Hacknet 下保留明暗切换入口、修复终端/聊天输入框焦点抢占</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.39</span>
     <span class="version-date">2026-08-03</span>
     <span class="version-arrow open">▶</span>

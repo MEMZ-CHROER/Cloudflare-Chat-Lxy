@@ -4303,3 +4303,517 @@ body.dark .bubble.redpacket-bubble {
   white-space: pre-line;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
 }
+
+/* ============================================================
+   v1.40 Hacknet 主题 — 布局级主题（区别于 v1.38 CSS 换肤）
+   改变界面结构：左1/5成员列表 · 中3/5(上3/4聊天+下1/4节点地图) · 右1/5命令终端
+   样式设计完全复刻《Hacknet》开源源码（OpenHacknet）：
+     #008BC7 高亮蓝(顶栏/普通节点) · #5FDC53 当前节点绿 · #444444 连线/边框
+     #080808 深底 · #D5F5FF 终端文字 · #DEC918 shell黄 · #FF0000 警告红
+     扫描线 rgba(255,255,255,.06) 1px/3px · 半透明灰 rgba(30,30,30,.39) 系列
+   贴图均为 .xnb 二进制不可内嵌 → 全 CSS/SVG 复刻
+   ============================================================ */
+body.theme-hacknet {
+  --primary: #008BC7;
+  --primary-light: #00A6EB;
+  --primary-dark: #0074A6;
+  --primary-rgb: 0, 139, 199;
+  --bg: rgba(8, 8, 8, 0.92);
+  --surface: rgba(12, 12, 12, 0.88);
+  --surface-2: rgba(20, 20, 20, 0.95);
+  --text: #D5F5FF;
+  --text-secondary: #5A5A5A;
+  --border: #444444;
+  --radius: 2px;
+  --radius-sm: 2px;
+  --msg-self: #008BC7;
+  --msg-self-text: #ffffff;
+  --msg-other: rgba(12, 12, 12, 0.72);
+  --msg-other-text: #D5F5FF;
+  --online-dot: #5FDC53;
+  --frosted-blur: none;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* 黑底 */
+body.theme-hacknet::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #080808;
+}
+
+/* ---- 顶栏（中上，Hacknet 21px 高亮蓝条 + 右侧 Location） ---- */
+body.theme-hacknet #channel-bar {
+  left: 20%;
+  right: 20%;
+  height: 36px;
+  background: #008BC7;
+  border-bottom: none;
+  padding: 0 10px;
+  gap: 2px;
+  align-items: center;
+  overflow-x: auto;
+}
+body.theme-hacknet #channel-bar::after {
+  content: "LOCATION: ROOT@HACKNET:~";
+  margin-left: auto;
+  margin-right: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: Consolas, "Courier New", monospace;
+}
+body.theme-hacknet .channel-item {
+  border-radius: 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  padding: 2px 10px;
+  background: transparent;
+}
+body.theme-hacknet .channel-item.active {
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+}
+body.theme-hacknet .channel-item:hover {
+  background: rgba(0, 0, 0, 0.15);
+  color: #ffffff;
+}
+
+/* ---- 左 1/5 成员列表 ---- */
+body.theme-hacknet #roster {
+  left: 0;
+  right: auto;
+  top: 0;
+  bottom: 0;
+  width: 20%;
+  min-width: 190px;
+  background: rgba(10, 10, 10, 0.92);
+  border-left: none;
+  border-right: 1px solid #444444;
+  padding: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body.theme-hacknet #roster-header {
+  height: 36px;
+  line-height: 36px;
+  padding: 0 12px;
+  background: #008BC7;
+  color: #ffffff;
+  font-size: 12px;
+  border-bottom: none;
+  margin: 0;
+  font-family: Consolas, "Courier New", monospace;
+}
+body.theme-hacknet #roster p {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  color: #D5F5FF;
+  padding: 4px 12px;
+  margin: 0;
+  border-bottom: 1px solid rgba(68, 68, 68, 0.4);
+}
+body.theme-hacknet #roster p::before {
+  content: "●";
+  color: #5FDC53;
+  font-size: 9px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+body.theme-hacknet #roster p:hover {
+  background: rgba(0, 139, 199, 0.15);
+}
+body.theme-hacknet #roster-backdrop,
+body.theme-hacknet #roster-toggle {
+  display: none;
+}
+
+/* ---- 频道条下方房间名横条（灰白底，hacknet.js 注入） ---- */
+#hacknet-room-bar {
+  position: fixed;
+  top: 36px;
+  left: 20%;
+  right: 20%;
+  height: 22px;
+  line-height: 22px;
+  padding: 0 12px;
+  background: rgba(213, 215, 220, 0.16); /* 灰白横条 */
+  border-bottom: 1px solid #323B5A;
+  color: #D5F5FF;
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: Consolas, "Courier New", monospace;
+  z-index: 8;
+}
+
+/* ---- 中上聊天历史 ---- */
+body.theme-hacknet #chatlog {
+  left: 20%;
+  right: 20%;
+  top: 58px; /* 频道条 36 + 房间名横条 22 */
+  bottom: calc(25% + 52px);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-left: 1px solid #444444;
+  border-right: 1px solid #444444;
+  padding: 12px 14px;
+}
+body.theme-hacknet #chatlog p.system-msg {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(68, 68, 68, 0.5);
+  border-radius: 0;
+  color: #5A5A5A;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+/* ---- 聊天消息 Hacknet 化（直角 + 透明深底 + 等宽） ---- */
+body.theme-hacknet .chat-msg .bubble {
+  border-radius: 0;
+  font-family: Consolas, "Courier New", monospace;
+}
+body.theme-hacknet .chat-msg.self .bubble {
+  background: #008BC7;
+  color: #ffffff;
+  border-bottom-right-radius: 0;
+}
+body.theme-hacknet .chat-msg.other .bubble {
+  background: rgba(12, 12, 12, 0.72);
+  border: 1px solid #444444;
+  border-bottom-left-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body.theme-hacknet .msg-header .username {
+  color: #00A6EB;
+}
+
+/* ---- Hacknet IRC 化消息：无气泡文本行 + 彩色昵称（复刻 IRCSystem.DrawLogEntry） ---- */
+body.theme-hacknet .irc-msg {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  max-width: 100%;
+  margin: 1px 0;
+  padding: 1px 6px;
+  background: rgba(255, 255, 255, 0.05); /* 极淡白底（Hacknet Color.White*0.12 行背景） */
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  border: none;
+  box-shadow: none;
+}
+body.theme-hacknet .irc-msg.self {
+  align-items: baseline;
+  margin-left: 0;
+}
+body.theme-hacknet .irc-msg .irc-name {
+  font-weight: 600;
+  flex: none;
+}
+body.theme-hacknet .irc-msg .irc-text {
+  color: #D5F5FF;
+  word-break: break-word;
+}
+body.theme-hacknet .irc-msg .irc-text a {
+  color: #00A6EB;
+}
+body.theme-hacknet .irc-msg .irc-text code {
+  color: #DEC918;
+  background: transparent;
+  padding: 0;
+}
+body.theme-hacknet .irc-msg .irc-text pre {
+  background: #0A0A0A;
+  border: 1px solid #444444;
+  border-radius: 0;
+  padding: 6px 8px;
+  margin: 4px 0;
+}
+
+/* ---- 中下聊天输入框 ---- */
+body.theme-hacknet #chat-input {
+  left: 20%;
+  right: 20%;
+  bottom: 25%;
+  height: 40px;
+  width: auto;
+  border: 1px solid #444444;
+  border-radius: 0;
+  background: rgba(12, 12, 12, 0.92);
+  color: #D5F5FF;
+  padding: 0 12px 0 96px;
+  box-shadow: none;
+  font-size: 13px;
+}
+body.theme-hacknet #chat-input::placeholder {
+  color: #5A5A5A;
+}
+body.theme-hacknet #chat-input:focus {
+  border-color: #00A6EB;
+  box-shadow: none;
+}
+
+/* 输入工具按钮：emoji/更多 方块化，其余隐藏 */
+body.theme-hacknet #emoji-btn,
+body.theme-hacknet #more-toggle-btn {
+  left: auto;
+  right: auto;
+  height: 40px;
+  line-height: 40px;
+  border: 1px solid #444444;
+  border-radius: 0;
+  background: rgba(12, 12, 12, 0.92);
+  color: #D5F5FF;
+  bottom: 25%;
+}
+body.theme-hacknet #emoji-btn {
+  left: calc(20% + 14px);
+  width: 36px;
+  padding: 0;
+  font-size: 18px;
+}
+body.theme-hacknet #more-toggle-btn {
+  left: calc(20% + 56px);
+  width: 36px;
+  padding: 0;
+  font-size: 15px;
+}
+body.theme-hacknet #voice-btn,
+body.theme-hacknet #image-btn,
+body.theme-hacknet #file-btn,
+body.theme-hacknet #input-toolbar-expanded,
+body.theme-hacknet #md-toolbar {
+  display: none;
+}
+
+/* ---- 浮动按钮：保留 settings + dark 入口（明暗正交），其余隐藏 ---- */
+body.theme-hacknet .floating-btn {
+  display: none;
+}
+body.theme-hacknet #settings-toggle {
+  display: block;
+  right: calc(20% + 12px);
+  bottom: calc(25% + 56px);
+  border-radius: 0;
+  background: rgba(12, 12, 12, 0.9);
+  color: #D5F5FF;
+  border: 1px solid #444444;
+}
+body.theme-hacknet #dark-toggle {
+  display: block;
+  right: calc(20% + 12px);
+  bottom: calc(25% + 96px);
+  border-radius: 0;
+  background: rgba(12, 12, 12, 0.9);
+  color: #D5F5FF;
+  border: 1px solid #444444;
+}
+
+/* ---- 房间列表 Hacknet 化 ---- */
+body.theme-hacknet .room-item {
+  background: rgba(12, 12, 12, 0.8);
+  border: 1px solid #444444;
+  border-radius: 0;
+  font-family: Consolas, "Courier New", monospace;
+}
+body.theme-hacknet .room-item .room-name {
+  color: #D5F5FF;
+}
+body.theme-hacknet .room-item .room-count {
+  color: #5A5A5A;
+}
+
+/* 滚动条 Hacknet 化 */
+body.theme-hacknet ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+body.theme-hacknet ::-webkit-scrollbar-thumb {
+  background: #323B5A;
+}
+body.theme-hacknet ::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+/* ---- 节点地图（中下 1/4，hacknet.js 注入） ---- */
+#hacknet-netmap {
+  position: fixed;
+  left: 20%;
+  right: 20%;
+  bottom: 0;
+  height: 25%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 8, 8, 0.94);
+  border-left: 1px solid #444444;
+  border-right: 1px solid #444444;
+  z-index: 8;
+}
+#hacknet-netmap .hn-bar {
+  height: 22px;
+  line-height: 22px;
+  padding: 0 10px;
+  background: rgba(14, 28, 40, 0.31);
+  border-bottom: 1px solid #323B5A;
+  color: #00A6EB;
+  font-size: 11px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-family: Consolas, "Courier New", monospace;
+}
+#hacknet-netmap .hn-body {
+  flex: 1;
+  overflow: hidden;
+}
+#hacknet-netmap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+#hacknet-netmap .hn-node {
+  cursor: pointer;
+}
+
+/* ---- 命令终端（右 1/5，hacknet.js 注入） ---- */
+#hacknet-terminal {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20%;
+  min-width: 230px;
+  display: flex;
+  flex-direction: column;
+  background: #080808;
+  border-left: 1px solid #444444;
+  z-index: 8;
+}
+#hacknet-terminal .ht-bar {
+  height: 22px;
+  line-height: 22px;
+  padding: 0 10px;
+  background: rgba(14, 28, 40, 0.31);
+  border-bottom: 1px solid #323B5A;
+  color: #00A6EB;
+  font-size: 11px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-family: Consolas, "Courier New", monospace;
+}
+#hacknet-terminal .ht-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #D5F5FF;
+  word-break: break-word;
+  font-family: Consolas, "Courier New", monospace;
+}
+#hacknet-terminal .ht-line {
+  white-space: pre-wrap;
+}
+#hacknet-terminal .ht-banner {
+  color: #5FDC53;
+}
+#hacknet-terminal .ht-sys {
+  color: #5A5A5A;
+}
+#hacknet-terminal .ht-cmd {
+  color: #D5F5FF;
+}
+#hacknet-terminal .ht-warn {
+  color: #DEC918;
+}
+#hacknet-terminal .ht-dim {
+  color: #5A5A5A;
+}
+#hacknet-terminal .ht-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-top: 1px solid #323B5A;
+  background: rgba(12, 12, 12, 0.9);
+}
+#hacknet-terminal .ht-prompt {
+  color: #5FDC53;
+  font-size: 13px;
+  font-weight: bold;
+}
+#hacknet-terminal #ht-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: Consolas, "Courier New", monospace;
+  caret-color: #ffffff;
+}
+
+/* ---- 移动端回退（窄屏隐藏终端/节点地图，聊天占满） ---- */
+@media (max-width: 1100px) {
+  body.theme-hacknet #hacknet-netmap,
+  body.theme-hacknet #hacknet-terminal {
+    display: none;
+  }
+  body.theme-hacknet #channel-bar {
+    left: 0;
+    right: 0;
+    height: 40px;
+  }
+  body.theme-hacknet #channel-bar::after,
+  body.theme-hacknet #hacknet-room-bar {
+    display: none;
+  }
+  body.theme-hacknet #chatlog {
+    left: 0;
+    right: 0;
+    top: 40px;
+    bottom: 56px;
+    border-left: none;
+    border-right: none;
+  }
+  body.theme-hacknet #chat-input {
+    left: 12px;
+    right: 12px;
+    bottom: 6px;
+    padding-left: 100px;
+    padding-right: 140px;
+  }
+  body.theme-hacknet #roster {
+    left: auto;
+    right: 0;
+    width: 260px;
+    min-width: 0;
+  }
+  body.theme-hacknet #settings-toggle {
+    right: 12px;
+    bottom: 60px;
+  }
+  body.theme-hacknet #emoji-btn {
+    left: 14px;
+    bottom: 6px;
+    height: 44px;
+    line-height: 44px;
+  }
+  body.theme-hacknet #more-toggle-btn {
+    left: 56px;
+    bottom: 6px;
+    height: 44px;
+    line-height: 44px;
+  }
+}
