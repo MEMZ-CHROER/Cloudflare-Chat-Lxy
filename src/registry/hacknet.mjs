@@ -563,7 +563,7 @@ async function handleConnect(reg, params) {
     if (enRoom.crackedBy === side) {
       clearTrace(reg, game, side);
       const t = await issueTicket(reg, roomName);
-      p.currentTarget = null;
+      // 保留 currentTarget：进入已打通房后玩家仍需 HeartTag（清空会导致"未锁定敌方房间"）
       await reg.saveHacknetGames();
       return ok("连接 #" + roomName + "（已打通，入场授权已签发）", { mode: "enter", ticket: t.ticket, expiry: t.expiry });
     }
@@ -631,7 +631,7 @@ async function handleAction(reg, params) {
   if (!game || game.state !== "active") return err("未在游戏中");
   const side = sideOf(game, name);
   const p = game.player[name];
-  const room = currentTargetRoom(game, side);
+  let room = currentTargetRoom(game, side);
 
   const CMDS = ["scan", "probe", "crack", "proxy", "analyze", "solve", "porthack", "hearttag"];
   if (!CMDS.includes(cmd)) return err("未知命令 " + cmd);
@@ -664,7 +664,14 @@ async function handleAction(reg, params) {
     return ok(lines.join("\n"));
   }
 
-  if (!room) return err("未锁定敌方房间（/connect #房间 锁定目标）");
+  if (!room) {
+    // hearttag 豁免：target 丢失（进了敌方已打通房 / 回了自己基地）时回退到我方已打通的敌方房间
+    if (cmd === "hearttag") {
+      const enSide = otherSide(side);
+      room = Object.values(game.bases[enSide].rooms).find(r => r.crackedBy === side && r.hearts.some(h => h.taggedBy !== side)) || null;
+    }
+    if (!room) return err("未锁定敌方房间（/connect #房间 锁定目标）");
+  }
   resolveRoomProgress(room);
   if (room.crackedBy && cmd !== "hearttag") return err("该房间已被打通（" + (room.crackedBy === side ? "你" : "对方") + "）");
 
