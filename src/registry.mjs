@@ -23,8 +23,10 @@ import {
   saveShopItems, saveBotCommands, saveUserInventory, saveTasks, saveTaskClaims,
   saveTaskCompletions, saveLotteryPools, saveLotteryRecords, saveEmoji,
   saveRedeemCodes, saveKickProtected, saveMutes,
-  saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid
+  saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid,
+  saveHacknetGames
 } from "./registry/persistence.mjs";
+import { handleHacknet, processHnTimer } from "./registry/hacknet.mjs";
 
 // RoomRegistry Durable Object — 全局单例，跟踪所有房间、用户、商城、任务、抽奖等
 export class RoomRegistry {
@@ -61,6 +63,11 @@ export class RoomRegistry {
     this.gameBets = new Map();       // name -> {wager, ts} 未结算下注
     this.gameLastWin = new Map();    // name -> ts 上次结算时间
     this.gameDailyWin = new Map();   // name -> {date, total} 每日净赢
+    // 🎮 v1.43 Hacknet 对战小游戏（全局单例持有）
+    this.hacknetGames = new Map();   // gameId -> game（持久化 storage key "hacknetGames"）
+    this.hnTimers = [];              // [{at, type, gameId, payload}] 事件表（alarm 统一调度，从 game 状态可重建）
+    this.hnTickets = new Map();      // room -> [{ticket, expiry}] 单次入场 ticket（内存，惰性清理）
+    this.hnSessions = new Map();     // sid -> {name, expiry} 游戏会话（status 轮询轻量鉴权，省 user-check-auth）
     this._loadPromise = Promise.race([
       this.load(),
       new Promise(resolve => setTimeout(resolve, 10000))
@@ -98,6 +105,11 @@ export class RoomRegistry {
     if (data.gameDailyWin) this.gameDailyWin = data.gameDailyWin;
     if (data.redPackets) this.redPackets = data.redPackets;
     if (data.checkinByIp) this.checkinByIp = data.checkinByIp;
+    // 🎮 v1.43：恢复 Hacknet 局状态，并从 game 状态重建 alarm 事件表（冷启动后定时器不丢）
+    if (data.hacknetGames) this.hacknetGames = data.hacknetGames;
+    if (handleHacknet && this.hacknetGames.size > 0) {
+      this.hnRebuildTimers();
+    }
 
     // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
     if (!this.shopItems.has("anon_coupon")) {
@@ -130,6 +142,100 @@ export class RoomRegistry {
   async saveGameDailyWin() { await saveGameDailyWin(this.storage, this.gameDailyWin); }
   async saveRedPackets() { await saveRedPackets(this.storage, this.redPackets); }
   async saveCheckinByIp() { await saveCheckinByIp(this.storage, this.checkinByIp); }
+
+  // 🎮 v1.43 Hacknet 对战：持久化 + alarm 调度 + 入场 ticket
+  async saveHacknetGames() { await saveHacknetGames(this.storage, this.hacknetGames); }
+
+  // 事件入表并重排 alarm（DO 同一时刻仅一个 pending alarm）
+  hnAddTimer(timer) {
+    this.hnTimers.push(timer);
+    this.hnReschedule();
+  }
+
+  // 重排 alarm 到最早事件（先删旧再设新；无事件则取消）
+  hnReschedule() {
+    try {
+      if (!this.hnTimers.length) {
+        try { this.storage.deleteAlarm(); } catch (e) {}
+        return;
+      }
+      this.hnTimers.sort((a, b) => a.at - b.at);
+      const earliest = this.hnTimers[0].at;
+      try { this.storage.deleteAlarm(); } catch (e) {}
+      this.storage.setAlarm(earliest).catch(() => {});
+    } catch (e) {}
+  }
+
+  // 冷启动/恢复：从 game 状态重建事件表（trace 超时 / 密码恢复 / AI tick）
+  hnRebuildTimers() {
+    this.hnTimers = [];
+    for (let [gameId, game] of this.hacknetGames) {
+      if (!game || game.state !== "active") continue;
+      for (let side of ["a", "b"]) {
+        let name = game.sides && game.sides[side];
+        if (!name || name === "__AI__") continue;
+        let p = game.player && game.player[name];
+        if (!p) continue;
+        if (p.trace && p.trace.active && p.trace.deadline) {
+          this.hnTimers.push({at: p.trace.deadline, type: "hn_trace", gameId, payload: {side}});
+        }
+        if (Array.isArray(p.exposed)) {
+          for (let ex of p.exposed) {
+            this.hnTimers.push({at: ex.until, type: "hn_restore_pwd", gameId, payload: {side, room: ex.room}});
+          }
+        }
+      }
+      if (game.ai) {
+        if (game.ai.nextTickAt) {
+          this.hnTimers.push({at: game.ai.nextTickAt, type: "hn_ai_tick", gameId, payload: {}});
+        }
+        if (game.ai.trace && game.ai.trace.active && game.ai.trace.deadline) {
+          this.hnTimers.push({at: game.ai.trace.deadline, type: "hn_trace", gameId, payload: {side: "b", ai: true}});
+        }
+      }
+    }
+    this.hnReschedule();
+  }
+
+  // 单次入场 ticket 校验（safeEqual 常量时间比较 + 消费即删 + 过期惰性清理）
+  async hnTicketOk(room, password) {
+    try {
+      const list = this.hnTickets.get(room);
+      if (!list || !list.length) return false;
+      const now = Date.now();
+      const valid = list.filter(t => t.expiry > now);
+      if (valid.length !== list.length) {
+        if (valid.length) this.hnTickets.set(room, valid);
+        else this.hnTickets.delete(room);
+      }
+      for (let i = 0; i < valid.length; i++) {
+        if (safeEqual(valid[i].ticket, String(password))) {
+          valid.splice(i, 1); // 消费
+          if (valid.length) this.hnTickets.set(room, valid);
+          else this.hnTickets.delete(room);
+          return true;
+        }
+      }
+      return false;
+    } catch (e) { return false; }
+  }
+
+  // DO alarm：处理到期事件（trace 惩罚 / 密码恢复 / AI tick），末尾重排下一事件
+  async alarm() {
+    if (this._loadPromise) await this._loadPromise;
+    const now = Date.now();
+    const due = this.hnTimers.filter(t => t.at <= now);
+    if (!due.length) return;
+    this.hnTimers = this.hnTimers.filter(t => t.at > now);
+    for (const evt of due) {
+      try {
+        if (processHnTimer) await processHnTimer(this, evt);
+      } catch (e) {
+        console.error("hn timer failed:", evt && evt.type, e && e.message);
+      }
+    }
+    this.hnReschedule();
+  }
 
   // 💰 积分流水账本：记录每笔积分变动（上限 100 条/用户），供用户查看收支明细
   async addLedger(name, delta, type, desc) {
@@ -237,6 +343,8 @@ export class RoomRegistry {
       handler = handleTags;
     else if (path.startsWith("/user-") || path === "/user/achievements" || path.startsWith("/xp/") || path === "/known-users" || path === "/user-init" || path === "/user-bio" || path === "/user-avatar" || path === "/user-profile")
       handler = handleUsers;
+    else if (path.startsWith("/hn/"))
+      handler = handleHacknet;
     else if (path.startsWith("/points/") || path.startsWith("/game/"))
       handler = handlePoints;
     else if (path.startsWith("/exp/"))

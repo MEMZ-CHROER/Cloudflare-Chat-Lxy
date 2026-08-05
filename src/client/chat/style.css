@@ -4817,3 +4817,33 @@ body.theme-hacknet ::-webkit-scrollbar-track {
     line-height: 44px;
   }
 }
+
+/* ---- v1.43 hacknet 对战游戏 ---- */
+#hacknet-game-panel {
+  position: fixed; left: 12px; bottom: 12px; width: 300px; max-height: 46vh;
+  background: rgba(8,14,8,0.92); border: 1px solid #26ff5e55; border-radius: 8px;
+  color: #26ff5e; font-family: monospace; font-size: 12px; z-index: 999;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#hacknet-game-panel .hn-head { padding: 6px 10px; border-bottom: 1px solid #26ff5e33; font-weight: bold; display: flex; justify-content: space-between; align-items: center; cursor: default; }
+#hacknet-game-panel .hn-body { padding: 6px 10px; overflow-y: auto; flex: 1; }
+#hacknet-game-panel .hn-msg { padding: 6px 10px; border-top: 1px solid #26ff5e33; max-height: 90px; overflow-y: auto; white-space: pre-wrap; color: #9affb0; }
+#hacknet-game-panel .hn-sec { margin-bottom: 8px; }
+#hacknet-game-panel .hn-sec--mine .hn-sec-title { color: #26ff5e; }
+#hacknet-game-panel .hn-sec--enemy .hn-sec-title { color: #ff5e26; }
+#hacknet-game-panel .hn-room { border: 1px solid #26ff5e44; border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; font-size: 11px; }
+#hacknet-game-panel .hn-room-name { font-weight: bold; }
+#hacknet-game-panel .hn-port { display: inline-block; margin: 1px 3px 1px 0; padding: 0 4px; border: 1px solid #26ff5e66; border-radius: 3px; font-size: 11px; }
+#hacknet-game-panel .hn-port--cracked { background: #26ff5e22; }
+#hacknet-game-panel .hn-proxy, #hacknet-game-panel .hn-firewall { margin: 1px 3px 1px 0; font-size: 11px; }
+#hacknet-game-panel .hn-bar-wrap { height: 5px; background: #26ff5e22; border-radius: 3px; margin-top: 2px; overflow: hidden; }
+#hacknet-game-panel .hn-bar-fill { height: 100%; background: #26ff5e; width: 0%; transition: width .4s linear; }
+#hacknet-game-panel .hn-heart { margin-right: 4px; }
+#hacknet-game-panel .hn-heart-captured { color: #ff5e26; text-decoration: line-through; }
+#hacknet-game-panel .hn-pwd { color: #ffd75e; }
+#hacknet-trace-bar {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 12px;
+  color: #AA0000; font-weight: bold; font-size: 15px; text-shadow: 0 0 6px #AA0000;
+  font-family: monospace; z-index: 1000; letter-spacing: 1px;
+}
+@media (max-width: 1100px) { #hacknet-game-panel, #hacknet-trace-bar { display: none !important; } }

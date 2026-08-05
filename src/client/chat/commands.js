@@ -281,6 +281,12 @@ export async function handleCommand(text) {
       break;
     }
 
+    case "/hn":
+    case "/hacknet":
+      // v1.43 hacknet 对战游戏：命令转发给游戏模块
+      import('./hacknet-game.js').then(m => m.hnCommand(arg));
+      break;
+
     case "/wave": {
       applyWaveEffect();
       if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({type: "effect", effect: "wave"}));
@@ -341,6 +347,8 @@ export async function handleCommand(text) {
       // 房间名规范化（与 startChat 一致：仅字母数字连字符、下划线转连字符、小写）
       name = name.replace(/[^a-zA-Z0-9_-]/g, "").replace(/_/g, "-").toLowerCase();
       if (!name) { showError(t("无效的房间名")); break; }
+      // v1.43 hacknet 对战游戏：若已注册游戏会话则让游戏接管切房
+      if (window.__hn && await window.__hn.tryConnect(name)) break;
       showInfo(t("正在连接到 #") + name + " ...");
       switchRoom(name);
       break;
@@ -349,6 +357,8 @@ export async function handleCommand(text) {
     // 📤 退出当前房间：断开连接并回到房间列表
     case "/dc":
     case "/disconnect": {
+      // v1.43 hacknet 对战游戏：若在游戏会话中则让游戏先退出
+      if (window.__hn && await window.__hn.tryDisconnect()) break;
       if (!window._chatStarted) { showInfo(t("当前未在聊天室中")); break; }
       state._manualDisconnect = true; // 手动退出：抑制 websocket rejoin 自动重连
       if (state.currentWebSocket) { try { state.currentWebSocket.close(); } catch (e) {} }

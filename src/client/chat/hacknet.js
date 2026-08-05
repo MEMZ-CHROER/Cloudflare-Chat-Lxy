@@ -50,6 +50,8 @@ export function applyHacknetLayout() {
   setHacknetIRC(true);
   // ④ 节点地图轮询
   startNetmap();
+  // v1.43 hacknet 对战游戏：动态加载游戏模块并初始化
+  import('./hacknet-game.js').then(m => m.hnInit()).catch(() => {});
 }
 
 export function removeHacknetLayout() {
@@ -62,6 +64,7 @@ export function removeHacknetLayout() {
   if (term) term.remove();
   const roomBar = document.getElementById("hacknet-room-bar");
   if (roomBar) roomBar.remove();
+  if (window.__hn) import('./hacknet-game.js').then(m => m.hnCleanup()).catch(() => {});
   terminalBound = false;
 }
 
@@ -106,7 +109,11 @@ function onTermKey(e) {
         termPrint("ERROR: " + (err && err.message ? err.message : String(err)), "ht-warn");
       }
     } else {
-      termPrint("命令必须以 / 开头，/help 查看全部命令", "ht-warn");
+      if (window.__hn && window.__hn.dispatchBare(v)) {
+        // 游戏裸命令已消费
+      } else {
+        termPrint("命令必须以 / 开头，/help 查看全部命令", "ht-warn");
+      }
     }
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
@@ -126,7 +133,7 @@ function onTermKey(e) {
 }
 
 // textContent 渲染防 XSS；上限 500 行
-function termPrint(text, cls) {
+export function termPrint(text, cls) {
   const out = document.getElementById("ht-output");
   if (!out) return;
   while (out.childElementCount >= 500) out.removeChild(out.firstChild);

@@ -20,6 +20,8 @@ function togglePinRoom(name) {
 
 // 密码校验：有密码则弹窗确认，返回是否允许进入；通过后记录 state.roomPassword
 async function resolveRoomPassword(name) {
+  // v1.43 hacknet 对战游戏：若游戏接管了该房间密码验证则直接放行
+  if (window.__hn && await window.__hn.enterPassword(name)) return true;
   try {
     let r = await fetch("/api/room/" + encodeURIComponent(name) + "/password-status");
     let data = await r.json();

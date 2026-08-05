@@ -51,6 +51,7 @@ import CHAT_ACHIEVEMENTS from "./client/chat/achievements.js";
 import CHAT_ICCO from "./client/chat/icco.js";
 import CHAT_ICCO_ASSETS from "./client/chat/icco-assets.js";
 import CHAT_HACKNET from "./client/chat/hacknet.js";
+import CHAT_HACKNET_GAME from "./client/chat/hacknet-game.js";
 import CHAT_UPLOAD from "./client/chat/upload.js";
 import CHAT_IMAGE_UPLOAD from "./client/chat/image-upload.js";
 import CHAT_VOICE_RECORD from "./client/chat/voice-record.js";
@@ -131,6 +132,7 @@ const CHAT_MODULES = {
   "chat/icco.js": CHAT_ICCO,
   "chat/icco-assets.js": CHAT_ICCO_ASSETS,
   "chat/hacknet.js": CHAT_HACKNET,
+  "chat/hacknet-game.js": CHAT_HACKNET_GAME,
   "chat/upload.js": CHAT_UPLOAD,
   "chat/image-upload.js": CHAT_IMAGE_UPLOAD,
   "chat/voice-record.js": CHAT_VOICE_RECORD,
@@ -181,6 +183,7 @@ import { handlePreview } from "./api/preview.mjs";
 import { handleArchive } from "./api/archive.mjs";
 import { handleRedeemApi } from "./api/redeem.mjs";
 import { handleGame } from "./api/game.mjs";
+import { handleHacknetApi } from "./api/hacknet.mjs";
 import ARCHIVE from "./archive.html";
 
 // Re-export Durable Object 类供 wrangler 识别
@@ -426,6 +429,9 @@ async function handleApi(apiPath, request, env) {
 
     case "game":
       return handleGame(apiPath, request, env);
+
+    case "hn":
+      return handleHacknetApi(apiPath, request, env);
 
     // 🔗 通用 Webhook 入站：POST /api/webhook/<room>?secret=xxx&channel=xxx
     // body: {content, sender?, channel?}；secret 也可放 X-Webhook-Secret header

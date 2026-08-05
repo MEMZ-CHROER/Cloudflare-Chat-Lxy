@@ -55,6 +55,10 @@ export async function handleRooms(reg, request, url) {
         let name = body.name;
         let password = body.password || "";
         let room = reg.rooms.get(name);
+        // 🎮 v1.43 Hacknet 对战：单次入场 ticket（攻破对方房间后签发，60s 有效，消费即失效）——作为密码豁免
+        if (reg.hnTicketOk && await reg.hnTicketOk(name, password)) {
+          return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
+        }
         if (!room || !room.password) {
           return new Response(JSON.stringify({ok: true}), {headers: {"Content-Type": "application/json"}});
         }
