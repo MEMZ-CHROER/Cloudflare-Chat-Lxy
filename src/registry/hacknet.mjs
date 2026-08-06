@@ -81,11 +81,12 @@ function sideOf(game, name) {
 }
 function otherSide(side) { return side === "a" ? "b" : "a"; }
 
-// 玩家参与的局（active 优先，否则 waiting）
-function findGameFor(reg, name) {
+// 玩家参与的局（active 优先，否则 waiting）；excludeId 跳过指定局（accept 时排除自己正要接受的 waiting 挑战）
+function findGameFor(reg, name, excludeId) {
   let waiting = null;
   for (const [, game] of reg.hacknetGames) {
     if (!game || !game.sides) continue;
+    if (excludeId && game.id === excludeId) continue;
     if (game.sides.a !== name && game.sides.b !== name) continue;
     if (game.state === "active") return game;
     if (game.state === "waiting" && !waiting) waiting = game;
@@ -504,7 +505,8 @@ async function handleAccept(reg, params) {
   const game = reg.hacknetGames.get(gameId);
   if (!game || game.mode !== "pvp" || game.state !== "waiting") return err("挑战不存在或已过期");
   if (game.sides.b !== name) return err("这不是发给你的挑战");
-  if (findGameFor(reg, name)) return err("你已在一局游戏中");
+  // 🔧 v1.43: 排除自身正接受的 waiting 挑战（findGameFor 会把 sides.b=自己的 waiting 局也算"已在一局"）
+  if (findGameFor(reg, name, gameId)) return err("你已在一局游戏中");
   game.state = "active";
   game.startedAt = Date.now();
   createBaseRooms(reg, game, "a");
