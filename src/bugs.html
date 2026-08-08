@@ -1,0 +1,2426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>已修复 Bug 档案 - CloudChat</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#4a6cf7">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f0f2f5; color: #1a1a2e; padding: 20px; max-width: 900px; margin: 0 auto;
+}
+.header { text-align: center; padding: 30px 0 20px; }
+.header h1 { font-size: 28px; font-weight: 700; color: #4a6cf7; margin-bottom: 6px; }
+.header p { color: #888; font-size: 14px; }
+.header .back-link {
+  display: inline-block; margin-top: 12px; color: #4a6cf7; text-decoration: none;
+  font-size: 14px; padding: 6px 16px; border: 1px solid #4a6cf7; border-radius: 20px;
+  transition: all 0.2s;
+}
+.header .back-link:hover { background: #4a6cf7; color: #fff; }
+.stats { text-align: center; color: #999; font-size: 13px; margin-bottom: 8px; }
+.total-card {
+  background: linear-gradient(135deg, #e64a4a, #c62828);
+  color: #fff; border-radius: 14px; padding: 22px 24px; margin-bottom: 24px;
+  text-align: center; box-shadow: 0 4px 16px rgba(198, 40, 40, 0.25);
+  position: relative; overflow: hidden;
+}
+.total-card::after {
+  content: "🐛"; position: absolute; right: -8px; bottom: -18px; font-size: 110px; opacity: 0.10;
+}
+.total-card .total-num { font-size: 46px; font-weight: 800; line-height: 1.1; }
+.total-card .total-label { font-size: 16px; margin-top: 2px; font-weight: 600; letter-spacing: 2px; }
+.total-card .total-sub { font-size: 12px; margin-top: 8px; opacity: 0.85; }
+.version-group { margin-bottom: 24px; }
+.version-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  padding: 12px 16px; background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  cursor: pointer; user-select: none; transition: box-shadow 0.2s;
+}
+.version-header:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.version-header .version-tag {
+  background: #e64a4a; color: #fff; font-size: 12px; font-weight: 600;
+  padding: 3px 10px; border-radius: 12px; white-space: nowrap;
+}
+.version-header .version-date { color: #999; font-size: 13px; }
+.version-header .version-count { color: #e64a4a; font-size: 12px; font-weight: 600; }
+.version-header .version-arrow { margin-left: auto; color: #ccc; font-size: 14px; transition: transform 0.2s; }
+.version-header .version-arrow.open { transform: rotate(90deg); }
+.version-body { display: none; padding: 0 4px; }
+.version-body.open { display: block; }
+.bug-item {
+  background: #fff; border-radius: 10px; margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden;
+  border-left: 3px solid #e64a4a;
+}
+.bug-title {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 14px; font-size: 14px; font-weight: 600; color: #1a1a2e;
+  cursor: pointer; user-select: none; background: #fdf2f2;
+}
+.bug-title .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+.tag-fix { background: #fde8e8; color: #c62828; }
+.tag-sec { background: #fff3e0; color: #e65100; }
+.bug-title .commit { font-size: 11px; color: #999; font-weight: 400; font-family: monospace; }
+.bug-title .arrow { margin-left: auto; color: #ccc; font-size: 12px; transition: transform 0.2s; }
+.bug-title .arrow.open { transform: rotate(90deg); }
+.bug-body { display: none; padding: 12px 14px 14px; border-top: 1px solid #f3e3e3; }
+.bug-body.open { display: block; }
+.field { margin-bottom: 8px; font-size: 13px; line-height: 1.6; color: #444; }
+.field b { display: inline-block; min-width: 42px; color: #888; font-weight: 600; margin-right: 4px; }
+.field b.why { color: #c62828; }
+.field b.sym { color: #e65100; }
+.field b.how { color: #2e7d32; }
+pre.bug-code {
+  background: #1e1e2e; color: #cdd6f4; font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px; line-height: 1.5; padding: 10px 12px; border-radius: 6px;
+  overflow-x: auto; margin-top: 6px; white-space: pre; max-height: 300px;
+}
+@media (max-width: 600px) {
+  body { padding: 12px; }
+  .header h1 { font-size: 22px; }
+  .version-header { padding: 10px 12px; flex-wrap: wrap; }
+  .bug-title { padding: 8px 10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐛 已修复 Bug 档案</h1>
+  <p>从 v1.0 到 v1.43，每一个踩过的坑</p>
+  <a class="back-link" href="/">← 返回聊天室</a>
+  <a class="back-link" href="/changelog">📋 更新日志</a>
+</div>
+
+<div class="total-card">
+  <div class="total-num"><span id="totalBugs">…</span></div>
+  <div class="total-label">个 Bug 已修复</div>
+  <div class="total-sub">从 v1.0 到 v1.44 · 每个 bug 含 症状 / 根因 / 修复 / 源码片段</div>
+</div>
+
+<!-- v1.43 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.43</span>
+    <span class="version-date">2026-08-05</span>
+    <span class="version-count">7 项</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>追踪(Trace)永不激活
+        <span class="commit">3aa5f23</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>对局中锁定敌方房间并开始破解，Trace 追踪从未启动，追踪惩罚机制形同虚设。</div>
+        <div class="field"><b class="why">根因</b><code>game.player[side]</code> 把 side("a"/"b")当成玩家名字去索引 player Map，而玩家名字是名字字符串，永远取不到对象；共 4 处，Trace 永不生效。</div>
+        <div class="field"><b class="how">修复</b>通过 <code>game.sides[side]</code> 取真实玩家名再索引 player。</div>
+        <pre class="bug-code">// 修复前：game.player[side]  →  side 是 "a"/"b"，取不到玩家
+const p = game.player[side];
+// 修复后：game.sides[side] 取该方的真实玩家名
+const p = game.player[game.sides[side]];</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>已打通房间 connect 返回锁定
+        <span class="commit">3aa5f23</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>敌方房间已被我全部破解（crackedBy=我），/connect 进入时仍被当作"锁定攻击"而非"进入房间"。</div>
+        <div class="field"><b class="why">根因</b>handleConnect 未结算惰性进度——端口破解、代理、防火墙等耗时操作完成后状态未立即刷新，判断已破解时读到旧数据。</div>
+        <div class="field"><b class="how">修复</b>connect 时补调 <code>resolveRoomProgress(enRoom)</code> 惰性结算再判定。</div>
+        <pre class="bug-code">async function handleConnect(reg, body) {
+  // ...定位敌方房间 enRoom
+  resolveRoomProgress(enRoom);   // 补：先结算惰性进度，再判定是否已打通
+  if (enRoom.crackedBy === name) { /* 进入房间 */ }
+  else { /* 锁定为攻击目标 */ }
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>对局结束后 status 不返回胜负
+        <span class="commit">3aa5f23</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>对局结束后前端 status 返回 game:null，胜负横幅无法显示。</div>
+        <div class="field"><b class="why">根因</b>handleStatus 只查 active/waiting 局，对 ended 局返回空。</div>
+        <div class="field"><b class="how">修复</b>补最近一场 ended 局查找，返回 winner 供前端渲染。</div>
+        <pre class="bug-code">// handleStatus 补 ended 局兜底
+if (!game) {
+  for (const g of reg.hacknetGames.values()) {
+    if (g.state === "ended" && (g.sides.a === name || g.sides.b === name)) {
+      game = g; break;   // 返回 winner，前端横幅依赖
+    }
+  }
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>HeartTag 提示"未锁定敌方房间"
+        <span class="commit">06fdd48</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>进入已打通的敌方房间 / 回到自己基地后，HeartTag 提示"未锁定敌方房间"无法执行。</div>
+        <div class="field"><b class="why">根因</b>进入已打通敌方房或回自己基地时清空了 currentTarget 锁定目标。</div>
+        <div class="field"><b class="how">修复</b>进入已打通敌方房保留锁定目标；HeartTag 目标丢失时自动回退到"我方已打通的敌方房间"。</div>
+        <pre class="bug-code">// enter 分支保留 currentTarget
+game.player[game.sides[side]].currentTarget = roomName;
+// hearttag 目标丢失自动回退到我方已打通的敌方房间
+let target = p.currentTarget;
+if (!isEnemyRoom(target)) {
+  target = firstCrackedByMe(game, side)?.name;
+  if (!target) return { ok:false, msg:"还没有打通任何敌方房间" };
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>pvp 迎战误报"你已在一局游戏中"
+        <span class="commit">aac2074</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>被挑战方 /hn accept 时总是提示"你已在一局游戏中"，应战无法建立。</div>
+        <div class="field"><b class="why">根因</b>findGameFor 把自己正接受的 waiting 挑战也判成"已在一局"。</div>
+        <div class="field"><b class="how">修复</b>findGameFor 加 excludeId 参数，accept 时排除自身 gameId。</div>
+        <pre class="bug-code">function findGameFor(reg, name, excludeId) {
+  for (const [id, game] of reg.hacknetGames) {
+    if (!game || !game.sides) continue;
+    if (excludeId && id === excludeId) continue;   // 排除自己正要接受的局
+    if (game.sides.a === name || game.sides.b === name) return { id, game };
+  }
+  return null;
+}
+// accept 调用时传入 gameId
+findGameFor(reg, body.name, body.gameId);</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/connect 后裸命令报"未锁定目标"
+        <span class="commit">47270f3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/connect 后输入裸破解命令，报"未锁定目标"，但用户以为已经锁定了。</div>
+        <div class="field"><b class="why">根因</b>①未锁定提示不带引导信息；②tryConnect 状态未就绪就判定导致误判；③破解不存在的端口无提示。</div>
+        <div class="field"><b class="how">修复</b>lockError 附上敌方基地房间名引导；tryConnect 未就绪先拉取一次；连自己基地/非本局房间明确提示；crack 不存在端口列出该房开放端口。</div>
+        <pre class="bug-code">// lockError 带敌方基地房名直接引导
+function lockError(game, side) {
+  const list = Object.values(game.bases[otherSide(side)].rooms).map(r => "#" + r.name).join("  ");
+  return { ok:false, msg:`未锁定攻击目标，请先 /connect ${list}` };
+}
+// crack 不存在端口：列出本房实际开放端口
+const openPorts = room.ports.map(p => p.port).join(", ");
+return { ok:false, msg:`该房间未开放端口 ${port}，开放端口: ${openPorts}` };</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>本机冒烟/部署运维坑
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>workers.dev 域名被屏蔽、execute 被 CF 拒、注册限频 429、archive 需 super key。</div>
+        <div class="field"><b class="how">修复</b>冒烟改走真实域名 chat.liuxiyu.cn；注册限频等接口等待限频窗口；archive 用 super 密钥；部署后存在传播延迟需重试。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.42 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.42</span>
+    <span class="version-date">2026-08-04</span>
+    <span class="version-count">4 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/kickall 普通用户可触发
+        <span class="commit">1524cdd</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/kickall 一键踢人命令最初没有权限收紧，任何用户都能调用踢掉全房间。</div>
+        <div class="field"><b class="why">根因</b>只做了前端触发，服务端分发与端点无鉴权。</div>
+        <div class="field"><b class="how">修复</b>三层鉴权：前端 admin_logged 检查 + admin.mjs room-kick-all 分发鉴权 + 服务端 /do-kick-all 密钥 safeEqual 校验。</div>
+        <pre class="bug-code">// 服务端 do-kick-all 密钥常量时间校验
+const keyOk = safeEqual(key, env.ADMIN_SECRET_KEY);
+if (!keyOk) return new Response("unauthorized", { status: 403 });
+// admin.mjs 白名单
+adminAllowedPaths["room-kick-all"] = { admin: true };</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/dc 退出后自动重连拉回
+        <span class="commit">e3ecf62</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>输入 /dc 退出房间后，过一会儿 WebSocket 自动重连又连回去。</div>
+        <div class="field"><b class="why">根因</b>rejoin 重连逻辑无法区分"意外断开"与"手动退出"。</div>
+        <div class="field"><b class="how">修复</b>新增 state._manualDisconnect 标志：join 时复位、rejoin 检查、/dc 与切房时置位抑制旧连接重连。</div>
+        <pre class="bug-code">state._manualDisconnect = false; // 新连接复位
+// rejoin 重连前检查
+if (state._manualDisconnect) return; // 手动退出，不自动重连
+// /dc 时置位
+state._manualDisconnect = true;
+ws.close();</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/dc 退出后再连接界面不显示
+        <span class="commit">04cafec</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/dc 后点击任意房间重新进入，聊天记录区和在线列表不显示。</div>
+        <div class="field"><b class="why">根因</b>/dc 隐藏了 #chatroom 容器，重连走 switchRoom 未恢复 display。</div>
+        <div class="field"><b class="how">修复</b>switchRoom 恢复 #chatroom 显示、隐藏房间列表、停列表轮询。</div>
+        <pre class="bug-code">// switchRoom 恢复显示
+document.getElementById("chatroom").style.display = "flex";
+document.getElementById("roomListPanel").style.display = "none";
+clearInterval(state.listPollTimer);</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>移除同名限制的副作用
+        <span class="commit">e3ecf62</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>移除"同房间同名用户限制"后，whisper 私信按名字投递命中第一个 session，同名用户可能收到他人私信。</div>
+        <div class="field"><b class="how">说明</b>服务端删除两处同名检测；whisper 按名投递副作用在 v1.43 前保留（同名场景较罕见），后续需按 session 投递。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.41 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.41</span>
+    <span class="version-date">2026-08-04</span>
+    <span class="version-count">3 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>新前端模块未注册 404
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>模块化重构新增模块（upload/image-upload/voice-record/mention/emoji-panel）后，浏览器请求报 404。</div>
+        <div class="field"><b class="why">根因</b>新前端模块必须注册进 index.mjs 的 CHAT_MODULES map，否则静态路由找不到。</div>
+        <div class="field"><b class="how">修复</b>逐一注册进 CHAT_MODULES。</div>
+        <pre class="bug-code">// index.mjs CHAT_MODULES
+CHAT_MODULES["chat/upload.js"] = CHAT_UPLOAD;
+CHAT_MODULES["chat/mention.js"] = CHAT_MENTION;
+CHAT_MODULES["chat/emoji-panel.js"] = CHAT_EMOJI_PANEL;</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>escapeHtml 8 处重复定义
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>bundle 里 escapeHtml 有 8 处定义，只有 renderers.js 是 chat 共享来源。</div>
+        <div class="field"><b class="how">修复</b>music.js 删除内部重复定义，统一复用 renderers.js 的共享工具。</div>
+        <pre class="bug-code">// 14 个模块从 renderers.js 导入共享 escapeHtml
+export function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  })[c]);
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>纯重构验证三板斧
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">方法</b>①acorn 解析前端 bundle 确认无语法错误；②grep 残留清零（旧函数无重复定义）；③线上 bundle grep 关键标志（init* 各 3 次）确认新代码已生效。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.40 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.40</span>
+    <span class="version-date">2026-08-04</span>
+    <span class="version-count">5 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>startChat 幂等致二次切房失效
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>Hacknet 主题下点击节点地图二次切房不生效。</div>
+        <div class="field"><b class="why">根因</b>startChat 有幂等保护，二次调用直接 return。</div>
+        <div class="field"><b class="how">修复</b>切房用 switchHacknetRoom：关旧 WS 再 join，绕过幂等。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>SVG CSS 动画不生效
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>SMIL 才可靠，CSS transition 对 SVG 部分属性无效。</div>
+        <div class="field"><b class="how">修复</b>改用 SMIL &lt;animate&gt; 实现节点呼吸/脉动。</div>
+        <pre class="bug-code">&lt;circle r="14"&gt;
+  &lt;animate attributeName="r" values="14;16;14" dur="3s" repeatCount="indefinite"/&gt;
+  &lt;animate attributeName="opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite"/&gt;
+&lt;/circle&gt;</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>拒绝采样兜底堆同点
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>随机散落节点拒绝采样兜底放在固定点，多节点重复堆叠。</div>
+        <div class="field"><b class="how">修复</b>改为网格扫描 + 按序号偏移。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>core.js body 级 click 抢焦点
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>点击 Hacknet 终端后焦点被抢走，无法输入命令。</div>
+        <div class="field"><b class="why">根因</b>core.js body 级 click 监听抢焦点。</div>
+        <div class="field"><b class="how">修复</b>白名单加 #hacknet-terminal。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>空房间过滤被临时改后又恢复
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>rooms.mjs 用 <code>if(info.count&gt;0)</code> 过滤空房间，测试临时改动后需恢复。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.39 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.39</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-count">4 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>JS 浮点取模坑
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>icco 斜纹滚动动画取模出现跳变。</div>
+        <div class="field"><b class="why">根因</b>JS 浮点运算精度问题，mod 结果差一点导致错位。</div>
+        <div class="field"><b class="how">修复</b>比较时减 epsilon。</div>
+        <pre class="bug-code">// 浮点取模需减 epsilon 防精度跳变
+if (mod &lt; 0.05 - 1e-9) { ... }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>素材尺寸/形态认知错误
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>StripePattern 是 40×40 稀疏斜线（非全填充）；CautionIcon 是 247×223 宽高比 1.108，按宽高比缩放。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>素材模块后缀选择
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>base64 数据模块后缀决定 esbuild 按 CJS 还是 ESM 处理（主仓 package.json 无 type:module）。</div>
+        <div class="field"><b class="how">修复</b>素材 base64 模块双用途（text + ESM）必须 .js；服务端 atob 用 .mjs。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>Andy 积分异常清空
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>未注册用户 + BigInt 科学计数法导致积分被清。</div>
+        <div class="field"><b class="how">修复</b>用 super key 手工恢复。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.38 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.38</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-count">3 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>扁平化主题丢失随机背景图
+        <span class="commit">b0f4ea9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>扁平化主题下随机背景图不显示。</div>
+        <div class="field"><b class="why">根因</b>用了 display:none 隐藏原背景。</div>
+        <div class="field"><b class="how">修复</b>display:none 改 filter:none + 遮罩改半透明。</div>
+        <pre class="bug-code">/* 修复前 */ .theme-flat .bg-wrap { display: none; }
+/* 修复后 */ .theme-flat .bg-wrap { filter: none; }
+.theme-flat .bg-overlay { opacity: 0.5; }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>archive latestVersion() 取错版本
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>存档脚本 latestVersion 正则取版本号出错。</div>
+        <div class="field"><b class="why">根因</b>m[m.length-1] 在正则结果里是最旧版本。</div>
+        <div class="field"><b class="how">修复</b>显式传版本号参数。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>部署后 curl 命中 CF 缓存
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>验证 style.css 须带 ?t= 参数绕过缓存。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.37 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.37</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-count">2 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>聊天室在线用户管理操作恢复（LD12 回归）
+        <span class="commit">96ea6d4</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>点击房间在线列表中的用户名（或消息用户名）弹出用户菜单，管理操作全部不显示；登录后台后仍判断"非管理员"。</div>
+        <div class="field"><b class="why">根因</b>v1.27 安全加固把管理密钥改存 httpOnly Cookie（JS 不可读），但前端 8 处 isAdmin/hasAdmin 判定仍要求 localStorage 的 admin_key，漏同步。</div>
+        <div class="field"><b class="how">修复</b>前端 8 处改为仅检查 admin_logged cookie 判断管理员；管理操作请求由服务端 httpOnly Cookie 鉴权。</div>
+        <pre class="bug-code">// 修复前：8 处 hasAdmin 要求 localStorage 密钥
+const hasAdmin = localStorage.getItem("admin_key");
+// 修复后：只看 admin_logged cookie
+const hasAdmin = document.cookie.indexOf("admin_logged=1") !== -1;</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>"在线用户"方向澄清
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>用户说"在线用户"需先澄清是聊天室 roster 还是管理后台房间列表，避免修错地方。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.36 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.36</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-count">2 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>管理后台点击在线用户名无管理操作
+        <span class="commit">18605b5</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>管理后台「房间列表」展开房间的在线用户、「在线用户」列表点击用户名无反应。</div>
+        <div class="field"><b class="why">根因</b>rooms.js span.name 未绑定 showUserDetail 点击事件。</div>
+        <div class="field"><b class="how">修复</b>名字 span 绑定 showUserDetail + 弹窗补禁言（muteUser）。</div>
+        <pre class="bug-code">// rooms.js 绑定用户详情
+span.name.addEventListener("click", () => showUserDetail(user));
+// 弹窗新增禁言操作
+btnMute.onclick = () => muteUser(user.name, duration, reason);</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>admin API 鉴权不读 X-Admin-Key 头
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>带 X-Admin-Key 请求头调用 admin API 仍被 403。</div>
+        <div class="field"><b class="why">根因</b>admin API 鉴权只认 ?key= 参数或 Cookie，不读 X-Admin-Key header。</div>
+        <div class="field"><b class="how">修复</b>前端改回用 ?key= 或靠 Cookie 鉴权。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.35 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.35</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-count">2 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>send-message 是 super 专用
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>普通管理员调用 /api/send-message 返回 403。</div>
+        <div class="field"><b class="how">说明</b>send-message 端点仅限 super 密钥，普通 admin key 403（设计如此，防止滥用广播）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>两仓同步行尾噪音
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>主仓与 Dsl 仓 cp 后 git add -A 自动消化 CRLF 行尾差异（autocrlf），核对真实改动用 ignore-cr-at-eol diff。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.34 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.34</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-count">18 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>file-data 泄露旧文件 + 身份
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/file-data 返回历史文件的 base64 原始消息 + _anonOwner 身份哈希 + fid，任何人可回拉。</div>
+        <div class="field"><b class="why">根因</b>端点直出 storage 原始字符串。</div>
+        <div class="field"><b class="how">修复</b>只回 file 类型元数据，剔除敏感字段。</div>
+        <pre class="bug-code">// 修复前：直接返回原始存储消息
+return new Response(raw);   // 含 base64 + _anonOwner
+// 修复后：只回文件元数据
+if (m.type !== "file") return new Response("not found", { status: 404 });
+const safe = { type:m.type, name:m.fileName, size:m.fileSize, timestamp:m.timestamp };
+delete safe._anonOwner;</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>游客上传 + 共享桶无配额 DoS
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>游客可上传文件到共享桶，无配额可拖垮全站文件功能。</div>
+        <div class="field"><b class="how">修复</b>登录门槛 + 每用户配额（200MB/50 个）+ 单文件上限 20MB。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>匿名 _anonOwner 三路径泄漏
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>匿名消息真实身份哈希经加入房间历史、切换频道、file-data 三条路径泄露（v1.33 引入的回归）。</div>
+        <div class="field"><b class="how">修复</b>manage.mjs 加 stripSensitiveMsg 统一剥离。</div>
+        <pre class="bug-code">// 所有 storage 读出路径统一剥离敏感字段
+function stripSensitiveMsg(m) {
+  if (!m) return m;
+  const { _anonOwner, ...rest } = m;
+  return rest;
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>铸币三连
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>商店商品可设负价反向加积分；任务奖励无上限；抽奖成本无上限。</div>
+        <div class="field"><b class="how">修复</b>三者全部正整数 + 上限 + 双保险（管理员层 + 服务端）。</div>
+        <pre class="bug-code">// 商店价格必须正整数
+if (!/^[1-9]\d*$/.test(String(price)) || Number(price) &gt; 100000) {
+  return err("商品价格必须为 1~100000 正整数");
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>特权标签绕过 + 灰色封禁越权
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>/tag/set 本地复制 isPrivilegedTag + isSuperAuth 校验可绕过。</div>
+        <div class="field"><b class="how">修复</b>打特权标签（管理员色/VIP）与灰色封禁仅限超级管理员。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>上传无魔数校验 + 文件存储加固
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>fileMagicPasses 校验文件头（伪装类型被拒）；文件桶端点 X-Internal-Key 签名鉴权；fid 检测重复拒绝覆盖；链接预览限制 256KB；管理端下载强制二进制流；管理密钥常量时间比较 safeEqual。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·定时消息投递只读公告频道
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>定时消息可被投递到只读 announcement 公告频道，绕过只读约束。</div>
+        <div class="field"><b class="how">修复</b>schedule 创建与 alarm 投递双校验公告频道只读。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·接龙无频控
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>接龙可被高频刷，聊天流被刷屏。</div>
+        <div class="field"><b class="how">修复</b>接龙 2 秒/条 + 全房 500 条上限。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·zifu 字符画未复用 lastUpload
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>zifu 复用 lastUpload 校验（文件配额/时限一致）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·投票/私信无需登录
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>游客可发起投票/私信，规避身份追踪。</div>
+        <div class="field"><b class="how">修复</b>投票/私信强制登录。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·红包频道未持久化
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>红包的频道归属 DO 热重启后丢失。</div>
+        <div class="field"><b class="how">修复</b>redpacketChannels 持久化到 storage。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·链接预览无大小上限
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>预览可拉取超大页面/大文件拖垮 Worker。</div>
+        <div class="field"><b class="how">修复</b>预览响应 256KB 流式读取上限。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·管理下载 Content-Type 未固定
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理端文件下载 Content-Type 固定为 octet-stream 强制下载。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·兑换码可爆破
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>兑换码接口无频控可被批量试。</div>
+        <div class="field"><b class="how">修复</b>redeem 10 分钟/30 次限频。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·emoji 上传无大小上限
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>emoji 上传 ≤200KB。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·mute-status 泄漏 mutedBy
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>禁言状态接口返回禁言执行者信息。</div>
+        <div class="field"><b class="how">修复</b>mute-status 响应仅返回 ['muted'] 去掉 mutedBy。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·inventory 泄漏 purchasedAt
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>inventory 响应去掉 purchasedAt 内部字段。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>低危·密钥比较非恒定时间
+        <span class="commit">4303dd9</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>registry adminAuthorized 用 === 比较密钥，存在时序侧信道。</div>
+        <div class="field"><b class="how">修复</b>改为常量时间比较 safeEqual。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.33 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.33</span>
+    <span class="version-date">2026-08-03</span>
+    <span class="version-count">5 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>匿名身份泄漏多路径
+        <span class="commit">dff5dcc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>匿名发言的 @红点/跨频道提醒泄漏真实身份；/gh /ai 匿名模式未扣券；匿名消息带自定义颜色。</div>
+        <div class="field"><b class="how">修复</b>@提醒统一显示「匿名」；/gh /ai 匿名块提前扣券；data.color 置空；_anonOwner 仅存 storage 不广播。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>匿名管理端点越权
+        <span class="commit">dff5dcc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>anon-log/anon-grant 限 super；user-profile 去敏（不再返回券余额与行为统计）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>Webhook 伪造/枚举
+        <span class="commit">dff5dcc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>密钥优先走请求头 X-Webhook-Secret；发送者固定「Webhook」；广播过敏感词；仅真实房间可生成；「未开启」与「密钥错误」统一文案防枚举；限频修复。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>草泥马同音映射回归
+        <span class="commit">dff5dcc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>「草泥马」等敏感词经同音映射后漏检。</div>
+        <div class="field"><b class="why">根因</b>映射改写原文导致原文先匹配失效。</div>
+        <div class="field"><b class="how">修复</b>原文先匹配 root，再做同音映射。</div>
+        <pre class="bug-code">// 先对原文做 root 匹配，再映射变体
+if (containsSensitive(original)) return true;
+const mapped = leetMap(original);
+return containsSensitive(mapped);</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>经验成就 + 其他加固
+        <span class="commit">dff5dcc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>发言经验限频会话级→房间内按用户；等级成就随经验下调自动回退；anonLog 原子写；archive Content-Length 预检；webhooks.js 房间名 escapeHtml。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.32 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.32</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-count">3 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>CF DO WS blockedMessages 不 flush
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>WebSocket blockedMessages 队列不发送。</div>
+        <div class="field"><b class="why">根因</b>DO 需先 send 一条消息激活会话才 flush 队列。</div>
+        <div class="field"><b class="how">修复</b>激活后先 send 首条消息。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>grantExp statsKey 映射错误
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>statsKey 未映射到 stats 字段名。</div>
+        <div class="field"><b class="how">修复</b>映射正确字段名。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>level-style 注入防护
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>每房间每等级徽章样式可注入非法 color/icon。</div>
+        <div class="field"><b class="how">修复</b>color 非法值置空、icon 含 &lt; 返回 400；前后端双重白名单 + createElement/textContent 渲染。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.30/1.31 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.30/1.31</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-count">2 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>admin URL path 结构坑
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>/api/admin/anon-grant 中 path[1] 直接是 action（anon-grant），不是子操作。</div>
+        <div class="field"><b class="how">说明</b>admin.mjs 路由时 path[1] 即 action，避免误取 path[2]。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>部署传播延迟 / user-init 无公开路由
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>部署传播延迟重试即通；user-init 无公开 API 路由，券数用 /api/user/profile 查。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.29 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.29</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-count">4 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>存档上传越权 + chunked 绕过
+        <span class="commit">ff6b9bb</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>普通管理员可上传版本存档（含密钥压缩包公开泄露）；chunked 编码绕过 50MB 体积限制。</div>
+        <div class="field"><b class="how">修复</b>限 super 上传 + request.arrayBuffer() 实际字节校验 50MB。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>敏感词 leetspeak 绕过
+        <span class="commit">ff6b9bb</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>加 leetspeak 映射（1→i、0→o、3→e）+ 希腊异体字母（μ→u），sh1t/f0ck/fμck 不再漏过，正常文本不误伤。</div>
+        <pre class="bug-code">const LEET = { "1":"i","0":"o","3":"e","4":"a","5":"s","7":"t","μ":"u","φ":"f" };
+function normalizeForSensitive(s) { return [...s].map(c => LEET[c] || c).join(""); }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>踢人越权 + 刷限频
+        <span class="commit">ff6b9bb</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>游客/未设名会话可踢人；换名重连刷踢人限频。</div>
+        <div class="field"><b class="how">修复</b>踢人需设名 + authenticated；按目标 60s 限频。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>特权标签提权
+        <span class="commit">ff6b9bb</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>普通用户经商城购买/抽奖获得 red/cyan/gold/VIP 特权标签。</div>
+        <div class="field"><b class="how">修复</b>shop.mjs/lottery.mjs 新增 isPrivilegedTag 校验发放。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.28 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.28</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-count">38 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L1</span>错误信息脱敏
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>服务端 API 把内部异常堆栈返回给客户端，暴露实现细节辅助侦察。</div>
+        <div class="field"><b class="how">修复</b>catch 后用固定文案「服务器内部错误」替换 error.message。</div>
+        <pre class="bug-code">catch (e) {
+  // 修复前：return err(e.message);
+  return err("服务器内部错误");
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L2</span>房间历史 limit 上限 200
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>请求房间历史 limit 传超大值可拖垮内存。</div>
+        <div class="field"><b class="how">修复</b>limit 钳制 1~200。</div>
+        <pre class="bug-code">const limit = Math.min(Math.max(parseInt(q.limit) || 50, 1), 200);</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L3</span>rooms 列表 limit 1~200
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>rooms 列表接口 limit 同样钳制 1~200，防超大值。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L4</span>Bot 命令 action 白名单
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>机器人命令 action 参数限定白名单，拒绝任意命令注入。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L5</span>禁言归因服务端固定
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>mutedBy 操作者由服务端从会话固定，前端不可伪造归因。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L6</span>已删消息不可再被编辑复活
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>消息被删除后仍可通过「编辑」恢复原文。</div>
+        <div class="field"><b class="how">修复</b>edit 时校验目标消息为已删除类型则拒绝。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L7</span>file-data / message-recall isNaN 守卫
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>非法时间戳导致 500。</div>
+        <div class="field"><b class="how">修复</b>isNaN(timestamp) 校验，非法值返回 400。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L8</span>同名并发竞态先到者保留
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>两个同名用户并发加入，重复写入。</div>
+        <div class="field"><b class="how">修复</b>先到者保留，后到者被拒。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L9</span>highlights/reactions JSON.parse 容错
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>存储 JSON 损坏时整个功能崩溃。</div>
+        <div class="field"><b class="how">修复</b>try/catch 包裹，损坏数据回退空值。</div>
+        <pre class="bug-code">let data;
+try { data = JSON.parse(raw); } catch { data = []; }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L10</span>filebucket alarm 重设
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>文件桶定时清理 alarm 未按最小 storedAt 重设，过期文件清理不彻底。</div>
+        <div class="field"><b class="how">修复</b>alarm 按最小 storedAt 重新排程。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L11</span>空/纯空白消息拦截
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>发送空白/纯空格消息无意义。</div>
+        <div class="field"><b class="how">修复</b>trim 后为空则拒绝。</div>
+        <pre class="bug-code">if (!String(msg).trim()) return err("消息不能为空");</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L12</span>DO 层端点鉴权注释处理
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>DO 层端点鉴权加 header 需 api/admin 配合零风险方案不成立，以注释记录不强制收紧。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L13a</span>签到每 IP 计数持久化
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>checkinByIp 每 IP 每日计数只存内存，DO 重启清零可重复签到。</div>
+        <div class="field"><b class="how">修复</b>checkinByIp 持久化到 storage。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L13b</span>注册每 IP 计数持久化
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>registerByIp 每 IP 每日注册数不持久，DO 重启可刷小号。</div>
+        <div class="field"><b class="how">修复</b>registerByIp 持久化（users.mjs 内自包含懒加载）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L14</span>评估项勿再收紧
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>审计明确该项"勿再收紧"，评估后未改动。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L15</span>管理密钥回传脱敏
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>admin-key 完整回传，前端可见明文密钥。</div>
+        <div class="field"><b class="how">修复</b>回传只显 **** + 后4位。</div>
+        <pre class="bug-code">const masked = "****" + key.slice(-4);</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L16</span>非法时间戳返回 400
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>文件/撤回接口非法时间戳返回 400 而非 500。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L17</span>历史 JSON 损坏容错
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>房间历史 JSON.parse try/catch，损坏不拒绝所有新连接。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L18</span>兑换码最短 8 位
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>兑换码 4 位可暴力枚举。</div>
+        <div class="field"><b class="how">修复</b>最短长度 4→8 位。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L19</span>任务发奖顺序 + 防双发
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>任务先落完成状态再加积分，崩溃重试丢奖或双发。</div>
+        <div class="field"><b class="how">修复</b>先加积分后落状态 + taskRewardPaid 标记防双发。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L20</span>批量扣款不足整批拒绝
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>批量扣款余额不足时部分成功部分失败，状态不一致。</div>
+        <div class="field"><b class="how">修复</b>余额不足整批拒绝，与单用户一致。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L21</span>房间信息 escapeHtml
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>房间信息面板动态内容统一 escapeHtml 防 XSS。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L22</span>关键词面板 escapeHtml
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>关键词提醒面板动态内容统一 escapeHtml。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L23</span>个人资料 escapeHtml
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>用户个人资料动态内容统一 escapeHtml。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L24</span>管理按钮需真实密钥点亮
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理操作按钮需真实 getAdminKey() 非空才点亮，空 key 不误显示。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L25</span>商城/任务/人数 escapeHtml
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>商城金额/任务奖励/房间人数动态内容统一 escapeHtml。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L26</span>t() 中文缺 key 回退
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>英文模式下词典缺 key 时显示原始 key 而非中文。</div>
+        <div class="field"><b class="how">修复</b>t() 未命中 key 回退返回中文原文。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L27</span>// 转义发 / 文本
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>想发 / 开头的普通文本被当成命令。</div>
+        <div class="field"><b class="how">修复</b>// 开头转义，去掉一个 / 当普通文本发送。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L28</span>WS 消息 JSON 容错
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>WebSocket 收到畸形 JSON try/catch，不中断连接。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L29</span>DM 发送方不重复渲染
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>私信自己发送的消息出现两次。</div>
+        <div class="field"><b class="how">修复</b>DM 发送方不重复渲染。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L30</span>其他动态内容 escapeHtml 统一
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>前端其余动态渲染统一收敛到 escapeHtml 工具。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L31</span>商城购买/装备防双击
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>商城购买/装备快速双击重复扣款。</div>
+        <div class="field"><b class="how">修复</b>按钮防抖 + 请求中禁用。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L32</span>调色大师双计分
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>调色大师游戏一次操作计两次分。</div>
+        <div class="field"><b class="how">修复</b>防重入，单局仅结算一次。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L33</span>扫雷/2048 下注时序
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>扫雷/2048 下注与结算时序竞态。</div>
+        <div class="field"><b class="how">修复</b>下注后锁定时序，防重复结算。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L34</span>游戏防重入
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>游戏多模块防重入/防竞态统一处理。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L35</span>监听器去重
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>语言切换/切房间重复绑定监听器。</div>
+        <div class="field"><b class="how">修复</b>addEventListener 前先 removeEventListener。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L36</span>removeEventListener 再 add
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>动态绑定统一先 remove 再 add，防重复触发。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">L37</span>语言切换动态 t()
+        <span class="commit">d4bb0d3</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>切换语言后已渲染界面文案不刷新。</div>
+        <div class="field"><b class="how">修复</b>语言切换时动态重渲染 t() 文案。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.27 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.27</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-count">23 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">H1</span>管理端 CSRF 防护
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>跨站请求携带管理凭据可伪造管理操作。</div>
+        <div class="field"><b class="how">修复</b>admin.mjs Cookie 改 SameSite=Strict + Secure。</div>
+        <pre class="bug-code">set-cookie: admin_logged=1; HttpOnly; Secure; SameSite=Strict</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">H2</span>SSRF 十六进制绕过
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>URL 预览可访问 ::ffff:7f00:1 等 IPv4-mapped 十六进制内网地址。</div>
+        <div class="field"><b class="how">修复</b>preview.mjs 拦截十六进制内网形式，转点分十进制走 isPrivateIPv4。</div>
+        <pre class="bug-code">if (host.startsWith("::ffff:") &amp;&amp; /[0-9a-f]{4}|[0-9a-f]{8}/i.test(host)) {
+  // 转点分十进制后 isPrivateIPv4 判断
+  return error("内网地址被拒绝");
+}</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">H3</span>clearAllMessages 误删
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>文本消息无 type 字段导致 /clear 删不掉；系统 key 消息被误删。</div>
+        <div class="field"><b class="how">修复</b>判定改"数字 timestamp + (message 字段或消息类 type)"。</div>
+        <pre class="bug-code">const isMsg = typeof m.timestamp === "number" &amp;&amp; (m.message !== undefined || MSG_TYPES.has(m.type));</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">H5</span>游戏赔率修正（防铸币）
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>45% 概率赢 1~25 倍为 +EV，长期玩必然铸币。</div>
+        <div class="field"><b class="how">修复</b>赔率改 1~2 倍（负期望），赢面收窄。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">H6</span>每日净赢持久化
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>gameDailyWin 每日净赢上限存内存，DO 重启重置可重复刷额度。</div>
+        <div class="field"><b class="how">修复</b>persistence.saveGameDailyWin + registry.load + points.bet 后保存。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M1</span>普通 admin 积分铸币越权
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>普通管理员可设置/增加/批量积分，给自己铸币。</div>
+        <div class="field"><b class="how">修复</b>adminAllowedPaths 移除 "points" 写操作；admin.html 积分导航加 nav-super；普通 admin 仅 points get/all 只读。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M2</span>转账负数/超大数
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>转账可转负数/超大指数，破坏积分。</div>
+        <div class="field"><b class="how">修复</b>transfer 金额正则 /^[1-9]\d*$/，负数与 1e100000 均 400。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M3</span>积分流水无鉴权 IDOR
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/ledger 无 token 可查任意用户流水。</div>
+        <div class="field"><b class="how">修复</b>ledger 加 token 校验（user-check-auth）；commands.js /ledger 带 token。无 token 403，最新 token 200，旧 token 403。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M5</span>撤回权限 fail-closed
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>recall.mjs 未复制密码房权限校验，密码房可被外部撤回消息。</div>
+        <div class="field"><b class="how">修复</b>recall.mjs 复制 requireRoomPassword（fail-closed）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M6</span>审计评估项
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>M6 为中危评估项，修复时按审计报告处理，明细未单独留存。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M7</span>admin 登录爆破
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>管理登录可无限尝试爆破密钥。</div>
+        <div class="field"><b class="how">修复</b>login 加 IP 限流：同 IP 10 分钟失败 ≥20 返回 429。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M11</span>搜索/导出/文件默认频道
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/search /export /files 不带 channel 参数时跨全部频道返回，泄漏其他频道内容。</div>
+        <div class="field"><b class="how">修复</b>默认 "general"；ui.js exportChatLog 带 channel。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M12</span>未命名会话 WS 消息堆积
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>broadcast/broadcastToChannel 对未命名会话 blockedMessages 无限堆积。</div>
+        <div class="field"><b class="how">修复</b>blockedMessages 上限 200。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M13</span>SVG/XHTML 上传 + gh-card XSS
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>上传 data:image/svg + xhtml+xml 可注入脚本；gh-card avatar 未转义。</div>
+        <div class="field"><b class="how">修复</b>media.mjs 拦 data:image/svg + application/xhtml+xml + application/svg+xml；renderers.js gh-card avatar 用 escapeHtml。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">M14</span>红包不持久化
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>未抢完的红包 DO 重启后消失。</div>
+        <div class="field"><b class="how">修复</b>redPackets 持久化（persistence.saveRedPackets + create/grab 后保存）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M15</span>registry 30+ 管理端点无统一守卫
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>registry.mjs fetch() 各管理端点鉴权缺失/不一致，内部转发可绕过。</div>
+        <div class="field"><b class="how">修复</b>fetch() 顶部统一守卫 30+ 管理端点（adminAuthorized 校验 ?auth=）；admin.mjs 注入 auth；14 个子模块转发带 auth；/ban 用精确路径避免误拦。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">M17</span>BigInt 大数 DoS
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>指数超大数字触发 BigInt 天文计算卡死。</div>
+        <div class="field"><b class="how">修复</b>6 处 toBigInt 加 if (e &gt; 100000) return 0n。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">M18</span>未授权频道路由
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>websocket.js else 分支频道路由在 timestamp 检查后，非法消息先落错频道。</div>
+        <div class="field"><b class="how">修复</b>频道路由提前到 timestamp 检查前。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">M19</span>搜索历史定位无法返回实时
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>search.js jumpToResult 保存 _savedView + "返回实时"浮层按钮（backToLive）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">M20</span>搜索防抖 + 过期响应丢弃
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>快速输入多次请求，旧响应覆盖新结果。</div>
+        <div class="field"><b class="how">修复</b>300ms 防抖 + _searchSeq 丢弃过期响应。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">M21</span>getAdminKey 双源兜底
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>ui.js 新增 getAdminKey()（localStorage 优先，cookie 兜底），menu/commands/ui 全部 let k="" 改用它。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">M22</span>游戏计时器泄漏
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>切换/关闭游戏后 timer/spawnTimer/countdown/anim 残留运行。</div>
+        <div class="field"><b class="how">修复</b>game-core.js cleanupGameTimers() 遍历 gs 清 timer，switchGame/closeGames 开头调用。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">M23</span>游戏双击下注扣款
+        <span class="commit">6aae754</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>双击下注第二次直接扣款铸币。</div>
+        <div class="field"><b class="how">修复</b>gameApi 加 _betInFlight 全局 bet 锁（第二次直接拒）+ 服务端 30 秒冷却双保险。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.26 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.26</span>
+    <span class="version-date">2026-08-02</span>
+    <span class="version-count">18 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>「空 key 判断当开关」隐形炸弹
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>用户菜单 5 个管理操作、/batch-kick、转房间同时静默失效。</div>
+        <div class="field"><b class="why">根因</b><code>let k=""; if(!k){...}</code> 拿本地空值当开关——k 恒为空串时 if(!k) 永远走"非管理员"分支，是本次审计头号炸弹。</div>
+        <div class="field"><b class="how">修复</b>管理判定改看服务端 httpOnly cookie <code>admin_logged=1</code>，空 key 照常带请求由服务端兜底鉴权。</div>
+        <pre class="bug-code">// 修复前：let k="" 时 if(!k) 恒真，管理操作全被静默拦截
+let k = localStorage.getItem("admin_key") || "";
+if (!k) { /* 误判非管理员 → return */ }
+// 修复后：以 admin_logged cookie 为准
+if (document.cookie.indexOf("admin_logged=1") === -1) { /* 真非管理员 */ }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>用户菜单·踢出恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>管理面板点用户「踢出」无任何反应。</div>
+        <div class="field"><b class="why">根因</b>「空 key 判断当开关」误判非管理员提前 return。</div>
+        <div class="field"><b class="how">修复</b>改判 admin_logged cookie 后正常发请求。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>用户菜单·封禁恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>点用户「封禁」无反应，违规用户始终不封。</div>
+        <div class="field"><b class="why">根因</b>同「空 key 判断当开关」。</div>
+        <div class="field"><b class="how">修复</b>以 admin_logged cookie 判定管理员。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>用户菜单·封禁IP恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>点用户「封禁IP」无反应。</div>
+        <div class="field"><b class="why">根因</b>同「空 key 判断当开关」。</div>
+        <div class="field"><b class="how">修复</b>以 admin_logged cookie 判定管理员。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>用户菜单·改标签恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>点用户「改标签」无反应，标签编辑弹窗打不开。</div>
+        <div class="field"><b class="why">根因</b>同「空 key 判断当开关」。</div>
+        <div class="field"><b class="how">修复</b>以 admin_logged cookie 判定管理员。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>用户菜单·批量踢出恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>点用户「批量踢出」无反应。</div>
+        <div class="field"><b class="why">根因</b>同「空 key 判断当开关」。</div>
+        <div class="field"><b class="how">修复</b>以 admin_logged cookie 判定管理员。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/batch-kick 恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/batch-kick 批量踢出命令执行无效果。</div>
+        <div class="field"><b class="why">根因</b>「空 key 判断当开关」在命令入口拦截。</div>
+        <div class="field"><b class="how">修复</b>改判 admin_logged cookie。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>消息转房间恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>消息菜单「转房间」操作无反应。</div>
+        <div class="field"><b class="why">根因</b>「空 key 判断当开关」拦截。</div>
+        <div class="field"><b class="how">修复</b>改判 admin_logged cookie。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>更多菜单·精华面板 TypeError
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>更多菜单点「精华」报 TypeError，面板不弹出。</div>
+        <div class="field"><b class="why">根因</b>showHighlightsPanel 未定义/未挂载即被调用。</div>
+        <div class="field"><b class="how">修复</b>补齐函数定义与全局挂载。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>更多菜单·房间信息 TypeError
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>更多菜单点「房间信息」报 TypeError。</div>
+        <div class="field"><b class="why">根因</b>toggleRoomInfo 未定义/未挂载。</div>
+        <div class="field"><b class="how">修复</b>补齐函数定义与全局挂载。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>更多菜单·定时消息 TypeError
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>更多菜单点「定时消息」报 TypeError，面板不弹。</div>
+        <div class="field"><b class="why">根因</b>#schedule-btn 绑定的函数未定义/未挂载。</div>
+        <div class="field"><b class="how">修复</b>补齐函数定义与全局挂载。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/签到 恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/签到 命令永远拿不到积分。</div>
+        <div class="field"><b class="why">根因</b>签到请求未携带用户 token，服务端校验身份失败。</div>
+        <div class="field"><b class="how">修复</b>签到请求补齐 token 参数。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>消息翻译恒失败
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>消息翻译功能调用报错，无法翻译。</div>
+        <div class="field"><b class="why">根因</b>翻译请求未带 name+token，被鉴权拦截。</div>
+        <div class="field"><b class="how">修复</b>翻译请求补齐 name+token。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>积分展示整链路 403
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>v1.21 安全收紧后 /api/points/all 收紧，积分徽章/商城/任务/排行榜/统计整链路全 403。</div>
+        <div class="field"><b class="why">根因</b>改服务端权限时没同步前端调用方，只收紧写操作却把公开读接口也一起封了。</div>
+        <div class="field"><b class="how">修复</b>积分排行榜本就公开，恢复公开只读；写操作仍走密钥鉴权。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>跨频道未读不更新标题
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>非当前频道来消息时标题不闪烁、未读不计数。</div>
+        <div class="field"><b class="why">根因</b>updateTitleUnread 是 ES module 导出未挂 window，调用点引用不到。</div>
+        <div class="field"><b class="how">修复</b>将 updateTitleUnread 挂到 window 全局。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>投票跨频道乱串
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>某频道发起的投票/投票结果广播到了全部频道。</div>
+        <div class="field"><b class="why">根因</b>用了 broadcast（全房广播）而非 broadcastToChannel（仅当前频道）。</div>
+        <div class="field"><b class="how">修复</b>投票事件改走 broadcastToChannel。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/clear 双重刷新
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/clear 清屏后界面闪两下/重复渲染。</div>
+        <div class="field"><b class="why">根因</b>清屏同时走了两套刷新逻辑（缓存+WS）重复执行。</div>
+        <div class="field"><b class="how">修复</b>去重，只保留一次刷新入口。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>main.js 死 import
+        <span class="commit">2f383de</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>main.js 加载报错，引用未定义模块/符号。</div>
+        <div class="field"><b class="why">根因</b>import 了不存在或已被移除的模块/导出。</div>
+        <div class="field"><b class="how">修复</b>删除/修正死 import。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.25 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.25</span>
+    <span class="version-date">2026-08-01</span>
+    <span class="version-count">3 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>media.mjs msgChannel 块级作用域
+        <span class="commit">ff044f2</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>image/file/zifu/voice 四类媒体消息全报"消息处理错误"。</div>
+        <div class="field"><b class="why">根因</b>let msgChannel 声明在 if 块内，各媒体分支访问不到。</div>
+        <div class="field"><b class="how">修复</b>提升到函数顶层声明。</div>
+        <pre class="bug-code">// 修复前：msgChannel 声明在 if 块内
+if (data.type === "image") {
+  let msgChannel = session.channel || "general"; // 块级作用域！
+  ... media 分支访问不到
+}
+// 修复后：提升到函数顶层
+let msgChannel = session.channel || "general";
+if (data.type === "image") { /* 各分支共享 msgChannel */ }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>GitHub API 限流
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>/gh 匿名查 GitHub API 403。</div>
+        <div class="field"><b class="why">根因</b>Workers 出口 IP 共享 60次/小时。</div>
+        <div class="field"><b class="how">修复</b>配 GITHUB_TOKEN + 1 小时缓存。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>旧前端缓存导致 "undefined" 气泡
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>旧版 commands.js 发 {type:"gh-card"}，新服务端 type 丢失。</div>
+        <div class="field"><b class="how">修复</b>服务端加 {type:"gh-card"} 兼容分支。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.24 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.24</span>
+    <span class="version-date">2026-08-01</span>
+    <span class="version-count">6 项</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>用户主页弹窗关不掉
+        <span class="commit">f773d8c / d2f6c40</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>关闭按钮/背景点击调 hideProfile 无反应。</div>
+        <div class="field"><b class="why">根因</b>hideProfile/sendDM 是 ES module 导出，未挂 window 全局，内联 onclick 调不到。</div>
+        <div class="field"><b class="how">修复</b>main.js 补挂 window.hideProfile + window.sendDM。</div>
+        <pre class="bug-code">// main.js 补挂全局（ES module 导出不可全局访问）
+window.closeDM = closeDM;
+window.sendDM = sendDM;
+window.hideProfile = hideProfile;</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>透明壁纸浮层露馅
+        <span class="commit">8693771</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>透明壁纸下 #game-overlay 与 #mobile-bottom-bar 露馅。</div>
+        <div class="field"><b class="how">修复</b>永久隐藏 display:none!important。</div>
+        <pre class="bug-code">#game-overlay, #mobile-bottom-bar, #game-overlay * { display: none !important; }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/destroy 前端 fetch 版执行不了
+        <span class="commit">36d28fc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>前端直接 fetch 失败。</div>
+        <div class="field"><b class="how">修复</b>改仿 /rollback 服务端透传：commands.js 顶部 WS send + chatroom.mjs 校验 env.DESTROY_KEY。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>WS ready 消息判断错误
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>ready 消息是 {ready:true} 无 type。</div>
+        <div class="field"><b class="how">修复</b>判断用 d.ready 别用 d.type==="ready"。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>静态资源缓存头
+        <span class="commit">8866496</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>用户反复"未知命令"（缓存旧 commands.js）。</div>
+        <div class="field"><b class="why">根因</b>Cache-Control max-age=60 仍被缓存。</div>
+        <div class="field"><b class="how">修复</b>index.mjs 所有 JS/CSS/HTML 改 no-cache, must-revalidate。</div>
+        <pre class="bug-code">// index.mjs 静态资源响应头
+{ "Cache-Control": "no-cache, must-revalidate", "Content-Type": "text/html;charset=UTF-8", ... }</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>销毁房间后续问题
+        <span class="commit">973846e</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>销毁后 rejoin 无限重连 / 没跳首页 / 连接 1011 / 房间复活。</div>
+        <div class="field"><b class="why">根因</b>依赖 CloseEvent.reason 判断销毁 + __destroyed__ 未持久化。</div>
+        <div class="field"><b class="how">修复</b>销毁通知改消息机制 {type:"destroyed"}；storage.put("__destroyed__","1") + 构造函数读回 + fetch 前检查。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- v1.23 及更早 -->
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.23 及更早</span>
+    <span class="version-date">2026-05 ~ 08-01</span>
+    <span class="version-count">重点</span>
+    <span class="version-arrow">▶</span>
+  </div>
+  <div class="version-body">
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>频道切换被公告只读校验误拦截
+        <span class="commit">de53978</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>切到 announcement 后 switch-channel/typing 被当"公告频道发言"拦死。</div>
+        <div class="field"><b class="how">修复</b>仅对图片/文件/字符画校验，普通文本放行。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>金边红超管被误判普通用户
+        <span class="commit">65e43bc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>金边红/金边青超管在公告频道发言、置顶、管频道、精华无权限。</div>
+        <div class="field"><b class="why">根因</b>管理员判定只认 tag 名，不认 tagColor/tagBorder。</div>
+        <div class="field"><b class="how">修复</b>统一走 isAdminSession（认 tag/tagColor/tagBorder 三围）。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>SW 缓存兜底
+        <span class="commit">1efc54a</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>网络波动缓存 miss 致 respondWith(undefined) 全部资源 ERR_FAILED 页面变裸 HTML。</div>
+        <div class="field"><b class="how">修复</b>返回 503 兜底响应 + 缓存版本升级。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>用户主页 500
+        <span class="commit">733f7dc</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>handleApi 的 case "user" 引用作用域外 url 变量 ReferenceError。</div>
+        <div class="field"><b class="how">修复</b>补 url 定义。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>commands.js 语法错误
+        <span class="commit">ad919ac</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>case 错位 + split(/\s+/) 解析。</div>
+        <div class="field"><b class="how">修复</b>修正 case 结构与参数解析。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>RateLimiter migration 问题
+        <span class="commit">2889fe7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">说明</b>wrangler.toml 注释导致 migration 解析问题，修复注释。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>S1 房间 DO 管理端点零认证
+        <span class="commit">eb97b91</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>PUBLIC_ROOM_ENDPOINTS 白名单，管理端点需密钥。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>版本存档下载公开
+        <span class="commit">3395ab8</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>下载无需密钥 + .zip 文件名。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>删除默认管理密钥兜底
+        <span class="commit">e32f73a</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>未配置密钥直接拒绝，防默认密钥。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>i18n 全面回归（v1.21.5~v1.22）
+        <span class="commit">ab7637b / 0f1a14c / 7704a48</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>i18n 改造后 login 瘫痪、28 模块未 import t 崩溃。</div>
+        <div class="field"><b class="how">修复</b>i18n 内联进 state.js + re-export 兜底；自动包裹 t() 必须补 import { t }；独立模块 CDN 暴露问题内联或 CHAT_MODULES re-export。</div>
+        <pre class="bug-code">// 坑：自动包裹 t() 但没 import t → ReferenceError
+// 修复：包裹后必须补
+import { t } from "./state.js";</pre>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>游戏刷分
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>修复游戏刷分 — 服务端校验下注记录，限制单局倍率/频率/每日净赢上限</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>商城/任务/抽奖/兑换越权
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>修复商城/任务/抽奖/兑换越权 — 所有积分写操作强制登录校验，杜绝操作任意账号</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>存储型 XSS
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>修复存储型 XSS — 用户名/消息/房间名/红包/精华/定时消息渲染统一转义</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>未登录可修改他人头像/简介
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>修复未登录可修改他人头像/简介 — 严格 token 校验</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>用户名/房间名字符白名单
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>用户名/房间名字符白名单 — 拒绝 HTML 特殊字符，从源头防注入</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>版本存档下载
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>版本存档下载 — 下载无需密钥，文件名正确带 .zip 后缀</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>踢人限频 + 敏感词拦截
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>踢人限频 + 敏感词拦截 — 防反复骚扰踢人、防冒名自动封号；抽奖面板 XSS 转义</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>游戏防铸币 + 文件消息防注入
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>游戏防铸币 + 文件消息防注入 — 下注前校验余额不足拒绝；拒绝可执行协议文件（javascript:/data:text/html）</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>管理操作权限加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理操作权限加固 — 置顶/精华限管理员，全屏特效限频，编辑消息过敏感词</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>壁纸/视频 URL 白名单校验
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>壁纸/视频 URL 白名单校验 — 仅允许 https/http 或安全 data:，防 CSS 注入与 IP 泄露</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>私信窃听/冒名漏洞修复
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>私信窃听/冒名漏洞修复 — 同一名字仅允许一个在线会话，冒名者无法截获他人私信</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>投票刷票修复
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>投票刷票修复 — 同一IP每场投票限1票 + 限频，防批量连接换名刷票/冒名封投票权</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>红包负数修复
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>红包负数修复 — 任意模式要求每个至少1积分，抢红包金额兜底为正，防 0/负数红包</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>游戏服务端定局
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>游戏服务端定局 — 下注即由服务端随机结算胜负，客户端无法上报赢取金额铸币；下注/扣款原子化，杜绝竞态双花</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>红包加认证
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>红包加认证 — 仅注册用户可发/抢红包，校验所在房间一致 + 每IP限频，堵死游客小号抢空红包</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>注册/签到反作弊
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>注册/签到反作弊 — 每IP每日注册上限与签到限频，防批量小号签到+铸币</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>密码房间数据保护
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>密码房间数据保护 — 历史/文件/导出/公告等数据端点强制密码校验，私密房内容不再裸奔</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>定时消息越权修复
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>定时消息越权修复 — 只能取消自己的定时消息（管理员除外），非管理员看不到他人定时内容</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>敏感词统一拦截
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>敏感词统一拦截 — 定时/接龙/投票/私信/字符画/表情全部过敏感词 + Unicode归一化防全角绕过</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>字符画不再伪装 BOT
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>字符画不再伪装 BOT — 广播使用发送者本人身份，防冒充官方机器人钓鱼</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>管理后台越权收窄
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理后台越权收窄 — 销毁房间/删用户/兑换码铸币/审计日志/IP详情仅限超管密钥</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>URL 预览 SSRF 加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>URL 预览 SSRF 加固 — IPv6/映射地址拦截、DNS 解析校验、重定向逐跳校验</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>管理操作审计日志接线
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理操作审计日志接线 — 写操作自动记录，日志仅超管可查/清空；密钥禁止设为空值</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>版本存档加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>版本存档加固 — 删除仅限超管，上传限制50MB防耗尽存储</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>积分表接口统一认证
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>积分表接口统一认证 — 消除平行密钥口子，空密钥拒绝，支持轮换密钥</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>房间黑名单功能修复
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>房间黑名单功能修复 — add/remove 判断变量错误导致无法禁止踢人</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>管理端大文件下载
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理端大文件下载 — FileBucket 化文件按 fid 回查拉取，不再提示无效</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>管理密钥常量时间比较 + 注册表层积分写端点纵深校验
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理密钥常量时间比较 + 注册表层积分写端点纵深校验</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>商城/任务/抽奖余额运算统一 BigInt
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>商城/任务/抽奖余额运算统一 BigInt — 防大数精度丢失</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>文件/图片上传限频
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>文件/图片上传限频 — 每用户10秒1次，防大文件广播放大DoS</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>表情反应加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>表情反应加固 — 校验真实时间戳 + 限频 + 总量上限，防伪造键DoS</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>投票加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>投票加固 — 选项限长、创建限频、过期轮询自动清理</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>图片/文件强制 data: 数据
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>图片/文件强制 data: 数据 — 拒绝外链URL防追踪钓鱼；消息颜色白名单</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>历史消息分页非法时间戳不再500
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>历史消息分页非法时间戳不再500</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>头像/表情存储型XSS修复
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>头像/表情存储型XSS修复 — data:image 内容白名单（拒 svg+xml）+ 前端转义引号</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>密码加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>密码加固 — 服务端强制密码强度 + 每用户随机盐 + 登录失败5次锁定30分钟</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>登录 token 加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>登录 token 加固 — 30天过期 + 服务端登出吊销 + 常量时间比较</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>陈旧会话冒名修复
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>陈旧会话冒名修复 — 红包创建/领取校验 token，标签更新仅限已认证会话</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>管理密钥 httpOnly Cookie 化
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>管理密钥 httpOnly Cookie 化 — 不再存 localStorage，聊天页不再读取，防 XSS 窃取密钥；日志脱敏；密钥只回掩码</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>定时消息条数上限（每人5条/房间50条）；接龙仅管理员可结束+24小时自动结束
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>定时消息条数上限（每人5条/房间50条）；接龙仅管理员可结束+24小时自动结束</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>消息撤回严格校验
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>消息撤回严格校验 — 消息不存在拒绝，杜绝伪造撤回/任意写入；商城/抽奖禁止发放管理标签</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>AI 功能加固
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>AI 功能加固 — 翻译/对话要求登录，目标语言白名单，错误脱敏</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-sec">安全</span>密码房校验 fail-closed；CORS 收敛同源
+        <span class="commit">6173ea6 / 8f9bcd8 / 902f51b / 816921c / 23e895e / a3ef2c3 / cd887fe / fe16798 / e0755c7</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>密码房校验 fail-closed；CORS 收敛同源</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>私信窃听/投票刷票/红包负数
+        <span class="commit">8f9bcd8</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>同名一在线；投票 IP 限频；红包每份至少 1 分。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>Toast 独立模块被 CDN 缓存断裂
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>v1.17 Toast 独立模块 CDN 缓存致 JS 模块链断裂。</div>
+        <div class="field"><b class="how">修复</b>Toast 函数内联进 state.js。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>/api/redeem 路由 404
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>兑换码 API 404。</div>
+        <div class="field"><b class="why">根因</b>切分后数组只有 ["redeem"] 无 [1]，path[1] 取错。</div>
+        <div class="field"><b class="how">修复</b>正确路由分发。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>core.js 缺闭合大括号 / main.js 引用已删元素
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>v1.15 模块解析失败、JS 崩溃登录按钮无效。</div>
+        <div class="field"><b class="how">修复</b>补闭合大括号；删除对已删元素的引用。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>聊天消息 DOM 无限增长
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>500 条上限，超限移除最早消息。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>收藏夹存储 Key 写死
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="why">根因</b>静态常量在模块初始化时计算，所有房间共用 key。</div>
+        <div class="field"><b class="how">修复</b>按房间动态生成 key。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>ZIP 中央目录签名写错
+        <span class="commit">401cad2</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="sym">症状</b>版本存档 unzip 失败。</div>
+        <div class="field"><b class="why">根因</b>中央目录签名 0x50 0x4b 0x01 0x02 写错。</div>
+        <div class="field"><b class="how">修复</b>签名修正。</div>
+      </div>
+    </div>
+
+    <div class="bug-item">
+      <div class="bug-title"><span class="tag tag-fix">修复</span>favorites.js roomname 未定义 / note.js 循环依赖
+        <span class="commit">—</span><span class="arrow">▶</span></div>
+      <div class="bug-body">
+        <div class="field"><b class="how">修复</b>v1.7 模块初始化时序修正。</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggle(header) {
+  let body = header.nextElementSibling;
+  let arrow = header.querySelector('.version-arrow');
+  if (body) {
+    body.classList.toggle('open');
+    if (arrow) arrow.classList.toggle('open');
+  }
+}
+// bug 条目折叠
+document.querySelectorAll('.bug-title').forEach(function(title) {
+  title.addEventListener('click', function() {
+    let body = this.nextElementSibling;
+    let arrow = this.querySelector('.arrow');
+    if (body) {
+      body.classList.toggle('open');
+      if (arrow) arrow.classList.toggle('open');
+    }
+  });
+});
+// 总卡统计：全部 bug-item 数量
+function countBugs() {
+  const n = document.querySelectorAll('.bug-item').length;
+  document.getElementById('totalBugs').textContent = n;
+}
+// 各版本组统计：覆盖硬编码的 version-count（优先 DOM 实际卡片数）
+document.querySelectorAll('.version-group').forEach(function(group) {
+  const n = group.querySelectorAll('.bug-item').length;
+  const c = group.querySelector('.version-count');
+  if (c) c.textContent = n + ' 项';
+});
+countBugs();
+</script>
+
+</body>
+</html>

@@ -2,6 +2,7 @@ import HTML from "./chat.html";
 import ADMIN from "./admin.html";
 import TASKS from "./tasks.html";
 import CHANGELOG from "./changelog.html";
+import BUGS from "./bugs.html";
 import FAVICON_B64 from "./favicon-data.mjs";
 import HELP from "./help.html";
 import ABOUT from "./about.html";
@@ -327,6 +328,9 @@ self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWi
 
         case "changelog":
           return new Response(CHANGELOG, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+
+        case "bugs":
+          return new Response(BUGS, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "help":
           return new Response(HELP, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
