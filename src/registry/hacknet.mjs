@@ -626,6 +626,12 @@ function currentTargetRoom(game, side) {
   return game.bases[otherSide(side)].rooms[t] || null;
 }
 
+// 未锁定提示：附上敌方基地房间名，直接引导用户 /connect 正确的攻击目标
+function lockError(game, side) {
+  const list = Object.values(game.bases[otherSide(side)].rooms).map(r => "#" + r.name).join("  ");
+  return err("未锁定敌方房间 — 敌方基地: " + (list || "无") + "（/connect 敌方房 锁定攻击目标）");
+}
+
 async function handleAction(reg, params) {
   const name = String(params.name || "").trim();
   const cmd = String(params.cmd || "").trim().toLowerCase();
@@ -655,7 +661,7 @@ async function handleAction(reg, params) {
   }
 
   if (cmd === "probe") {
-    if (!room) return err("未锁定敌方房间（/connect #房间 锁定目标）");
+    if (!room) return lockError(game, side);
     resolveRoomProgress(room);
     const lines = ["目标 #" + room.name + " 情报："];
     lines.push("  端口: " + room.ports.map(pp => pp + (room.crackDone[pp] ? "✓" : room.crack[pp] ? "…" : "✗")).join("  "));
@@ -672,7 +678,7 @@ async function handleAction(reg, params) {
       const enSide = otherSide(side);
       room = Object.values(game.bases[enSide].rooms).find(r => r.crackedBy === side && r.hearts.some(h => h.taggedBy !== side)) || null;
     }
-    if (!room) return err("未锁定敌方房间（/connect #房间 锁定目标）");
+    if (!room) return lockError(game, side);
   }
   resolveRoomProgress(room);
   if (room.crackedBy && cmd !== "hearttag") return err("该房间已被打通（" + (room.crackedBy === side ? "你" : "对方") + "）");
@@ -682,7 +688,7 @@ async function handleAction(reg, params) {
       const port = Number(params.port);
       const cr = CRACKERS[port];
       if (!cr) return err("未知端口 " + port + "（可用端口: " + Object.keys(CRACKERS).join(",") + "）");
-      if (!room.ports.includes(port)) return err("该房间没有开放端口 " + port);
+      if (!room.ports.includes(port)) return err("该房间没有开放端口 " + port + "（本房开放: " + room.ports.join(",") + "）");
       if (room.crackDone[port]) return err("端口 " + port + " 已破解完成");
       if (room.crack[port]) return err("端口 " + port + " 破解中…");
       room.crack[port] = { startedAt: Date.now(), duration: cr.duration };

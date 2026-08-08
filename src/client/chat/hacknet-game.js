@@ -412,13 +412,27 @@ export function dispatchBare(v) {
 }
 
 // ---------- 切房 / 断开 / 密码 / ticket 钩子 ----------
+function enemyNames(st) {
+  const list = (st && st.bases && st.bases.enemy || []).map(r => "#" + r.room);
+  return list.length ? list.join("  ") : "无";
+}
+
 export async function tryConnect(name) {
   if (!name) return false;
-  const st = currentStatus;
-  if (!st) return false;
+  let st = currentStatus;
+  if (!st) {
+    // 状态尚未就绪（刚开局 / 刚切主题）→ 先拉一次状态再判定，避免漏锁
+    await poll();
+    st = currentStatus;
+  }
+  if (!st) {
+    printMsg("⚠ 当前不在 Hacknet 对局中，/connect 为普通切房。开局: /hn new pve 或 /hn new pvp vs <玩家>", true);
+    return false;
+  }
   const mine = st.bases && st.bases.mine && st.bases.mine.find(r => r.room === name);
   if (mine) {
-    // 我方基地房 → 直接 switchRoom（自动进，密码钩子 enterPassword 绕过弹窗）
+    // 我方基地房 → 直接 switchRoom（自动进，密码钩子 enterPassword 绕过弹窗）；提示安全区非攻击目标
+    printMsg("ℹ #" + name + " 是你的基地房（安全区，非攻击目标）。敌方基地: " + enemyNames(st) + "，攻破请 /connect 敌方房", true);
     try { await switchRoom(name); } catch (e) { printMsg("✗ 进入失败: " + (e && e.message ? e.message : String(e)), true); }
     return true;
   }
@@ -448,6 +462,8 @@ export async function tryConnect(name) {
     } catch (e) { printMsg("✗ " + (e && e.message ? e.message : String(e)), true); }
     return false;
   }
+  // 普通房间/未匹配：明确提示未锁定，别让用户误以为已锁
+  printMsg("⚠ #" + name + " 不是本局基地房间，未锁定攻击目标。敌方基地: " + enemyNames(st), true);
   return false;
 }
 

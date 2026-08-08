@@ -116,6 +116,7 @@ body {
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>追踪激活 bug（<code>game.player[side]</code> 错取 side 当玩家名，4 处改为 <code>game.player[game.sides[side]]</code>，Trace 此前永不生效）、已打通房间 connect 返回锁定（补惰性进度结算）、对局结束后 status 返回胜负数据（前端胜负横幅依赖）</span></div>
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>HeartTag 提示"未锁定敌方房间" — 进入已打通敌方房 / 回到自己基地后会清除锁定目标，导致 HeartTag 无法执行；现进入已打通房<b>保留锁定目标</b>，且 HeartTag 在目标丢失时<b>自动回退</b>到"我方已打通的敌方房间"</span></div>
     <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span>pvp 迎战报"你已在一局游戏中" — 被挑战方 <code>/hn accept</code> 时 <code>findGameFor</code> 把自己正接受的 waiting 挑战也算"已在一局"而误拒；现 accept 排除自身 gameId，应战正常建立双方基地</span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><code>/connect #房间</code> 后裸命令报"未锁定目标" — ①未锁定报错直接附上<b>敌方基地房间名</b>引导（<code>/connect 敌方房 锁定攻击目标</code>）；②<code>tryConnect</code> 状态未就绪自动先拉取一次再判定，连自己基地房 / 非本局房间时明确提示并列出敌方基地房，杜绝"以为锁定了实际没锁"；③破解不存在的端口会列出该房实际开放端口</span></div>
   </div>
 </div>
 
