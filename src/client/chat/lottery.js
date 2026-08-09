@@ -2,12 +2,27 @@
 import { state, t } from './state.js';
 import { escapeHtml } from './renderers.js';
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function openLottery() {
-  document.getElementById("lottery-overlay").classList.add("show");
-  loadLotteryPools();
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openLotteryLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('lottery')).catch(() => openLotteryLegacy());
 }
 export function closeLottery() {
-  document.getElementById("lottery-overlay").classList.remove("show");
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    document.getElementById("lottery-overlay").classList.remove("show");
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('lottery')).catch(() => {
+    document.getElementById("lottery-overlay").classList.remove("show");
+  });
+}
+
+function openLotteryLegacy() {
+  document.getElementById("lottery-overlay").classList.add("show");
+  loadLotteryPools();
 }
 
 async function loadLotteryPools() {

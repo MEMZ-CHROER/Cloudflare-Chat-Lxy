@@ -4,12 +4,26 @@ import { state, t } from './state.js';
 import { getAuthName, getAuthToken, isAuthenticated } from './auth.js';
 import { TAG_COLORS } from './vip.js';
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（modals/market.js）；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function openMarket(tab) {
-  document.getElementById("market-overlay").classList.add("show");
-  switchMarketTab(tab || "list");
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openMarketLegacy(tab);
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('market', { tab })).catch(() => openMarketLegacy(tab));
 }
 export function closeMarket() {
-  document.getElementById("market-overlay").classList.remove("show");
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    document.getElementById("market-overlay").classList.remove("show");
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('market')).catch(() => {
+    document.getElementById("market-overlay").classList.remove("show");
+  });
+}
+function openMarketLegacy(tab) {
+  document.getElementById("market-overlay").classList.add("show");
+  switchMarketTab(tab || "list");
 }
 export function switchMarketTab(tab) {
   document.querySelectorAll("#market-overlay .shop-tab").forEach(el => el.classList.toggle("active", el.dataset.marketTab === tab));

@@ -4,12 +4,26 @@ import { escapeHtml, updatePointsDisplay } from './renderers.js';
 import { getAuthName, getAuthToken, isAuthenticated } from './auth.js';
 import { TAG_COLORS } from './vip.js';
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（modals/shop.js）；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function openShop(tab) {
-  document.getElementById("shop-overlay").classList.add("show");
-  switchShopTab(tab || "buy");
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openShopLegacy(tab);
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('shop', { tab })).catch(() => openShopLegacy(tab));
 }
 export function closeShop() {
-  document.getElementById("shop-overlay").classList.remove("show");
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    document.getElementById("shop-overlay").classList.remove("show");
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('shop')).catch(() => {
+    document.getElementById("shop-overlay").classList.remove("show");
+  });
+}
+function openShopLegacy(tab) {
+  document.getElementById("shop-overlay").classList.add("show");
+  switchShopTab(tab || "buy");
 }
 export function switchShopTab(tab) {
   document.querySelectorAll(".shop-tab").forEach(t => t.classList.toggle("active", t.dataset.shopTab === tab));

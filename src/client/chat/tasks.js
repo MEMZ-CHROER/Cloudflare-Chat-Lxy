@@ -3,12 +3,27 @@ import { state, t } from './state.js';
 import { escapeHtml, updatePointsDisplay } from './renderers.js';
 import { getAuthName, getAuthToken, isAuthenticated } from './auth.js';
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function openTasks() {
-  document.getElementById("task-overlay").classList.add("show");
-  loadTasks();
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openTasksLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('tasks')).catch(() => openTasksLegacy());
 }
 export function closeTasks() {
-  document.getElementById("task-overlay").classList.remove("show");
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    document.getElementById("task-overlay").classList.remove("show");
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('tasks')).catch(() => {
+    document.getElementById("task-overlay").classList.remove("show");
+  });
+}
+
+function openTasksLegacy() {
+  document.getElementById("task-overlay").classList.add("show");
+  loadTasks();
 }
 
 function updateTaskPoints() {

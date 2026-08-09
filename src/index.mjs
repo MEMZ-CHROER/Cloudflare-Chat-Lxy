@@ -68,6 +68,13 @@ import CHAT_MARKET from "./client/chat/market.js";
 import CHAT_RELATION from "./client/chat/relation.js";
 import CHAT_MODAL_MANAGER from "./client/chat/modal-manager.js";
 import CHAT_MODAL_SETTINGS from "./client/chat/modals/settings.js";
+// 🧪 v1.53 批1 经济域弹窗 Vue 化
+import CHAT_MODAL_SHOP from "./client/chat/modals/shop.js";
+import CHAT_MODAL_MARKET from "./client/chat/modals/market.js";
+import CHAT_MODAL_LOTTERY from "./client/chat/modals/lottery.js";
+import CHAT_MODAL_TASKS from "./client/chat/modals/tasks.js";
+import CHAT_MODAL_SEASON from "./client/chat/modals/season.js";
+import CHAT_MODAL_RELATION from "./client/chat/modals/relation.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -192,6 +199,12 @@ const CHAT_MODULES = {
   "chat/vendor/vue.js": ADMIN_VUE,
   "chat/modal-manager.js": CHAT_MODAL_MANAGER,
   "chat/modals/settings.js": CHAT_MODAL_SETTINGS,
+  "chat/modals/shop.js": CHAT_MODAL_SHOP,
+  "chat/modals/market.js": CHAT_MODAL_MARKET,
+  "chat/modals/lottery.js": CHAT_MODAL_LOTTERY,
+  "chat/modals/tasks.js": CHAT_MODAL_TASKS,
+  "chat/modals/season.js": CHAT_MODAL_SEASON,
+  "chat/modals/relation.js": CHAT_MODAL_RELATION,
 };
 
 const ADMIN_MODULES = {

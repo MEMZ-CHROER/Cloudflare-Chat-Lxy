@@ -7,15 +7,31 @@ const GOAL_TYPE_LABEL = {
   msg: "发言", checkin: "签到", game: "游戏获胜", points: "赛季积分", achievement: "成就"
 };
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function openSeason() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openSeasonLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('season')).catch(() => openSeasonLegacy());
+}
+export function closeSeason() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    let overlay = document.getElementById("season-overlay");
+    if (overlay) overlay.classList.remove("show");
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('season')).catch(() => {
+    let overlay = document.getElementById("season-overlay");
+    if (overlay) overlay.classList.remove("show");
+  });
+}
+
+function openSeasonLegacy() {
   let overlay = document.getElementById("season-overlay");
   if (!overlay) return;
   overlay.classList.add("show");
   renderSeason();
-}
-export function closeSeason() {
-  let overlay = document.getElementById("season-overlay");
-  if (overlay) overlay.classList.remove("show");
 }
 
 function fmtTime(ts) {

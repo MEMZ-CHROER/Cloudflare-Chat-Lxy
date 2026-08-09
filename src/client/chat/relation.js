@@ -23,7 +23,16 @@ function btn(text, onClick) {
   return b;
 }
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（modals/relation.js）；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function openRelations(tab) {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openRelationsLegacy(tab);
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('relation', { tab })).catch(() => openRelationsLegacy(tab));
+}
+
+function openRelationsLegacy(tab) {
   let overlay = document.getElementById("relation-overlay");
   if (!overlay) return;
   overlay.classList.add("show");
@@ -32,6 +41,14 @@ export function openRelations(tab) {
 }
 
 export function closeRelations() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    closeRelationsLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('relation')).catch(() => closeRelationsLegacy());
+}
+
+function closeRelationsLegacy() {
   let overlay = document.getElementById("relation-overlay");
   if (!overlay) return;
   overlay.classList.remove("show");
