@@ -1,5 +1,5 @@
 // v1.52 管理后台 Vue3 迁移 - AdminApp 骨架（登录遮罩 + 顶栏 + 侧边栏 + 动态组件路由）
-// 双轨并行期：本应用挂在 /admin-vue/ 独立路径，旧 /admin/ 不受影响。
+// 收尾切换后：/admin 与 /admin-vue 均指向本应用，URL 统一归一到 /admin/ 前缀。
 // 全部 fetch 走 httpOnly Cookie 鉴权，不带 ?key=。
 import * as Vue from '/static/admin/vendor/vue.js';
 import { store, navigate, toast } from '/static/admin/store.js';
@@ -65,10 +65,10 @@ const NAV = [
   { key: 'emoji', label: '😀 表情管理' },
 ];
 
-// 从 location.pathname 解析当前 section key
+// 从 location.pathname 解析当前 section key（/admin/ 与 /admin-vue/ 双前缀兼容）
 function routeFromPath() {
   let p = location.pathname;
-  let m = p.match(/^\/admin-vue\/([^/]*)\/?/);
+  let m = p.match(/^\/(?:admin|admin-vue)\/([^/]*)\/?/);
   let key = m && m[1] ? m[1] : 'dashboard';
   return ROUTES[key] ? key : 'dashboard';
 }
@@ -124,15 +124,20 @@ const AdminApp = {
       try { await fetch('/api/admin/logout', { method: 'POST' }); } catch (e) {}
       store.level = null;
       store.current = 'dashboard';
-      try { history.pushState({}, '', '/admin-vue/dashboard/'); } catch {}
+      try { history.pushState({}, '', '/admin/dashboard/'); } catch {}
       toast('已退出登录');
     }
 
     // 顶栏 + 侧边栏共用导航
     function go(key) { navigate(key); }
 
-    // popstate：浏览器前进/后退
+    // popstate：浏览器前进/后退；/admin-vue/ 旧链接自动归一化到 /admin/ 统一 URL
     Vue.onMounted(() => {
+      try {
+        if (location.pathname.startsWith('/admin-vue')) {
+          history.replaceState({}, '', location.pathname.replace(/^\/admin-vue/, '/admin'));
+        }
+      } catch {}
       store.current = routeFromPath();
       checkAuth();
       window.addEventListener('popstate', () => { store.current = routeFromPath(); });

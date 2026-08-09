@@ -1,6 +1,7 @@
 import HTML from "./chat.html";
 import ADMIN from "./admin.html";
-// 🧪 v1.52 管理后台 Vue3 迁移 - 新后台独立入口（双轨并行：旧 /admin 不受影响）
+// v1.52 管理后台 Vue3 迁移 - 收尾切换：/admin 已正式指向 Vue3 新后台。
+// 旧后台代码与注册全部保留，保底入口 /admin-legacy（routing.js 前缀归一化兼容）。
 import ADMIN_VUE_HTML from "./admin-vue.html";
 import TASKS from "./tasks.html";
 import CHANGELOG from "./changelog.html";
@@ -305,7 +306,7 @@ export default {
       let path = url.pathname.slice(1).split('/');
 
       // IP 封禁检查
-      if (path[0] !== "admin" && path[0] !== "tasks" && path[0] !== "help" && path[0] !== "about" && path[0] !== "leaderboard" && path[0] !== "user" && path[0] !== "rooms" && path[0] !== "online" && path[0] !== "stats" && path[0] !== "redeem" && !(path[0] === "api" && path[1] === "admin")) {
+      if (path[0] !== "admin" && path[0] !== "admin-vue" && path[0] !== "admin-legacy" && path[0] !== "tasks" && path[0] !== "help" && path[0] !== "about" && path[0] !== "leaderboard" && path[0] !== "user" && path[0] !== "rooms" && path[0] !== "online" && path[0] !== "stats" && path[0] !== "redeem" && !(path[0] === "api" && path[1] === "admin")) {
         let clientIp = request.headers.get("CF-Connecting-IP") || "";
         if (clientIp) {
           try {
@@ -405,12 +406,14 @@ self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWi
         case "api":
           return handleApi(path.slice(1), request, env);
 
+        // v1.52 收尾切换：/admin 正式指向 Vue3 新后台（AdminApp）
         case "admin":
-          return new Response(ADMIN, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
-
-        // 🧪 v1.52 管理后台 Vue3 迁移 - 新后台独立入口（双轨并行）
         case "admin-vue":
           return new Response(ADMIN_VUE_HTML, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+
+        // v1.52 收尾：旧后台保底入口（代码/注册全保留，routing.js 前缀归一化兼容）
+        case "admin-legacy":
+          return new Response(ADMIN, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "tasks":
           return new Response(TASKS, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});

@@ -46,5 +46,5 @@ export function toast(msg, type = 'ok') {
 export function navigate(key) {
   if (store.current === key) return;
   store.current = key;
-  try { history.pushState({}, '', '/admin-vue/' + key + '/'); } catch {}
+  try { history.pushState({}, '', '/admin/' + key + '/'); } catch {}
 }

@@ -53,8 +53,15 @@ export const routeToSection = {
   '/admin/lp/': 'lp-section',
 };
 
+// v1.52 收尾：旧后台保底入口 /admin-legacy——路由表保持 /admin/ 前缀不变，
+// 这里只做前缀归一化，让旧后台在 /admin-legacy 下也能完整工作。
+function isLegacyPath() {
+  return location.pathname.startsWith('/admin-legacy');
+}
+
 export function getCurrentRoute() {
   let p = location.pathname;
+  if (isLegacyPath()) p = '/admin' + p.slice('/admin-legacy'.length);
   if (!p.endsWith('/')) p += '/';
   if (routeToSection[p]) return p;
   for (let r of Object.keys(routeToSection)) {
@@ -65,7 +72,12 @@ export function getCurrentRoute() {
 
 export function navigateTo(path, pushHistory) {
   if (pushHistory !== false) {
-    history.pushState({}, '', path);
+    let url = path;
+    // 保底入口：URL 保持 /admin-legacy/ 前缀，避免被新后台(/admin)接管
+    if (isLegacyPath() && url.startsWith('/admin/')) {
+      url = '/admin-legacy' + url.slice('/admin'.length);
+    }
+    history.pushState({}, '', url);
   }
   let targetId = routeToSection[path] || 'room-list-container';
   document.querySelectorAll('.page-section').forEach(el => {

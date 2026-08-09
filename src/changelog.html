@@ -130,6 +130,7 @@ body {
     <div class="feature-item"><span class="icon">🪙</span><span class="text"><span class="tag tag-feature">功能</span><b>荣誉管理（superOnly）</b> — 手动发放/扣除荣誉币（金额可负）+ 荣誉商店商品增删/上架下架（🪙 价格徽章 + 标签色 + 色板选择）</span></div>
     <div class="feature-item"><span class="icon">😀</span><span class="text"><span class="tag tag-feature">功能</span><b>表情管理</b> — 上传表单（名称 + 文件 ≤200KB + 实时预览）+ 表情网格（走公开 /api/emoji/list 取完整 dataURI 展示）+ 删除</span></div>
     <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>批3 jsdom 端到端 147 项断言全过</b> — 侧边栏扩到 26 项（kickprotect/adminkey/log/season/honor superOnly）→ 9 个新 section 全部渲染 + 核心交互（webhook 生成、bot 添加、广播发送、保护添加、密钥修改、日志过滤、赛季目标、荣誉发放、emoji 上传预览）；修复 honor.js type=number v-model 返回 number 致 form.honorPrice.trim 崩溃的真实 bug；线上冒烟（部署 78574aad）login→auth-check=super + 批3 全部只读 API（webhook/list/bot/kick-protect/admin-key/log/season/config/honor-shop/items/emoji）200 + 9 个新 section 模块 200 + 旧 /admin 双轨 200</span></div>
+    <div class="feature-item"><span class="icon">🔀</span><span class="text"><span class="tag tag-feature">功能</span><b>收尾切换（26 页全量上线）</b> — <b>/admin 正式指向 Vue3 新后台</b>（26 页全齐：仪表盘/房间/用户/封禁/IP封禁/黑名单/历史/标签/积分/市场/等级/房间样式/商店/任务/抽奖/兑换码/同IP/Webhook/机器人/发送消息/踢出保护/管理员密钥/操作日志/赛季/荣誉/表情）；<b>/admin-vue 保留为兼容别名</b>自动归一化到 /admin/ 统一 URL（旧收藏链接直接可用）；<b>旧后台保底入口 /admin-legacy</b>（routing.js 前缀归一化，旧后台完整可回退使用）；旧 admin.html 与全部旧模块代码/注册保留不删</span></div>
   </div>
 </div>
 
