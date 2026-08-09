@@ -106,6 +106,12 @@ body {
     <div class="feature-item"><span class="icon">👤</span><span class="text"><span class="tag tag-feature">功能</span><b>用户详情弹窗</b> — 全局单实例（store.userModal 控制 + watch 触发加载）：积分/标签/在线状态/IP/所在房间/封禁状态 + 管理积分/全局踢/禁言/封禁/封禁IP/删除用户 全套操作</span></div>
     <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-feature">架构</span><b>双轨并行</b> — 旧 /admin 保持原样继续服务（零功能缺失），新后台在 /admin-vue/ 独立路径分批构建，全部 26 页迁完后再一次性切换；index.mjs 注册只增不删</span></div>
     <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>jsdom 端到端 28 项断言全过</b> — 登录态=super → 侧边栏 3 项（market superOnly）→ 仪表盘统计/排行 → 用户弹窗数据+跳转 → 积分表/行内增加/批量/CSV → 市场配置保存；修复 usermodal 模板引用 TAG_COLORS 未暴露的真实 bug</span></div>
+    <div class="feature-item"><span class="icon">🏠</span><span class="text"><span class="tag tag-feature">功能</span><b>房间列表</b> — 全部房间卡片（在线数/展开收起）+ 详情抽屉：房间公告设置、置顶消息查看/按频道+时间戳置顶/清除、最近消息查看器、在线用户（IP/踢出/拉黑/禁止踢人）、房间黑名单管理、文件列表（大小格式化+下载链接）、清空聊天记录、💥销毁房间（双重确认）</span></div>
+    <div class="feature-item"><span class="icon">👥</span><span class="text"><span class="tag tag-feature">功能</span><b>在线用户</b> — 跨房聚合在线用户（标签徽章/等级Lv徽章/IP/所在房间/积分）+ 设置积分/发匿名券/标签增删/全局踢出/封禁/拉黑，点用户名直开用户详情</span></div>
+    <div class="feature-item"><span class="icon">🚫</span><span class="text"><span class="tag tag-feature">功能</span><b>封禁 / IP封禁 / 全局黑名单</b> — 列表 + 解封/移除；IP 封禁支持输入框按 IP 封禁（回车或按钮）</span></div>
+    <div class="feature-item"><span class="icon">🕘</span><span class="text"><span class="tag tag-feature">功能</span><b>历史用户</b> — 全部注册用户：在线状态●/标签增删/踢出/封禁/解封/拉黑</span></div>
+    <div class="feature-item"><span class="icon">🏷️</span><span class="text"><span class="tag tag-feature">功能</span><b>用户标签</b> — 全部注册用户拥有的装扮商品（当前装备标签/颜色/装备物品/全部物品），用户名搜索过滤（普通 admin 可见）</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>批1 jsdom 端到端 54 项断言全过</b> — 侧边栏扩到 10 项（tags 非 super）→ 房间展开详情/置顶/文件/踢人 → 在线用户徽章/全局踢 → 封禁解封 → IP 封禁输入 → 黑名单移除 → 历史在线标记 → 标签页装备渲染；线上冒烟 28/28（7 个新 section 200 + 旧 /admin 双轨 200 + cookie login→auth-check=super + 9 个批1 API 200）</span></div>
   </div>
 </div>
 

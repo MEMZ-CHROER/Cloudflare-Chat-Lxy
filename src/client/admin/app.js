@@ -8,6 +8,13 @@ import UserModal from '/static/admin/sections/usermodal.js';
 // 路由表：key -> 懒加载组件。批量迁移时在此追加。
 const ROUTES = {
   dashboard: () => import('/static/admin/sections/dashboard.js'),
+  rooms: () => import('/static/admin/sections/rooms.js'),
+  users: () => import('/static/admin/sections/users.js'),
+  bans: () => import('/static/admin/sections/bans.js'),
+  ipbans: () => import('/static/admin/sections/ipbans.js'),
+  blacklist: () => import('/static/admin/sections/blacklist.js'),
+  history: () => import('/static/admin/sections/history.js'),
+  tags: () => import('/static/admin/sections/tags.js'),
   points: () => import('/static/admin/sections/points.js'),
   market: () => import('/static/admin/sections/market.js'),
 };
@@ -15,7 +22,14 @@ const ROUTES = {
 // 侧边栏导航（superOnly: true 仅超管可见；过渡期只列已迁移页）
 const NAV = [
   { key: 'dashboard', label: '📊 仪表盘' },
-  { key: 'points', label: '💰 积分管理' },
+  { key: 'rooms', label: '🏠 房间列表', superOnly: true },
+  { key: 'users', label: '👥 在线用户', superOnly: true },
+  { key: 'bans', label: '🚫 封禁用户', superOnly: true },
+  { key: 'ipbans', label: '🛡️ IP封禁', superOnly: true },
+  { key: 'blacklist', label: '🚫 全局黑名单', superOnly: true },
+  { key: 'history', label: '🕘 历史用户', superOnly: true },
+  { key: 'tags', label: '🏷️ 用户标签' },
+  { key: 'points', label: '💰 积分管理', superOnly: true },
   { key: 'market', label: '💱 市场管理', superOnly: true },
 ];
 

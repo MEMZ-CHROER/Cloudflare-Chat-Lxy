@@ -106,6 +106,13 @@ import ADMIN_VUE from "./client/admin/vendor/vue.js";
 import ADMIN_VUE_APP from "./client/admin/app.js";
 import ADMIN_VUE_STORE from "./client/admin/store.js";
 import ADMIN_VUE_SEC_DASHBOARD from "./client/admin/sections/dashboard.js";
+import ADMIN_VUE_SEC_ROOMS from "./client/admin/sections/rooms.js";
+import ADMIN_VUE_SEC_USERS from "./client/admin/sections/users.js";
+import ADMIN_VUE_SEC_BANS from "./client/admin/sections/bans.js";
+import ADMIN_VUE_SEC_IPBANS from "./client/admin/sections/ipbans.js";
+import ADMIN_VUE_SEC_BLACKLIST from "./client/admin/sections/blacklist.js";
+import ADMIN_VUE_SEC_HISTORY from "./client/admin/sections/history.js";
+import ADMIN_VUE_SEC_TAGS from "./client/admin/sections/tags.js";
 import ADMIN_VUE_SEC_POINTS from "./client/admin/sections/points.js";
 import ADMIN_VUE_SEC_MARKET from "./client/admin/sections/market.js";
 import ADMIN_VUE_SEC_USERMODAL from "./client/admin/sections/usermodal.js";
@@ -200,6 +207,13 @@ const ADMIN_MODULES = {
   "admin/app.js": ADMIN_VUE_APP,
   "admin/store.js": ADMIN_VUE_STORE,
   "admin/sections/dashboard.js": ADMIN_VUE_SEC_DASHBOARD,
+  "admin/sections/rooms.js": ADMIN_VUE_SEC_ROOMS,
+  "admin/sections/users.js": ADMIN_VUE_SEC_USERS,
+  "admin/sections/bans.js": ADMIN_VUE_SEC_BANS,
+  "admin/sections/ipbans.js": ADMIN_VUE_SEC_IPBANS,
+  "admin/sections/blacklist.js": ADMIN_VUE_SEC_BLACKLIST,
+  "admin/sections/history.js": ADMIN_VUE_SEC_HISTORY,
+  "admin/sections/tags.js": ADMIN_VUE_SEC_TAGS,
   "admin/sections/points.js": ADMIN_VUE_SEC_POINTS,
   "admin/sections/market.js": ADMIN_VUE_SEC_MARKET,
   "admin/sections/usermodal.js": ADMIN_VUE_SEC_USERMODAL,
