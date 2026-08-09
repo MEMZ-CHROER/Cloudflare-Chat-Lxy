@@ -1,5 +1,7 @@
 import HTML from "./chat.html";
 import ADMIN from "./admin.html";
+// 🧪 v1.52 管理后台 Vue3 迁移 - 新后台独立入口（双轨并行：旧 /admin 不受影响）
+import ADMIN_VUE_HTML from "./admin-vue.html";
 import TASKS from "./tasks.html";
 import CHANGELOG from "./changelog.html";
 import BUGS from "./bugs.html";
@@ -100,6 +102,13 @@ import ADMIN_MARKET from "./client/admin/market.js";
 import ADMIN_LP from "./client/admin/lp.js";
 // 🧪 v1.51 Vue3 运行时（esm-browser.prod，含编译器），供 /static/admin/lp.js 使用
 import ADMIN_VUE from "./client/admin/vendor/vue.js";
+// 🧪 v1.52 管理后台 Vue3 迁移 - 新后台模块
+import ADMIN_VUE_APP from "./client/admin/app.js";
+import ADMIN_VUE_STORE from "./client/admin/store.js";
+import ADMIN_VUE_SEC_DASHBOARD from "./client/admin/sections/dashboard.js";
+import ADMIN_VUE_SEC_POINTS from "./client/admin/sections/points.js";
+import ADMIN_VUE_SEC_MARKET from "./client/admin/sections/market.js";
+import ADMIN_VUE_SEC_USERMODAL from "./client/admin/sections/usermodal.js";
 
 // i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
 const CHAT_I18N = 'export { t, getLang, setLang, applyI18n, LANG_KEY } from "./state.js";';
@@ -187,6 +196,13 @@ const ADMIN_MODULES = {
   "admin/market.js": ADMIN_MARKET,
   "admin/lp.js": ADMIN_LP,
   "admin/vendor/vue.js": ADMIN_VUE,
+  // 🧪 v1.52 管理后台 Vue3 迁移
+  "admin/app.js": ADMIN_VUE_APP,
+  "admin/store.js": ADMIN_VUE_STORE,
+  "admin/sections/dashboard.js": ADMIN_VUE_SEC_DASHBOARD,
+  "admin/sections/points.js": ADMIN_VUE_SEC_POINTS,
+  "admin/sections/market.js": ADMIN_VUE_SEC_MARKET,
+  "admin/sections/usermodal.js": ADMIN_VUE_SEC_USERMODAL,
 };
 
 import { handleErrors } from "./utils.mjs";
@@ -345,6 +361,10 @@ self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWi
 
         case "admin":
           return new Response(ADMIN, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+
+        // 🧪 v1.52 管理后台 Vue3 迁移 - 新后台独立入口（双轨并行）
+        case "admin-vue":
+          return new Response(ADMIN_VUE_HTML, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         case "tasks":
           return new Response(TASKS, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});

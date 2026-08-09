@@ -94,6 +94,23 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.52</span>
+    <span class="version-date">2026-08-09</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🖥️</span><span class="text"><span class="tag tag-feature">功能</span><b>管理后台全量迁移 Vue3 · 批0（骨架 + 4 范式页）</b> — 全新 <b>/admin-vue/</b> 深色液态玻璃管理后台（底色 #0e0e14 + 毛玻璃卡片 + 青蓝霓虹强调 + 等宽字体点缀），Vue3 单应用 AdminApp：登录遮罩（/api/admin/login cookie 会话复用）+ 顶栏 + 侧边栏 + defineAsyncComponent 懒加载路由 + popstate/history 前进后退；共享 reactive store（level / current / userModal / ptsFocus）+ body 级 toast；鉴权全部走 httpOnly Cookie，fetch 一律不带 ?key=</span></div>
+    <div class="feature-item"><span class="icon">📊</span><span class="text"><span class="tag tag-feature">功能</span><b>仪表盘</b> — 7 项实时统计（房间数/在线/注册/封禁/封禁IP/总积分BigInt/同IP分组）+ 积分排行榜 Top10（前三名名次徽章），点用户名直开用户详情</span></div>
+    <div class="feature-item"><span class="icon">💰</span><span class="text"><span class="tag tag-feature">功能</span><b>积分管理</b> — 搜索定位 + 行内设置/增加/扣除 + 工具栏批量 + 勾选批量增减（confirm 确认）+ BOM CSV 导出 + 从用户弹窗「管理积分」跳转预填；Vue watch(ptsFocus) 联动</span></div>
+    <div class="feature-item"><span class="icon">💱</span><span class="text"><span class="tag tag-feature">功能</span><b>市场管理</b> — 开关/手续费/上限配置保存 + 订单列表（状态着色）+ 下架操作</span></div>
+    <div class="feature-item"><span class="icon">👤</span><span class="text"><span class="tag tag-feature">功能</span><b>用户详情弹窗</b> — 全局单实例（store.userModal 控制 + watch 触发加载）：积分/标签/在线状态/IP/所在房间/封禁状态 + 管理积分/全局踢/禁言/封禁/封禁IP/删除用户 全套操作</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-feature">架构</span><b>双轨并行</b> — 旧 /admin 保持原样继续服务（零功能缺失），新后台在 /admin-vue/ 独立路径分批构建，全部 26 页迁完后再一次性切换；index.mjs 注册只增不删</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>jsdom 端到端 28 项断言全过</b> — 登录态=super → 侧边栏 3 项（market superOnly）→ 仪表盘统计/排行 → 用户弹窗数据+跳转 → 积分表/行内增加/批量/CSV → 市场配置保存；修复 usermodal 模板引用 TAG_COLORS 未暴露的真实 bug</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.51</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudChat Admin</title>
+<style>
+/* ============ 深色液态玻璃设计系统 (v1.52) ============ */
+:root{
+  --bg:#0e0e14;
+  --panel:rgba(255,255,255,.05);
+  --panel-strong:rgba(255,255,255,.09);
+  --border:rgba(255,255,255,.09);
+  --border-hi:rgba(255,255,255,.18);
+  --text:#e6e6e6;
+  --text-2:rgba(255,255,255,.58);
+  --text-3:rgba(255,255,255,.34);
+  --accent:#7aa2ff;
+  --cyan:#22d3ee;
+  --green:#4ade80;
+  --red:#ff6b6b;
+  --orange:#f6a609;
+  --purple:#9b59b6;
+  --mono:Consolas,"JetBrains Mono","Cascadia Mono",ui-monospace,monospace;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(1100px 520px at 12% -8%, rgba(122,162,255,.09), transparent 60%),
+    radial-gradient(900px 480px at 92% 8%, rgba(34,211,238,.07), transparent 55%),
+    radial-gradient(700px 500px at 55% 110%, rgba(155,89,182,.05), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(122,162,255,.28)}
+.mono{font-family:var(--mono)}
+input[type=checkbox]{accent-color:var(--accent)}
+
+/* ---- 卡片 ---- */
+.av-card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 8px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* ---- 按钮 ---- */
+.av-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 15px;border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  font-size:13px;cursor:pointer;transition:all .15s;
+  white-space:nowrap;user-select:none;
+}
+.av-btn:hover{border-color:var(--border-hi);background:var(--panel-strong)}
+.av-btn:active{transform:translateY(1px)}
+.av-btn.primary{background:linear-gradient(135deg,rgba(122,162,255,.2),rgba(34,211,238,.14));border-color:rgba(122,162,255,.5);color:#dce5ff}
+.av-btn.primary:hover{box-shadow:0 0 18px rgba(122,162,255,.28)}
+.av-btn.success{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.42);color:#b6f7cf}
+.av-btn.danger{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.42);color:#ffb3b3}
+.av-btn.ghost{background:transparent}
+.av-btn.sm{padding:3px 10px;font-size:12px;border-radius:6px}
+.av-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ---- 输入 / 下拉 ---- */
+.av-input,.av-select{
+  background:rgba(0,0,0,.38);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);padding:7px 11px;font-size:13px;outline:none;
+  transition:border-color .15s, box-shadow .15s;
+}
+.av-input:focus,.av-select:focus{border-color:rgba(122,162,255,.6);box-shadow:0 0 0 3px rgba(122,162,255,.12)}
+.av-input::placeholder{color:var(--text-3)}
+.av-select option{background:#14161d;color:var(--text)}
+
+/* ---- 表格 ---- */
+.av-table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+.av-table{width:100%;border-collapse:collapse;background:rgba(0,0,0,.16);font-size:13px}
+.av-table thead th{
+  position:sticky;top:0;z-index:2;
+  background:rgba(16,18,26,.92);backdrop-filter:blur(8px);
+  color:var(--text-2);font-weight:600;text-align:left;
+  padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;letter-spacing:.02em;
+}
+.av-table tbody td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.av-table tbody tr:last-child td{border-bottom:none}
+.av-table tbody tr:hover{background:rgba(122,162,255,.05)}
+.av-table tbody tr.av-row-hl td{background:rgba(122,162,255,.09)}
+
+/* ---- 布局 ---- */
+.av-app{display:flex;flex-direction:column;min-height:100vh}
+.av-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 22px;border-bottom:1px solid var(--border);
+  background:rgba(14,14,20,.72);backdrop-filter:blur(16px);
+  position:sticky;top:0;z-index:50;
+}
+.av-brand{font-weight:700;letter-spacing:.03em;display:flex;align-items:center;gap:9px;font-size:15px}
+.av-brand em{font-style:normal;font-family:var(--mono);color:var(--cyan);font-size:11px;border:1px solid rgba(34,211,238,.4);padding:1px 7px;border-radius:6px}
+.av-level{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:6px;text-transform:uppercase}
+.av-level.super{background:rgba(255,107,107,.15);color:#ffb3b3;border:1px solid rgba(255,107,107,.4)}
+.av-level.admin{background:rgba(122,162,255,.15);color:#a9c1ff;border:1px solid rgba(122,162,255,.4)}
+.av-body{display:flex;flex:1;align-items:stretch}
+.av-sidebar{
+  width:212px;flex-shrink:0;padding:18px 12px;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:4px;
+  background:rgba(14,14,20,.42);backdrop-filter:blur(8px);
+}
+.av-nav-item{
+  display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;
+  color:var(--text-2);text-decoration:none;cursor:pointer;font-size:13px;
+  border:1px solid transparent;transition:all .15s;
+}
+.av-nav-item:hover{background:var(--panel);color:var(--text)}
+.av-nav-item.active{background:linear-gradient(135deg,rgba(122,162,255,.17),rgba(34,211,238,.08));border-color:rgba(122,162,255,.38);color:#eaf0ff}
+.av-content{flex:1;padding:22px 26px;min-width:0}
+
+/* ---- 页面内 ---- */
+.av-page h1{font-size:19px;margin:0 0 4px;font-weight:650}
+.av-page .av-sub{color:var(--text-2);font-size:13px;margin:0 0 18px}
+.av-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.av-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+.av-stat{padding:16px 18px}
+.av-stat .num{
+  font-size:26px;font-weight:700;font-family:var(--mono);line-height:1.15;
+  background:linear-gradient(135deg,var(--accent),var(--cyan));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.av-stat .num.red{background:none;-webkit-text-fill-color:var(--red);color:var(--red)}
+.av-stat .num.green{background:none;-webkit-text-fill-color:var(--green);color:var(--green)}
+.av-stat .lbl{color:var(--text-2);font-size:12px;margin-top:3px}
+.rank-badge{width:22px;height:22px;border-radius:6px;background:var(--panel-strong);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--mono);color:var(--text-2)}
+.rank-badge.r1{background:linear-gradient(135deg,#ffd700,#ffa500);color:#000}
+.rank-badge.r2{background:linear-gradient(135deg,#cfd6e6,#9aa7bd);color:#000}
+.rank-badge.r3{background:linear-gradient(135deg,#e3a87c,#b06a3c);color:#fff}
+
+/* ---- 加载 / 空态 ---- */
+.av-loading{display:flex;align-items:center;justify-content:center;padding:56px;color:var(--text-2);gap:10px;font-size:13px}
+.spinner{width:16px;height:16px;border:2px solid var(--border-hi);border-top-color:var(--accent);border-radius:50%;animation:avSpin .7s linear infinite}
+@keyframes avSpin{to{transform:rotate(360deg)}}
+.av-empty{color:var(--text-3);text-align:center;padding:36px;font-size:13px}
+
+/* ---- Toast ---- */
+.av-toast{
+  position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9999;
+  padding:10px 18px;border-radius:10px;font-size:13px;max-width:86vw;
+  background:rgba(20,22,30,.94);border:1px solid var(--border-hi);
+  backdrop-filter:blur(12px);box-shadow:0 10px 30px rgba(0,0,0,.4);
+  animation:avToastIn .18s ease;
+}
+.av-toast.ok{border-color:rgba(74,222,128,.5);color:#b6f7cf}
+.av-toast.err{border-color:rgba(255,107,107,.5);color:#ffb3b3}
+.av-toast.warn{border-color:rgba(246,166,9,.5);color:#ffd48a}
+@keyframes avToastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* ---- 登录 ---- */
+.av-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.av-login-card{
+  width:344px;padding:34px 30px;text-align:center;
+  background:var(--panel);border:1px solid var(--border);border-radius:16px;
+  backdrop-filter:blur(18px);
+  box-shadow:0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.av-login-card h2{margin:0 0 6px;font-size:19px}
+.av-login-card .sub{color:var(--text-2);margin:0 0 20px;font-size:13px}
+.av-login-card .av-input{width:100%;text-align:center;margin-bottom:14px;padding:10px}
+.av-login-card .av-btn{width:100%;justify-content:center;padding:10px}
+.av-login-err{color:var(--red);font-size:12px;margin-top:12px}
+
+/* ---- 弹窗 ---- */
+.av-modal-mask{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.av-modal{
+  width:min(480px,94vw);max-height:84vh;overflow-y:auto;
+  background:rgba(18,20,28,.94);border:1px solid var(--border-hi);border-radius:16px;
+  backdrop-filter:blur(20px);box-shadow:0 24px 70px rgba(0,0,0,.5);padding:22px 24px;
+}
+.av-modal h3{margin:0 0 14px;font-size:16px;display:flex;align-items:center;gap:8px}
+.av-modal-close{margin-left:auto;cursor:pointer;color:var(--text-2);background:none;border:none;font-size:18px;line-height:1}
+.av-modal-close:hover{color:var(--text)}
+.av-field{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;gap:14px}
+.av-field .lbl{color:var(--text-2);flex-shrink:0}
+.av-field .val{color:var(--text);font-family:var(--mono);text-align:right;word-break:break-all}
+.av-modal-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.av-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:11px;font-family:var(--mono)}
+
+/* ---- 响应式 ---- */
+@media (max-width:700px){
+  .av-body{flex-direction:column}
+  .av-sidebar{width:100%;flex-direction:row;overflow-x:auto;padding:10px;border-right:none;border-bottom:1px solid var(--border)}
+  .av-nav-item{white-space:nowrap}
+  .av-content{padding:16px}
+  .av-topbar{padding:11px 14px}
+}
+</style>
+</head>
+<body>
+<div id="admin-app">
+  <div class="av-login"><div class="av-loading"><span class="spinner"></span>加载中...</div></div>
+</div>
+<script type="module" src="/static/admin/app.js"></script>
+</body>
+</html>
