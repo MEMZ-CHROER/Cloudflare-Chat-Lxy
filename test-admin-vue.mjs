@@ -17,6 +17,7 @@ globalThis.history = w.history;
 globalThis.confirm = () => true;
 globalThis.alert = () => {};
 globalThis.prompt = () => "1";
+globalThis.FileReader = w.FileReader;
 globalThis.URL.createObjectURL = () => "blob:mock";
 globalThis.URL.revokeObjectURL = () => {};
 
@@ -50,6 +51,21 @@ const mockDb = {
     ABC123: { points: 500, createdBy: 'admin', createdAt: 1000, usedBy: '', usedAt: 0 },
     USE999: { points: 100, createdBy: 'admin', createdAt: 2000, usedBy: 'Bob', usedAt: 1500 }
   },
+  // 批3 数据
+  webhooks: { room1: { hasWebhook: true }, room2: { hasWebhook: false } },
+  botCmds: [
+    { keyword: 'hello', response: '你好呀', enabled: true },
+    { keyword: 'rank', response: '查看排名', enabled: false }
+  ],
+  kickProtected: ['Alice'],
+  adminKeyInfo: { key: 'abc123456' },
+  logs: [
+    { timestamp: '2026-08-09T10:00:00Z', operator: 'admin', action: 'kick', target: 'Bob', detail: '违规发言' },
+    { timestamp: '2026-08-09T11:00:00Z', operator: 'admin', action: 'set_points', target: 'Alice', detail: '奖励' }
+  ],
+  seasonConfig: { id: 's1', name: 'S1 赛季', status: 'active', startAt: 1000, endAt: 9000, settled: false, goals: [{ type: 'msg', label: '发言', target: '100', honor: '50' }] },
+  honorItems: [{ id: 'h1', name: '金色头衔', description: '尊贵标识', honorPrice: 300, tag: '金色', color: 'gold', border: '', enabled: true }],
+  emojis: { smile: 'data:image/png;base64,iVBORw0KGgo=', wink: 'data:image/png;base64,ABC' },
 };
 const fetchCalls = [];
 globalThis.fetch = async (url) => {
@@ -129,6 +145,35 @@ globalThis.fetch = async (url) => {
     return json(mockDb.marketConfig);
   }
   if (u.includes('/api/admin/market/orders')) return json(mockDb.marketOrders);
+  // 批3 系统/运营域
+  if (u.includes('/api/admin/webhook/list')) return json(mockDb.webhooks);
+  if (u.includes('/api/admin/webhook/gen/')) return json({ ok: true, secret: 'whsec_test123' });
+  if (u.includes('/api/admin/webhook/del/')) return json({ ok: true });
+  if (u.includes('/api/admin/bot?action=list')) return json(mockDb.botCmds);
+  if (u.includes('/api/admin/bot?action=get')) return json(mockDb.botCmds[0]);
+  if (u.includes('/api/admin/bot?action=add')) return json({ ok: true });
+  if (u.includes('/api/admin/bot?action=update')) return json({ ok: true });
+  if (u.includes('/api/admin/bot?action=delete')) return json({ ok: true });
+  if (u.includes('/api/admin/kick-protect/list')) return json(mockDb.kickProtected);
+  if (u.includes('/api/admin/kick-protect/add')) return text('已添加保护');
+  if (u.includes('/api/admin/kick-protect/remove')) return text('已移除保护');
+  if (u.includes('/api/admin/admin-key/get')) return json(mockDb.adminKeyInfo);
+  if (u.includes('/api/admin/admin-key/set')) return text('密钥已修改');
+  if (u.includes('/api/admin/admin-key/reset')) return text('密钥已重置');
+  if (u.includes('/api/admin/log/list')) return json(mockDb.logs);
+  if (u.includes('/api/admin/log/clear')) return text('日志已清空');
+  if (u.includes('/api/admin/season/config')) return json(mockDb.seasonConfig);
+  if (u.includes('/api/admin/season/create')) return json({ ok: true });
+  if (u.includes('/api/admin/season/start')) return json({ ok: true });
+  if (u.includes('/api/admin/season/end')) return json({ ok: true });
+  if (u.includes('/api/admin/honor/honor-shop/items')) return json(mockDb.honorItems);
+  if (u.includes('/api/admin/honor/honor-shop/item/add')) return json({ ok: true });
+  if (u.includes('/api/admin/honor/honor-shop/item/toggle')) return json({ ok: true });
+  if (u.includes('/api/admin/honor/honor-shop/item/delete')) return json({ ok: true });
+  if (u.includes('/api/admin/honor/add')) return json({ ok: true });
+  if (u.includes('/api/emoji/list')) return json(mockDb.emojis);
+  if (u.includes('/api/admin/emoji/add')) return json({ ok: true });
+  if (u.includes('/api/admin/emoji/remove')) return json({ ok: true });
   return text('mock-unknown:' + u);
 };
 
@@ -144,7 +189,7 @@ globalThis.__vue = await import('file://' + process.cwd().replace(/\\/g, '/') + 
 
 // store.js
 const storeMod = await loadModule(storeRepl(fs.readFileSync('src/client/admin/store.js', 'utf8')));
-globalThis.__store = { store: storeMod.store, toast: storeMod.toast, TAG_COLORS: storeMod.TAG_COLORS, navigate: storeMod.navigate };
+globalThis.__store = { store: storeMod.store, toast: storeMod.toast, TAG_COLORS: storeMod.TAG_COLORS, LIGHT_COLORS: storeMod.LIGHT_COLORS, navigate: storeMod.navigate };
 
 // sections
 async function loadSection(file) {
@@ -170,6 +215,15 @@ const secTasks = await loadSection('tasks.js');
 const secLottery = await loadSection('lottery.js');
 const secRedeem = await loadSection('redeem.js');
 const secIpgroup = await loadSection('ipgroup.js');
+const secWebhooks = await loadSection('webhooks.js');
+const secBot = await loadSection('bot.js');
+const secSendmessage = await loadSection('sendmessage.js');
+const secKickprotect = await loadSection('kickprotect.js');
+const secAdminkey = await loadSection('adminkey.js');
+const secLog = await loadSection('log.js');
+const secSeason = await loadSection('season.js');
+const secHonor = await loadSection('honor.js');
+const secEmoji = await loadSection('emoji.js');
 globalThis.__sec = {
   dashboard: { default: secDashboard.default }, points: { default: secPoints.default },
   market: { default: secMarket.default }, usermodal: { default: secUsermodal.default },
@@ -180,7 +234,12 @@ globalThis.__sec = {
   exp: { default: secExp.default }, levelstyle: { default: secLevelstyle.default },
   shop: { default: secShop.default }, tasks: { default: secTasks.default },
   lottery: { default: secLottery.default }, redeem: { default: secRedeem.default },
-  ipgroup: { default: secIpgroup.default }
+  ipgroup: { default: secIpgroup.default },
+  webhooks: { default: secWebhooks.default }, bot: { default: secBot.default },
+  sendmessage: { default: secSendmessage.default }, kickprotect: { default: secKickprotect.default },
+  adminkey: { default: secAdminkey.default }, log: { default: secLog.default },
+  season: { default: secSeason.default }, honor: { default: secHonor.default },
+  emoji: { default: secEmoji.default }
 };
 
 // app.js（替换 ROUTES 动态 import → 全局引用 + 替换 UserModal import）
@@ -209,9 +268,9 @@ assert(has('.av-topbar'), "顶栏渲染");
 assert(text('.av-brand').includes('CloudChat Admin'), "品牌栏");
 assert(text('.av-level').includes('super'), "超管徽标");
 
-console.log("== 侧边栏（super 显示 17 项）==");
+console.log("== 侧边栏（super 显示 26 项）==");
 const navs = qsAll('.av-nav-item');
-assert(navs.length === 17, "侧边栏 17 项，实际 " + navs.length);
+assert(navs.length === 26, "侧边栏 26 项，实际 " + navs.length);
 assert(navs.some(n => n.textContent.includes('等级管理')), "含等级管理");
 assert(navs.some(n => n.textContent.includes('商店管理')), "含商店管理");
 assert(navs.some(n => n.textContent.includes('任务管理')), "含任务管理");
@@ -220,6 +279,15 @@ assert(navs.some(n => n.textContent.includes('同IP检测')), "含同IP检测");
 assert(navs.some(n => n.textContent.includes('兑换码')), "含兑换码");
 assert(navs.some(n => n.textContent.includes('房间列表')), "含房间列表");
 assert(navs.some(n => n.textContent.includes('用户标签')), "含用户标签(普通admin可见)");
+assert(navs.some(n => n.textContent.includes('Webhook')), "含Webhook");
+assert(navs.some(n => n.textContent.includes('机器人命令')), "含机器人命令");
+assert(navs.some(n => n.textContent.includes('发送消息')), "含发送消息");
+assert(navs.some(n => n.textContent.includes('踢出保护')), "含踢出保护");
+assert(navs.some(n => n.textContent.includes('管理员密钥')), "含管理员密钥");
+assert(navs.some(n => n.textContent.includes('操作日志')), "含操作日志");
+assert(navs.some(n => n.textContent.includes('赛季管理')), "含赛季管理");
+assert(navs.some(n => n.textContent.includes('荣誉管理')), "含荣誉管理");
+assert(navs.some(n => n.textContent.includes('表情管理')), "含表情管理");
 
 console.log("== 仪表盘 ==");
 assert(text('#admin-app').includes('系统概览'), "概览标题");
@@ -489,6 +557,150 @@ findBtn('#admin-app', '详情')?.click();
 await tick(200);
 assert(has('.av-modal-mask'), "用户详情弹窗从 IP 分组打开");
 assert(text('.av-modal').includes('VIP'), "弹窗显示标签 VIP");
+
+console.log("== 批3: Webhook 管理 ==");
+await navTo('webhooks');
+assert(text('#admin-app').includes('房间 Webhook'), "Webhook 标题");
+assert(text('#admin-app').includes('已开启'), "room1 已开启徽章");
+assert(text('#admin-app').includes('未开启'), "room2 未开启徽章");
+const whStats = qsAll('.av-stat .num').map(e => e.textContent);
+assert(whStats.includes('1') && whStats.includes('2'), "统计 1/2 个已开启/总数");
+const genBtn = [...document.querySelectorAll('.av-btn')].find(b => b.textContent.includes('生成'));
+genBtn?.click();
+await tick(300);
+assert(has('.av-modal-mask'), "生成结果弹窗打开");
+assert(text('.av-modal').includes('X-Webhook-Secret'), "弹窗含 curl 示例");
+assert(text('.av-modal').includes('whsec_test123'), "弹窗含 secret");
+assert(fetchCalls.some(c => c.includes('/api/admin/webhook/gen/room2')), "调用了 webhook/gen/room2");
+document.querySelector('.av-modal-close')?.click();
+await tick(100);
+
+console.log("== 批3: 机器人命令 ==");
+await navTo('bot');
+assert(text('#admin-app').includes('机器人命令'), "机器人标题");
+assert(text('#admin-app').includes('hello'), "命令 hello 渲染");
+assert(text('#admin-app').includes('禁用'), "禁用状态徽章");
+const botKw = qsAll('.av-card input').find(i => i.placeholder.includes('命令关键词'));
+botKw.value = 'test';
+botKw.dispatchEvent(new w.Event('input', { bubbles: true }));
+const botResp = qsAll('.av-card input').find(i => i.placeholder === '回复内容');
+botResp.value = '测试回复';
+botResp.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '添加命令')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('bot?action=add')), "添加命令调用 bot?action=add");
+
+console.log("== 批3: 发送消息 ==");
+await navTo('sendmessage');
+assert(text('#admin-app').includes('发送消息'), "发送消息标题");
+const smSel = document.querySelector('.av-page select');
+assert(smSel.querySelectorAll('option').length >= 3, "房间下拉含 room1/room2+占位");
+smSel.value = 'room1';
+smSel.dispatchEvent(new w.Event('change', { bubbles: true }));
+const smText = document.querySelector('.av-page textarea');
+smText.value = '大家好';
+smText.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '发 送')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/send-message/room1') && c.includes('sender')), "发送到 room1 调用 send-message");
+assert(text('#admin-app').includes('系统公告'), "预览气泡含发送者");
+
+console.log("== 批3: 踢出保护 ==");
+await navTo('kickprotect');
+assert(text('#admin-app').includes('踢出保护'), "踢出保护标题");
+assert(text('#admin-app').includes('Alice'), "受保护用户 Alice 渲染");
+const kpInput = document.querySelector('.av-page input');
+kpInput.value = 'Bob';
+kpInput.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '添加保护')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/kick-protect/add') && c.includes('Bob')), "添加保护 Bob 调用 kick-protect/add");
+
+console.log("== 批3: 管理员密钥 ==");
+await navTo('adminkey');
+assert(text('#admin-app').includes('管理员密钥'), "密钥标题");
+assert(text('#admin-app').includes('abc1****'), "密钥遮罩 abc1****");
+const nkInput = document.querySelector('.av-page input');
+nkInput.value = 'newsecret';
+nkInput.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '修改')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/admin-key/set') && c.includes('newsecret')), "修改密钥调用 admin-key/set");
+
+console.log("== 批3: 操作日志 ==");
+await navTo('log');
+assert(text('#admin-app').includes('操作日志'), "日志标题");
+assert(text('#admin-app').includes('👢 踢出'), "日志操作徽章 踢出");
+assert(qsAll('.av-table tbody tr').length === 2, "日志表 2 行，实际 " + qsAll('.av-table tbody tr').length);
+const kickFilter = [...document.querySelectorAll('.av-btn')].find(b => b.textContent.includes('踢出'));
+kickFilter?.click();
+await tick(180);
+assert(text('#admin-app').includes('违规发言'), "踢出过滤后详情可见");
+[...document.querySelectorAll('.av-btn')].find(b => b.textContent.includes('清空日志'))?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/log/clear')), "清空日志调用 log/clear");
+
+console.log("== 批3: 赛季管理 ==");
+await navTo('season');
+assert(text('#admin-app').includes('赛季管理'), "赛季标题");
+assert(text('#admin-app').includes('S1 赛季'), "当前赛季 S1 渲染");
+assert(text('#admin-app').includes('进行中'), "赛季状态 进行中");
+assert(text('#admin-app').includes('发言'), "目标表格含类型 发言");
+assert(text('#admin-app').includes('100'), "目标表格含目标值 100");
+const sName = qsAll('.av-page input').find(i => i.placeholder === '赛季名称');
+sName.value = 'S2 新赛季';
+sName.dispatchEvent(new w.Event('input', { bubbles: true }));
+const sStart = qsAll('.av-page input').find(i => i.placeholder.includes('开始时间戳'));
+sStart.value = '2000';
+sStart.dispatchEvent(new w.Event('input', { bubbles: true }));
+const sEnd = qsAll('.av-page input').find(i => i.placeholder.includes('结束时间戳'));
+sEnd.value = '9000';
+sEnd.dispatchEvent(new w.Event('input', { bubbles: true }));
+const gTarget = qsAll('.av-page input').find(i => i.placeholder === '目标值');
+gTarget.value = '50';
+gTarget.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '创建赛季')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/season/create')), "创建赛季调用 season/create");
+
+console.log("== 批3: 荣誉管理 ==");
+await navTo('honor');
+assert(text('#admin-app').includes('荣誉管理'), "荣誉标题");
+assert(text('#admin-app').includes('金色头衔'), "荣誉商品渲染");
+assert(text('#admin-app').includes('300'), "荣誉价格 300 渲染");
+const hName = qsAll('.av-card input').find(i => i.placeholder === '商品名称');
+hName.value = '钻石头衔';
+hName.dispatchEvent(new w.Event('input', { bubbles: true }));
+const hPrice = qsAll('.av-card input').find(i => i.placeholder === '荣誉价格');
+hPrice.value = '500';
+hPrice.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '添加商品')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/honor/honor-shop/item/add')), "添加荣誉商品调用 item/add");
+
+console.log("== 批3: 表情管理 ==");
+await navTo('emoji');
+assert(text('#admin-app').includes('表情管理'), "表情标题");
+assert(text('#admin-app').includes(':smile:'), "表情 :smile: 渲染");
+assert(qsAll('.av-card img').length === 2, "表情图片 2 个，实际 " + qsAll('.av-card img').length);
+const emojiName = qsAll('.av-card input').find(i => i.placeholder.includes('名称'));
+emojiName.value = 'happy';
+emojiName.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+const fileInput = document.getElementById('emoji-file-input');
+Object.defineProperty(fileInput, 'files', { value: [new File(['x'], 'x.png', { type: 'image/png' })] });
+fileInput.dispatchEvent(new w.Event('change', { bubbles: true }));
+await tick(100);
+assert(!!document.querySelector('.av-card img[src^="data:image"]'), "上传预览出现");
+findBtn('#admin-app', '上传')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/emoji/add')), "上传表情调用 emoji/add");
 
 console.log("\n结果: " + pass + " 通过, " + fail + " 失败");
 process.exit(fail ? 1 : 0);

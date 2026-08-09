@@ -120,6 +120,16 @@ body {
     <div class="feature-item"><span class="icon">🎁</span><span class="text"><span class="tag tag-feature">功能</span><b>兑换码（superOnly）</b> — 表格（未使用在前）+ 批量生成（积分/数量/前缀，单次≤100）+ 自定义添加 + 未使用可删除，生成后 toast 直接展示码</span></div>
     <div class="feature-item"><span class="icon">🌐</span><span class="text"><span class="tag tag-feature">功能</span><b>同IP检测（superOnly）</b> — 5 数据源聚合（user-ips/积分/在线/标签/封禁）按 IP 分组、用户数降序、统计多用户 IP 数 + 搜索过滤 + 展开/折叠 + 每用户详情/踢出/解封/封禁</span></div>
     <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>批2 jsdom 端到端 96 项断言全过</b> — 侧边栏扩到 17 项（exp/redeem/ipgroup superOnly，levelstyle/shop/tasks/lottery 普通可见）→ 等级行内加减 → 房间样式设置 → 商店添加 → 任务禁用 → 抽奖双弹窗（奖品/奖池）→ 兑换码排序与生成 → 同IP分组展开+用户详情弹窗联动；修复 shop.js return 残留未定义 isSwatch 致组件 setup 抛错真实 bug；线上冒烟（部署 cadb0a37）login→auth-check=super + 批2 五类只读 API 返回真实数据 + 旧 /admin 双轨 200</span></div>
+    <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-feature">功能</span><b>Webhook 管理</b> — 统计卡（开启/总房间数）+ 房间卡片网格（状态徽章）+ 生成结果弹窗（URL/secret/curl 示例 + 一键复制）+ 删除</span></div>
+    <div class="feature-item"><span class="icon">🤖</span><span class="text"><span class="tag tag-feature">功能</span><b>机器人命令</b> — 命令卡片列表（关键词/回复/启用状态徽章）+ 添加表单 + 启用禁用切换（get→update 两步）</span></div>
+    <div class="feature-item"><span class="icon">📣</span><span class="text"><span class="tag tag-feature">功能</span><b>发送消息（superOnly）</b> — 广播表单（房间下拉/发送者/内容）+ 聊天气泡实时预览 + 房间在线数 + 快速发送「系统通知」</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-feature">功能</span><b>踢出保护（superOnly）</b> — 受保护用户列表（🛡️ 徽章）+ 添加/移除，踢出时自动豁免</span></div>
+    <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-feature">功能</span><b>管理员密钥（superOnly）</b> — 当前密钥掩码显示（前4位+****）+ 修改（≥3位）+ 重置默认（确认）</span></div>
+    <div class="feature-item"><span class="icon">📜</span><span class="text"><span class="tag tag-feature">功能</span><b>操作日志（superOnly）</b> — action 过滤 chips（操作类型着色）+ 日志表格（操作人/操作/目标/详情）+ 清空</span></div>
+    <div class="feature-item"><span class="icon">🏆</span><span class="text"><span class="tag tag-feature">功能</span><b>赛季管理（superOnly）</b> — 赛季状态卡（未开始/进行中/已结束，静态色徽章）+ 目标表格（类型/目标值/荣誉奖励/标签）+ 动态目标行增删 + 创建/开始/结算按钮按状态禁用</span></div>
+    <div class="feature-item"><span class="icon">🪙</span><span class="text"><span class="tag tag-feature">功能</span><b>荣誉管理（superOnly）</b> — 手动发放/扣除荣誉币（金额可负）+ 荣誉商店商品增删/上架下架（🪙 价格徽章 + 标签色 + 色板选择）</span></div>
+    <div class="feature-item"><span class="icon">😀</span><span class="text"><span class="tag tag-feature">功能</span><b>表情管理</b> — 上传表单（名称 + 文件 ≤200KB + 实时预览）+ 表情网格（走公开 /api/emoji/list 取完整 dataURI 展示）+ 删除</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>批3 jsdom 端到端 147 项断言全过</b> — 侧边栏扩到 26 项（kickprotect/adminkey/log/season/honor superOnly）→ 9 个新 section 全部渲染 + 核心交互（webhook 生成、bot 添加、广播发送、保护添加、密钥修改、日志过滤、赛季目标、荣誉发放、emoji 上传预览）；修复 honor.js type=number v-model 返回 number 致 form.honorPrice.trim 崩溃的真实 bug；线上冒烟（部署 78574aad）login→auth-check=super + 批3 全部只读 API（webhook/list/bot/kick-protect/admin-key/log/season/config/honor-shop/items/emoji）200 + 9 个新 section 模块 200 + 旧 /admin 双轨 200</span></div>
   </div>
 </div>
 

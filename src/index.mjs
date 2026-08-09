@@ -122,6 +122,15 @@ import ADMIN_VUE_SEC_TASKS from "./client/admin/sections/tasks.js";
 import ADMIN_VUE_SEC_LOTTERY from "./client/admin/sections/lottery.js";
 import ADMIN_VUE_SEC_REDEEM from "./client/admin/sections/redeem.js";
 import ADMIN_VUE_SEC_IPGROUP from "./client/admin/sections/ipgroup.js";
+import ADMIN_VUE_SEC_WEBHOOKS from "./client/admin/sections/webhooks.js";
+import ADMIN_VUE_SEC_BOT from "./client/admin/sections/bot.js";
+import ADMIN_VUE_SEC_SENDMESSAGE from "./client/admin/sections/sendmessage.js";
+import ADMIN_VUE_SEC_KICKPROTECT from "./client/admin/sections/kickprotect.js";
+import ADMIN_VUE_SEC_ADMINKEY from "./client/admin/sections/adminkey.js";
+import ADMIN_VUE_SEC_LOG from "./client/admin/sections/log.js";
+import ADMIN_VUE_SEC_SEASON from "./client/admin/sections/season.js";
+import ADMIN_VUE_SEC_HONOR from "./client/admin/sections/honor.js";
+import ADMIN_VUE_SEC_EMOJI from "./client/admin/sections/emoji.js";
 import ADMIN_VUE_SEC_USERMODAL from "./client/admin/sections/usermodal.js";
 
 // i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
@@ -230,6 +239,15 @@ const ADMIN_MODULES = {
   "admin/sections/lottery.js": ADMIN_VUE_SEC_LOTTERY,
   "admin/sections/redeem.js": ADMIN_VUE_SEC_REDEEM,
   "admin/sections/ipgroup.js": ADMIN_VUE_SEC_IPGROUP,
+  "admin/sections/webhooks.js": ADMIN_VUE_SEC_WEBHOOKS,
+  "admin/sections/bot.js": ADMIN_VUE_SEC_BOT,
+  "admin/sections/sendmessage.js": ADMIN_VUE_SEC_SENDMESSAGE,
+  "admin/sections/kickprotect.js": ADMIN_VUE_SEC_KICKPROTECT,
+  "admin/sections/adminkey.js": ADMIN_VUE_SEC_ADMINKEY,
+  "admin/sections/log.js": ADMIN_VUE_SEC_LOG,
+  "admin/sections/season.js": ADMIN_VUE_SEC_SEASON,
+  "admin/sections/honor.js": ADMIN_VUE_SEC_HONOR,
+  "admin/sections/emoji.js": ADMIN_VUE_SEC_EMOJI,
   "admin/sections/usermodal.js": ADMIN_VUE_SEC_USERMODAL,
 };
 

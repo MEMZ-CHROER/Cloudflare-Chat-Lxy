@@ -24,6 +24,15 @@ const ROUTES = {
   lottery: () => import('/static/admin/sections/lottery.js'),
   redeem: () => import('/static/admin/sections/redeem.js'),
   ipgroup: () => import('/static/admin/sections/ipgroup.js'),
+  webhooks: () => import('/static/admin/sections/webhooks.js'),
+  bot: () => import('/static/admin/sections/bot.js'),
+  sendmessage: () => import('/static/admin/sections/sendmessage.js'),
+  kickprotect: () => import('/static/admin/sections/kickprotect.js'),
+  adminkey: () => import('/static/admin/sections/adminkey.js'),
+  log: () => import('/static/admin/sections/log.js'),
+  season: () => import('/static/admin/sections/season.js'),
+  honor: () => import('/static/admin/sections/honor.js'),
+  emoji: () => import('/static/admin/sections/emoji.js'),
 };
 
 // 侧边栏导航（superOnly: true 仅超管可见；过渡期只列已迁移页）
@@ -45,6 +54,15 @@ const NAV = [
   { key: 'ipgroup', label: '🌐 同IP检测', superOnly: true },
   { key: 'redeem', label: '🎁 兑换码', superOnly: true },
   { key: 'market', label: '💱 市场管理', superOnly: true },
+  { key: 'webhooks', label: '🔗 Webhook' },
+  { key: 'bot', label: '🤖 机器人命令' },
+  { key: 'sendmessage', label: '📣 发送消息' },
+  { key: 'kickprotect', label: '🛡️ 踢出保护', superOnly: true },
+  { key: 'adminkey', label: '🔑 管理员密钥', superOnly: true },
+  { key: 'log', label: '📜 操作日志', superOnly: true },
+  { key: 'season', label: '🏆 赛季管理', superOnly: true },
+  { key: 'honor', label: '🪙 荣誉管理', superOnly: true },
+  { key: 'emoji', label: '😀 表情管理' },
 ];
 
 // 从 location.pathname 解析当前 section key
