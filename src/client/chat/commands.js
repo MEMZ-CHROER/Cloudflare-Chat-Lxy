@@ -78,7 +78,7 @@ export async function handleCommand(text) {
       let results = [];
       for (let n of names) {
         try {
-          let r = await fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKeyK) + "&name=" + encodeURIComponent(n));
+          let r = await fetch("/api/admin/kick-user/" + encodeURIComponent(state.roomname) + "?key=" + encodeURIComponent(adminKeyK) + "&name=" + encodeURIComponent(n) + "&caller=" + encodeURIComponent(state.username || ""));
           results.push(n + ": " + await r.text());
         } catch (e) { results.push(n + t(": 失败 - ") + e.message); }
       }

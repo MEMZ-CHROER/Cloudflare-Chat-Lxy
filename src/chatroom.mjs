@@ -455,6 +455,13 @@ export class ChatRoom {
           if (targetName === callerName) {
             return new Response("不能踢出自己", {status: 400});
           }
+          // 🧪 v1.49 LP：caller 存在 = 用户主动踢人（聊天室内 /kick 命令 / roster 踢出按钮经 admin API 转发）。
+          //   chat.admin.kickUser 显式 false 硬拦（即使管理员/超管），未定义(null) 放行（管理 API 已做 admin 鉴权）。
+          //   （管理后台踢人/全局踢/改标签踢人都不带 caller，走运维通道，不受此限）
+          if (callerName) {
+            let lpOk = await this.lpRawPerm(callerName, "chat.admin.kickUser");
+            if (lpOk === false) return new Response("你无权执行该操作", {status: 403});
+          }
 
           // 检查VIP踢出保护（全局机制，管理员也不能绕过）
           for (let [ws, s] of this.sessions) {
@@ -517,6 +524,11 @@ export class ChatRoom {
           let isKeyOk = (this.env.ADMIN_KEY && safeEqual(k, this.env.ADMIN_KEY)) || (this.env.ADMIN_SECRET_KEY && safeEqual(k, this.env.ADMIN_SECRET_KEY));
           if (!isKeyOk) return new Response("未经授权", { status: 401 });
           let except = url.searchParams.get("except") || "";
+          // 🧪 v1.49 LP：/kickall 触发者(except) 的 chat.admin.kickUser 显式 false 同样硬拦
+          if (except) {
+            let lpOk = await this.lpRawPerm(except, "chat.admin.kickUser");
+            if (lpOk === false) return new Response("你无权执行该操作", {status: 403});
+          }
           let count = 0;
           for (let [webSocket, session] of this.sessions) {
             if (except && session.name === except) continue;
@@ -2378,6 +2390,21 @@ export class ChatRoom {
     if (node.startsWith("chat.admin.")) return this.isAdminSession(session);
     if (node.startsWith("chat.user.")) return !!name && !!(session && session.authenticated);
     return false;
+  }
+
+  // 🧪 v1.49 LP 辅助：查询用户对节点的显式权限结果（true/false/null），
+  // 不回退 session 基础层 —— 供 /do-kick、/do-kick-all 等无 session 上下文的管理端点
+  // （null = LP 未定义，由调用方决定：管理端点已做 admin 鉴权，故放行）
+  async lpRawPerm(name, node) {
+    if (!name) return null;
+    try {
+      let rid = this.env.registry.idFromName("global");
+      let stub = this.env.registry.get(rid);
+      let r = await stub.fetch("https://dummy-url/lp/check?name=" + encodeURIComponent(name) + "&node=" + encodeURIComponent(node));
+      let d = await r.json();
+      if (d && (d.result === true || d.result === false)) return d.result;
+      return null;
+    } catch (e) { return null; }
   }
 
   // 📌 在线@红点：记录 @<用户名> 到 storage（上限 50 条），供用户下次上线时补显

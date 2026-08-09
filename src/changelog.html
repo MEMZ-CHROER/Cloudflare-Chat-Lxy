@@ -107,6 +107,7 @@ body {
     <div class="feature-item"><span class="icon">🖥️</span><span class="text"><span class="tag tag-feature">功能</span><b>独立 /lp 页面</b> — 编辑器单独做成全屏独立应用（仿原版 LuckPermsWeb）：顶部品牌栏 + 全屏权限表，独立页首次访问未超管时显示登录遮罩（输入密钥走 /api/admin/login，cookie 会话复用管理后台），管理后台导航「🔐 权限编辑」改为跳转独立页；lp.js 容器抽象化（模块级 _root + rerender()），同一编辑器同时支撑 admin 内嵌版与独立版</span></div>
     <div class="feature-item"><span class="icon">⚡</span><span class="text"><span class="tag tag-feature">优化</span><b>增量写入</b> — 节点添加/删除/值切换/批量操作成功后不再整棵刷新（去掉了每次操作后的全量 loadLpSection），直接把那一条写进内存数据并纯内存重画（无网络请求）；提示条改为 body 级 toast 固定顶部，不再被重渲染清掉；组/用户增删自动清理相互引用</span></div>
     <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span><b>继承节点选项点不动</b> — 添加栏节点类型下拉选「继承节点」时触发整棵重渲染、新 select 值被重置回「权限节点」；改为 onchange 局部动态增删组选择器 + 输入框占位提示（不再整棵重渲染），选组后直接添加继承</span></div>
+    <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span><b>kickUser=false 被管理踢人路径绕过</b> — 聊天室内 /lp 设 chat.admin.kickUser=false 后，roster 在线列表「踢出」按钮 / /kick 命令 / /batch-kick / /kickall 仍能踢人（它们走 /api/admin/kick-user 管理接口、只经 admin key 鉴权、绕过 hasPerm 判定）；服务端 <b>/do-kick</b>（带 caller 时）与 <b>/do-kick-all</b>（带 except 时）新增 LP chat.admin.kickUser 显式 false 硬拦（未定义 null 放行），/batch-kick 前端补传 caller；管理后台/全局踢/改标签踢等不带 caller 的运维通道不受影响；冒烟 8 项全过</span></div>
   </div>
 </div>
 
