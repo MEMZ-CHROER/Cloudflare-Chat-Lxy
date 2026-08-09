@@ -94,6 +94,22 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.49</span>
+    <span class="version-date">2026-08-09</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔐</span><span class="text"><span class="tag tag-feature">功能</span><b>LuckPerms 权限系统</b> — 基于 CHAT_PERMISSIONS.txt 的 chat.域.动作 节点体系，聊天室内 <b>/lp</b> 命令（仿 LuckPerms）：用户直接权限 + 权限组 + 组继承，节点细粒度授权</span></div>
+    <div class="feature-item"><span class="icon">👥</span><span class="text"><span class="tag tag-feature">功能</span><b>权限组</b> — <b>/lp creategroup 组名</b> 建组、<b>/lp group 组 permission set 节点 [true|false]</b> 组设权限、<b>/lp group 组 parent add 父组</b> 组继承（BFS 防环）、组删除自动清理引用</span></div>
+    <div class="feature-item"><span class="icon">🪪</span><span class="text"><span class="tag tag-feature">功能</span><b>用户授权</b> — <b>/lp user 名 permission set 节点 true</b> 给非管理员授权、<b>/lp user 名 parent add 组</b> 通过组继承批量授权；/lp user 名 info 查看详情</span></div>
+    <div class="feature-item"><span class="icon">⭐</span><span class="text"><span class="tag tag-feature">功能</span><b>通配符</b> — <b>*</b> 全部权限、<b>chat.admin.*</b> 前缀通配；解析优先级 精确 &gt; 前缀 &gt; 全局，同层 deny 优先；/lp check 名 节点 测试解析结果</span></div>
+    <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-feature">功能</span><b>全链路接入</b> — 踢人 / 置顶 / 频道管理 / 精华 / 定时消息查看等 8+ 处鉴权点接入 hasPerm：LP 显式结果优先（可授权、可禁真管理员），未定义回退基础层（红青金管理员 / 登录用户 / 游客）</span></div>
+    <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-feature">安全</span><b>权限门控</b> — /lp 命令需管理员标签或 chat.lp.manage 权限，命令转发 registry 执行（L1 脱敏）；名称/组名/节点正则白名单；修改即持久化（storage key lpData）；数据导出 /lp/data 预留网页编辑器接入</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.48</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>

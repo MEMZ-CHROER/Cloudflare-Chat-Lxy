@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData, marketOrdersData, marketConfigData, userRelationsData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData, marketOrdersData, marketConfigData, userRelationsData, lpData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -39,6 +39,7 @@ export async function loadAll(storage) {
       storage.get("marketOrders"),
       storage.get("marketConfig"),
       storage.get("userRelations"),
+      storage.get("lpData"),
     ]);
 
   return {
@@ -83,6 +84,11 @@ export async function loadAll(storage) {
       pendingIn: new Set(rel.pendingIn || []),
       blocked: new Set(rel.blocked || [])
     }])) : new Map(),
+    // 🧪 v1.49 LuckPerms 权限系统：{users: Map<name,{permissions:Map,groups:Set}>, groups: Map<gname,{permissions:Map,parents:Set}>}
+    lp: lpData ? {
+      users: new Map(lpData.users.map(([n, u]) => [n, {permissions: new Map(u.permissions || []), groups: new Set(u.groups || [])}])),
+      groups: new Map(lpData.groups.map(([gn, g]) => [gn, {permissions: new Map(g.permissions || []), parents: new Set(g.parents || [])}]))
+    } : {users: new Map(), groups: new Map()},
   };
 }
 
@@ -217,4 +223,19 @@ export async function saveUserRelations(storage, data) {
     }]);
   }
   await storage.put("userRelations", serialized);
+}
+
+// 🧪 v1.49 LuckPerms 权限系统持久化：{users, groups} 均 Map（内嵌 Map/Set 序列化）
+export async function saveLp(storage, data) {
+  let serialized = {
+    users: [],
+    groups: []
+  };
+  for (let [name, u] of data.users) {
+    serialized.users.push([name, {permissions: [...(u.permissions || [])], groups: [...(u.groups || [])]}]);
+  }
+  for (let [gname, g] of data.groups) {
+    serialized.groups.push([gname, {permissions: [...(g.permissions || [])], parents: [...(g.parents || [])]}]);
+  }
+  await storage.put("lpData", serialized);
 }

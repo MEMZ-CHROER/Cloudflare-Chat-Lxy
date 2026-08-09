@@ -8,6 +8,12 @@ import { getAdminKey } from './ui.js';
 import { switchRoom, loadRoomList } from './rooms.js';
 
 export async function handleCommand(text) {
+  // 🧪 v1.49 LuckPerms 权限系统命令：透传给服务端处理（门控/执行均在服务端）
+  if (/^\/lp\b/i.test(text)) {
+    if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));
+    else showError(t("请先加入聊天室后再使用 /lp"));
+    return;
+  }
   // 应急回滚命令（公开管理功能）：透传给服务端处理，不拦截为前端命令
   if (/^\/rollback\s+\S+\s+\S+/i.test(text)) {
     if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({message: text}));

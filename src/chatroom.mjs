@@ -1013,7 +1013,8 @@ export class ChatRoom {
           return;
         }
         // 🔒 安全修复（M10）：踢人限频（普通用户30秒内只能踢1次，管理员不限），防反复骚扰他人
-        let isKickAdmin = this.isAdminSession(session);
+        // 🧪 v1.49 LP：管理员标签 或 chat.admin.kickUser 授权（含组继承/通配符）均可踢人
+        let isKickAdmin = await this.hasPerm(session, "chat.admin.kickUser");
         // 🔒 安全修复（M10）：非管理员踢人必须是已认证（登录）用户，堵住游客换名重连绕限频
         if (!isKickAdmin && !session.authenticated) {
           webSocket.send(JSON.stringify({error: "请登录后再踢人"}));
@@ -1332,7 +1333,7 @@ export class ChatRoom {
         if (this._loadChannels) await this._loadChannels;
         let schedChanName = session.channel || "general";
         let schedChanObj = this.channels.find(c => c.name === schedChanName);
-        if (schedChanObj && schedChanObj.type === "announcement" && !this.isAdminSession(session)) {
+        if (schedChanObj && schedChanObj.type === "announcement" && !(await this.hasPerm(session, "chat.admin.announcement"))) {
           webSocket.send(JSON.stringify({error: "公告频道仅管理员可发"}));
           return;
         }
@@ -1363,7 +1364,7 @@ export class ChatRoom {
         let sched = (this.scheduledMessages || []).find(s => s.id === cancelId);
         if (!sched) { webSocket.send(JSON.stringify({error: "定时消息不存在"})); return; }
         // 🔒 安全修复（W6）：只能取消自己创建的定时消息（管理员可取消任意）
-        if (sched.name !== session.name && !this.isAdminSession(session)) {
+        if (sched.name !== session.name && !(await this.hasPerm(session, "chat.admin.messageDelete"))) {
           webSocket.send(JSON.stringify({error: "只能取消自己创建的定时消息"}));
           return;
         }
@@ -1463,7 +1464,7 @@ export class ChatRoom {
         let relay = this.relays.get(relayId);
         if (!relay) { webSocket.send(JSON.stringify({error: "接龙不存在"})); return; }
         // 🔒 安全修复（LD18）：发起者或管理员（red/cyan）可结束接龙，防游客创建后断线导致功能永久锁死
-        if (relay.startedBy !== session.name && !this.isAdminSession(session)) {
+        if (relay.startedBy !== session.name && !(await this.hasPerm(session, "chat.admin.messageDelete"))) {
           webSocket.send(JSON.stringify({error: "只有发起者或管理员可以结束接龙"})); return;
         }
         relay.active = false;
@@ -1627,7 +1628,7 @@ export class ChatRoom {
       let msgChannel = session.channel || "general";
       // 频道体系：公告频道只读，仅管理员（red/cyan）可发言
       let curChan = this.channels.find(c => c.name === msgChannel);
-      if (curChan && curChan.type === "announcement" && !this.isAdminSession(session)) {
+      if (curChan && curChan.type === "announcement" && !(await this.hasPerm(session, "chat.admin.announcement"))) {
         webSocket.send(JSON.stringify({error: "仅管理员可在公告频道发言"}));
         return;
       }
@@ -1684,7 +1685,7 @@ export class ChatRoom {
         if (delOrig.type === "recalled" || delOrig.type === "deleted") {
           webSocket.send(JSON.stringify({error: "该消息已被撤回或删除"})); return;
         }
-        let isDelAdmin = this.isAdminSession(session);
+        let isDelAdmin = await this.hasPerm(session, "chat.admin.messageDelete");
         // 🔒 安全修复（F7）：匿名消息存储时 name="匿名"，原判定使真实发送者永远删不掉自己的匿名消息；
         // 增加对 storage 中 _anonOwner（真实 name 哈希）的校验，允许本人删除且不向他人泄露身份
         let isAnonOwner = !session.name ? false : (delOrig.name === "匿名" && !!delOrig._anonOwner && delOrig._anonOwner === hashAnonOwner(session.name));
@@ -1806,6 +1807,40 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "未知命令，输入 /bot help 查看可用命令"}));
         } catch (e) {
           webSocket.send(JSON.stringify({error: "机器人暂时不可用"}));
+        }
+        return;
+      }
+
+      // 🧪 v1.49 LuckPerms 权限系统命令（仿 /rollback 服务端透传）：/lp ...
+      // 门控：管理员标签 或 拥有 chat.lp.manage 权限的用户可执行；转发 registry /lp/exec 执行
+      if (/^\/lp\b/i.test(data.message)) {
+        let canManage = this.isAdminSession(session);
+        if (!canManage && session.name) {
+          try {
+            let rid = this.env.registry.idFromName("global");
+            let stub = this.env.registry.get(rid);
+            let r = await stub.fetch("https://dummy-url/lp/check?name=" + encodeURIComponent(session.name) + "&node=chat.lp.manage");
+            let d = await r.json();
+            if (d && d.result === true) canManage = true;
+          } catch (e) {}
+        }
+        if (!canManage) {
+          webSocket.send(JSON.stringify({error: "无权限使用 /lp（需要管理员身份或 chat.lp.manage 权限）"}));
+          return;
+        }
+        try {
+          let rid = this.env.registry.idFromName("global");
+          let stub = this.env.registry.get(rid);
+          let r = await stub.fetch("https://dummy-url/lp/exec", {
+            method: "POST",
+            body: JSON.stringify({cmd: data.message}),
+            headers: {"Content-Type": "application/json"}
+          });
+          let d = await r.json();
+          let txt = (d && d.text) || (d && d.error) || "命令执行完毕";
+          webSocket.send(JSON.stringify({system: txt}));
+        } catch (e) {
+          webSocket.send(JSON.stringify({error: "权限系统暂时不可用"}));
         }
         return;
       }
@@ -2335,6 +2370,32 @@ export class ChatRoom {
     return session.tag === "red" || session.tag === "cyan" ||
            session.tagColor === "red" || session.tagColor === "cyan" ||
            session.tagBorder === "gold";
+  }
+
+  // 🧪 v1.49 超管判定：金色边框标签（区别于普通管理员红/青标签）
+  isSuperSession(session) {
+    return !!(session && session.tagBorder === "gold");
+  }
+
+  // 🧪 v1.49 LuckPerms 权限解析（node 形如 chat.admin.kickUser / chat.admin.* / *）：
+  //   LP 显式结果优先（true/false 都覆盖基础层，故可给非管理员授权、也可禁真管理员）；
+  //   未定义 → 回退基础层：chat.super.*=金边超管、chat.admin.*=管理员标签、chat.user.*=已登录。
+  // 返回 Promise<boolean>。查询 registry /lp/check（内部无鉴权端点，仅 DO stub 直连，不暴露 HTTP）。
+  async hasPerm(session, node) {
+    let name = session && session.name;
+    if (name) {
+      try {
+        let rid = this.env.registry.idFromName("global");
+        let stub = this.env.registry.get(rid);
+        let r = await stub.fetch("https://dummy-url/lp/check?name=" + encodeURIComponent(name) + "&node=" + encodeURIComponent(node));
+        let d = await r.json();
+        if (d && typeof d.result === "boolean") return d.result;
+      } catch (e) {}
+    }
+    if (node.startsWith("chat.super.")) return this.isSuperSession(session);
+    if (node.startsWith("chat.admin.")) return this.isAdminSession(session);
+    if (node.startsWith("chat.user.")) return !!name && !!(session && session.authenticated);
+    return false;
   }
 
   // 📌 在线@红点：记录 @<用户名> 到 storage（上限 50 条），供用户下次上线时补显

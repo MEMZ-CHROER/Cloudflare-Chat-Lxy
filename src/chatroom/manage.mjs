@@ -47,7 +47,8 @@ export async function handleManage(room, session, data, webSocket) {
     if (room._loadChannels) await room._loadChannels; // 确保频道列表已加载
     let action = data.action;
     let name = "" + (data.name || "");
-    if (!room.isAdminSession(session)) {
+    // 🧪 v1.49 LP：chat.admin.channel（管理员标签或授权均可）
+    if (!(await room.hasPerm(session, "chat.admin.channel"))) {
       webSocket.send(JSON.stringify({error: "仅管理员可管理频道"}));
       return true;
     }
@@ -82,7 +83,8 @@ export async function handleManage(room, session, data, webSocket) {
 
   if (data.type === "pin") {
     // 🔒 安全修复：置顶是管理员功能，普通用户禁止
-    if (!room.isAdminSession(session)) {
+    // 🧪 v1.49 LP：chat.admin.pinMessage（管理员标签或授权均可）
+    if (!(await room.hasPerm(session, "chat.admin.pinMessage"))) {
       webSocket.send(JSON.stringify({error: "仅管理员可置顶消息"}));
       return true;
     }
@@ -167,7 +169,8 @@ export async function handleManage(room, session, data, webSocket) {
   if (data.type === "get-scheduled") {
     if (room._loadScheduled) await room._loadScheduled;
     // 🔒 安全修复（W6）：非管理员只能查看自己创建的定时消息，防窥探他人定时内容
-    let isAdmin = room.isAdminSession(session);
+    // 🧪 v1.49 LP：chat.admin.viewMessages（管理员标签或授权均可）
+    let isAdmin = await room.hasPerm(session, "chat.admin.viewMessages");
     let list = (room.scheduledMessages || [])
       .filter(s => isAdmin || s.name === session.name)
       .map(s => ({id: s.id, name: s.name, message: s.message.slice(0, 80), time: s.time, createdAt: s.createdAt}));
@@ -177,7 +180,8 @@ export async function handleManage(room, session, data, webSocket) {
 
   if (data.type === "highlight") {
     // 🔒 安全修复：增删精华是管理员功能，普通用户禁止
-    if (!room.isAdminSession(session)) {
+    // 🧪 v1.49 LP：chat.admin.highlight（管理员标签或授权均可）
+    if (!(await room.hasPerm(session, "chat.admin.highlight"))) {
       webSocket.send(JSON.stringify({error: "仅管理员可操作精华消息"}));
       return true;
     }

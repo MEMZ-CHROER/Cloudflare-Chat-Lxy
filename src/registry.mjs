@@ -26,7 +26,7 @@ import {
   saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid,
   saveHacknetGames,
   saveSeasonState, saveSeasonProgress, saveHonorCoins, saveOauthStates,
-  saveMarketOrders, saveMarketConfig, saveUserRelations
+  saveMarketOrders, saveMarketConfig, saveUserRelations, saveLp
 } from "./registry/persistence.mjs";
 import { handleHacknet, processHnTimer } from "./registry/hacknet.mjs";
 import { handleSeason, processSeasonTimer } from "./registry/season.mjs";
@@ -34,6 +34,7 @@ import { handleHonor } from "./registry/honor.mjs";
 import { handleOauth } from "./registry/oauth.mjs";
 import { handleMarket } from "./registry/market.mjs";
 import { handleRelations } from "./registry/relations.mjs";
+import { handleLp } from "./registry/lp.mjs";
 
 // 🏆 v1.45 赛季 points 目标白名单：仅这 6 类正向入账计入赛季积分进度。
 // 排除 transfer（防自刷转账）与 admin（防管理员铸币灌入赛季进度）。
@@ -112,6 +113,11 @@ export class RoomRegistry {
     this.marketOrders = [];   // 交易市场挂单（storage key "marketOrders"）
     this.marketConfig = { feePercent: 5, enabled: true, maxOpenOrders: 20, maxPrice: "10000000" };
     this.userRelations = new Map();   // 👥 v1.48 关系链：关注/好友/拉黑（storage key "userRelations"）
+    // 🧪 v1.49 LuckPerms 权限系统（storage key "lpData"）：{users, groups} 均 Map
+    this.lp = {users: new Map(), groups: new Map()};
+    // 🧪 v1.49 诊断：实例标识 + load 完成标记（区分冷启动/多实例，定位 LP 读不到问题）
+    this._instId = (crypto && crypto.randomUUID) ? crypto.randomUUID().slice(0, 8) : String(Math.random()).slice(2, 8);
+    this._loaded = false;
     this._loadPromise = Promise.race([
       this.load(),
       new Promise(resolve => setTimeout(resolve, 10000))
@@ -166,6 +172,8 @@ export class RoomRegistry {
     if (data.marketConfig) this.marketConfig = Object.assign({feePercent:5,enabled:true,maxOpenOrders:20,maxPrice:"10000000"}, data.marketConfig);
     // 👥 v1.48 关系链恢复（Map<name,{following,friends,pendingOut,pendingIn,blocked} 均 Set>）
     if (data.userRelations) this.userRelations = data.userRelations;
+    // 🧪 v1.49 LuckPerms 权限系统恢复
+    if (data.lp) this.lp = data.lp;
 
     // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
     if (!this.shopItems.has("anon_coupon")) {
@@ -176,6 +184,8 @@ export class RoomRegistry {
     if (this.seasonState && this.seasonState.status === "active" && !this.seasonState.settled && this.seasonState.endAt > Date.now()) {
       this.hnAddTimer({at: this.seasonState.endAt, type: "season_settle", payload: {}});
     }
+
+    this._loaded = true;
   }
 
   async save() { await saveRooms(this.storage, this.rooms); }
@@ -221,6 +231,9 @@ export class RoomRegistry {
 
   // 👥 v1.48 关系链持久化
   async saveUserRelations() { await saveUserRelations(this.storage, this.userRelations); }
+
+  // 🧪 v1.49 LuckPerms 权限系统持久化
+  async saveLp() { await saveLp(this.storage, this.lp); }
 
   // 事件入表并重排 alarm（DO 同一时刻仅一个 pending alarm）
   hnAddTimer(timer) {
@@ -463,6 +476,8 @@ export class RoomRegistry {
       handler = handleUsers;
     else if (path.startsWith("/rel/"))
       handler = handleRelations;
+    else if (path.startsWith("/lp/"))
+      handler = handleLp;
     else if (path.startsWith("/hn/"))
       handler = handleHacknet;
     else if (path.startsWith("/season/") || path.startsWith("/admin/season/"))

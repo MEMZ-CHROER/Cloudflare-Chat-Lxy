@@ -1,0 +1,14 @@
+以你告诉我的聊天室权限txt为基础，为聊天室写一个LuckPerms的权限系统
+LP源码：git@github.com:LuckPerms/LuckPerms.git
+LP网页端源码：git@github.com:LuckPerms/LuckPermsWeb.git
+我要求，后端（用命令方式）使用lp功能
+类似：
+（聊天室内输入）
+/lp user LIU permission set chat.admin.kickUser true
+(让LIU拥有踢人权限，即使他不是管理员）
+/lp creategroup thatcankick
+/lp group thatcankick permission set chat.admin.kickUser true
+/lp user LIU parent add thatcankick
+（此时LIU从组继承的权限中获得踢人权限）
+/lp user LIU permission set * true
+（此时LIU获得所有管理权限，即使他原来不是管理员）
