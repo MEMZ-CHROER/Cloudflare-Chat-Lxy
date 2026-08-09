@@ -112,6 +112,14 @@ body {
     <div class="feature-item"><span class="icon">🕘</span><span class="text"><span class="tag tag-feature">功能</span><b>历史用户</b> — 全部注册用户：在线状态●/标签增删/踢出/封禁/解封/拉黑</span></div>
     <div class="feature-item"><span class="icon">🏷️</span><span class="text"><span class="tag tag-feature">功能</span><b>用户标签</b> — 全部注册用户拥有的装扮商品（当前装备标签/颜色/装备物品/全部物品），用户名搜索过滤（普通 admin 可见）</span></div>
     <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>批1 jsdom 端到端 54 项断言全过</b> — 侧边栏扩到 10 项（tags 非 super）→ 房间展开详情/置顶/文件/踢人 → 在线用户徽章/全局踢 → 封禁解封 → IP 封禁输入 → 黑名单移除 → 历史在线标记 → 标签页装备渲染；线上冒烟 28/28（7 个新 section 200 + 旧 /admin 双轨 200 + cookie login→auth-check=super + 9 个批1 API 200）</span></div>
+    <div class="feature-item"><span class="icon">⭐</span><span class="text"><span class="tag tag-feature">功能</span><b>等级管理（superOnly）</b> — 全部用户经验/等级表（等级降序）+ 工具栏搜索定位/设置/增加/扣除 + 选中用户面板 + 行内操作，加减经验自动带出新等级与成就解锁提示</span></div>
+    <div class="feature-item"><span class="icon">🏅</span><span class="text"><span class="tag tag-feature">功能</span><b>房间样式</b> — 房间下拉（在线数）+ 等级号 1-999 校验 + 35 色名白名单 + 图标≤4字符/文字≤10字符（HTML 特殊字符拦截），设置/清除实时推送在线用户</span></div>
+    <div class="feature-item"><span class="icon">🛒</span><span class="text"><span class="tag tag-feature">功能</span><b>商店管理</b> — 装扮商品列表（标签徽章/颜色/边框/价格/上架状态）+ 添加表单（双色板 33-swatch 颜色/边框选择）+ 上架/下架/删除</span></div>
+    <div class="feature-item"><span class="icon">📋</span><span class="text"><span class="tag tag-feature">功能</span><b>任务管理</b> — 任务列表（奖励/完成数/启用状态）+ 添加（名称/描述/奖励）+ 启用禁用/删除</span></div>
+    <div class="feature-item"><span class="icon">🎰</span><span class="text"><span class="tag tag-feature">功能</span><b>抽奖管理</b> — 奖池卡片（启用徽章/描述/每次积分/奖品 chips 含×删除+补货）+ 新建/编辑奖池弹窗 + 添加奖品弹窗（名称/概率/库存/标签/颜色）</span></div>
+    <div class="feature-item"><span class="icon">🎁</span><span class="text"><span class="tag tag-feature">功能</span><b>兑换码（superOnly）</b> — 表格（未使用在前）+ 批量生成（积分/数量/前缀，单次≤100）+ 自定义添加 + 未使用可删除，生成后 toast 直接展示码</span></div>
+    <div class="feature-item"><span class="icon">🌐</span><span class="text"><span class="tag tag-feature">功能</span><b>同IP检测（superOnly）</b> — 5 数据源聚合（user-ips/积分/在线/标签/封禁）按 IP 分组、用户数降序、统计多用户 IP 数 + 搜索过滤 + 展开/折叠 + 每用户详情/踢出/解封/封禁</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-feature">验证</span><b>批2 jsdom 端到端 96 项断言全过</b> — 侧边栏扩到 17 项（exp/redeem/ipgroup superOnly，levelstyle/shop/tasks/lottery 普通可见）→ 等级行内加减 → 房间样式设置 → 商店添加 → 任务禁用 → 抽奖双弹窗（奖品/奖池）→ 兑换码排序与生成 → 同IP分组展开+用户详情弹窗联动；修复 shop.js return 残留未定义 isSwatch 致组件 setup 抛错真实 bug；线上冒烟（部署 cadb0a37）login→auth-check=super + 批2 五类只读 API 返回真实数据 + 旧 /admin 双轨 200</span></div>
   </div>
 </div>
 

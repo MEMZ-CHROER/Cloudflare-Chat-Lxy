@@ -115,6 +115,13 @@ import ADMIN_VUE_SEC_HISTORY from "./client/admin/sections/history.js";
 import ADMIN_VUE_SEC_TAGS from "./client/admin/sections/tags.js";
 import ADMIN_VUE_SEC_POINTS from "./client/admin/sections/points.js";
 import ADMIN_VUE_SEC_MARKET from "./client/admin/sections/market.js";
+import ADMIN_VUE_SEC_EXP from "./client/admin/sections/exp.js";
+import ADMIN_VUE_SEC_LEVELSTYLE from "./client/admin/sections/levelstyle.js";
+import ADMIN_VUE_SEC_SHOP from "./client/admin/sections/shop.js";
+import ADMIN_VUE_SEC_TASKS from "./client/admin/sections/tasks.js";
+import ADMIN_VUE_SEC_LOTTERY from "./client/admin/sections/lottery.js";
+import ADMIN_VUE_SEC_REDEEM from "./client/admin/sections/redeem.js";
+import ADMIN_VUE_SEC_IPGROUP from "./client/admin/sections/ipgroup.js";
 import ADMIN_VUE_SEC_USERMODAL from "./client/admin/sections/usermodal.js";
 
 // i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
@@ -216,6 +223,13 @@ const ADMIN_MODULES = {
   "admin/sections/tags.js": ADMIN_VUE_SEC_TAGS,
   "admin/sections/points.js": ADMIN_VUE_SEC_POINTS,
   "admin/sections/market.js": ADMIN_VUE_SEC_MARKET,
+  "admin/sections/exp.js": ADMIN_VUE_SEC_EXP,
+  "admin/sections/levelstyle.js": ADMIN_VUE_SEC_LEVELSTYLE,
+  "admin/sections/shop.js": ADMIN_VUE_SEC_SHOP,
+  "admin/sections/tasks.js": ADMIN_VUE_SEC_TASKS,
+  "admin/sections/lottery.js": ADMIN_VUE_SEC_LOTTERY,
+  "admin/sections/redeem.js": ADMIN_VUE_SEC_REDEEM,
+  "admin/sections/ipgroup.js": ADMIN_VUE_SEC_IPGROUP,
   "admin/sections/usermodal.js": ADMIN_VUE_SEC_USERMODAL,
 };
 

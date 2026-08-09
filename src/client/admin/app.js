@@ -17,6 +17,13 @@ const ROUTES = {
   tags: () => import('/static/admin/sections/tags.js'),
   points: () => import('/static/admin/sections/points.js'),
   market: () => import('/static/admin/sections/market.js'),
+  exp: () => import('/static/admin/sections/exp.js'),
+  levelstyle: () => import('/static/admin/sections/levelstyle.js'),
+  shop: () => import('/static/admin/sections/shop.js'),
+  tasks: () => import('/static/admin/sections/tasks.js'),
+  lottery: () => import('/static/admin/sections/lottery.js'),
+  redeem: () => import('/static/admin/sections/redeem.js'),
+  ipgroup: () => import('/static/admin/sections/ipgroup.js'),
 };
 
 // 侧边栏导航（superOnly: true 仅超管可见；过渡期只列已迁移页）
@@ -30,6 +37,13 @@ const NAV = [
   { key: 'history', label: '🕘 历史用户', superOnly: true },
   { key: 'tags', label: '🏷️ 用户标签' },
   { key: 'points', label: '💰 积分管理', superOnly: true },
+  { key: 'exp', label: '⭐ 等级管理', superOnly: true },
+  { key: 'levelstyle', label: '🏅 房间样式' },
+  { key: 'shop', label: '🛒 商店管理' },
+  { key: 'tasks', label: '📋 任务管理' },
+  { key: 'lottery', label: '🎰 抽奖管理' },
+  { key: 'ipgroup', label: '🌐 同IP检测', superOnly: true },
+  { key: 'redeem', label: '🎁 兑换码', superOnly: true },
   { key: 'market', label: '💱 市场管理', superOnly: true },
 ];
 

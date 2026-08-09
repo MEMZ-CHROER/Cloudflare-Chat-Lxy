@@ -28,9 +28,8 @@ const mockDb = {
   banned: ['Bob'],
   history: ['Alice', 'Bob', 'Charlie'],
   ipBanned: ['1.2.3.4'],
-  ips: { Alice: '9.9.9.9', Bob: '8.8.8.8' },
+  ips: { Alice: '9.9.9.9', Bob: '9.9.9.9', Carol: '8.8.8.8' },
   tags: { Alice: { tag: 'VIP', color: 'gold' } },
-  exp: { Alice: { exp: 100, level: 5 } },
   blacklist: ['Mallory'],
   roomUsers: { room1: ['Alice', 'Bob'] },
   roomBlacklist: { room1: ['Mallory'] },
@@ -42,6 +41,15 @@ const mockDb = {
   marketConfig: { enabled: true, feePercent: 10, maxOpenOrders: 5, maxPrice: '1000000' },
   marketOrders: { orders: [{ id: 'o1', itemName: '神器', seller: 'Alice', buyer: null, price: 500, status: 'open', createdAt: '2026-08-09T10:00:00Z' }] },
   pointsResponse: {}, // 动态注入 points/api 响应
+  // 批2 数据
+  exp: { Alice: { exp: 100, level: 5 }, Bob: { exp: 30, level: 1 } },
+  shopItems: [{ id: 'i1', name: '红名卡', description: '变红', price: 200, tag: '红名', color: 'red', border: 'gold', enabled: true }],
+  tasks: [{ id: 't1', name: '每日签到', description: '每日任务', reward: 10, enabled: true, completedCount: 3 }],
+  lotteryPools: [{ id: 'p1', name: '新手池', description: '新手奖池', cost: 100, enabled: true, prizes: [{ id: 'pr1', name: 'VIP头衔', stock: 8, initialStock: 10 }] }],
+  redeemCodes: {
+    ABC123: { points: 500, createdBy: 'admin', createdAt: 1000, usedBy: '', usedAt: 0 },
+    USE999: { points: 100, createdBy: 'admin', createdAt: 2000, usedBy: 'Bob', usedAt: 1500 }
+  },
 };
 const fetchCalls = [];
 globalThis.fetch = async (url) => {
@@ -90,6 +98,30 @@ globalThis.fetch = async (url) => {
   if (u.includes('/api/admin/tag/remove')) return text('已移除标签');
   if (u.includes('/api/admin/user-tags')) return json(mockDb.userTags);
   if (u.includes('/api/admin/exp/all')) return json(mockDb.exp);
+  if (u.includes('/api/admin/exp/set')) { const name = sp('name'); mockDb.exp[name] = { exp: Number(sp('exp')), level: Math.max(1, Math.floor(Number(sp('exp')) / 20)) }; return json({ ok: true, exp: mockDb.exp[name].exp, level: mockDb.exp[name].level }); }
+  if (u.includes('/api/admin/exp/add')) { const name = sp('name'); const base = mockDb.exp[name] || { exp: 0, level: 1 }; mockDb.exp[name] = { exp: base.exp + Number(sp('amount')), level: Math.max(1, Math.floor((base.exp + Number(sp('amount'))) / 20)) }; return json({ ok: true, exp: mockDb.exp[name].exp, level: mockDb.exp[name].level }); }
+  if (u.includes('/api/admin/level-style/set/')) return text('样式已设置');
+  if (u.includes('/api/admin/level-style/clear/')) return text('样式已清除');
+  if (u.includes('/api/admin/shop/item/delete')) return json({ ok: true });
+  if (u.includes('/api/admin/shop/item/toggle')) return json({ ok: true });
+  if (u.includes('/api/admin/shop/item/add')) return json({ ok: true });
+  if (u.includes('/api/admin/shop/items')) return json(mockDb.shopItems);
+  if (u.includes('/api/admin/tasks/task/delete')) return json({ ok: true });
+  if (u.includes('/api/admin/tasks/task/toggle')) return json({ ok: true });
+  if (u.includes('/api/admin/tasks/task/add')) return json({ ok: true });
+  if (u.includes('/api/admin/tasks/list')) return json(mockDb.tasks);
+  if (u.includes('/api/admin/lottery/pool/create')) return json({ ok: true });
+  if (u.includes('/api/admin/lottery/pool/update')) return json({ ok: true });
+  if (u.includes('/api/admin/lottery/pool/toggle')) return json({ ok: true });
+  if (u.includes('/api/admin/lottery/pool/delete')) return json({ ok: true });
+  if (u.includes('/api/admin/lottery/prize/restock')) return json({ ok: true });
+  if (u.includes('/api/admin/lottery/prize/delete')) return json({ ok: true });
+  if (u.includes('/api/admin/lottery/prize/create')) return json({ ok: true });
+  if (u.includes('/api/admin/lottery/pools')) return json(mockDb.lotteryPools);
+  if (u.includes('/api/admin/redeem/delete')) return json({ ok: true });
+  if (u.includes('/api/admin/redeem/add')) return json({ ok: true });
+  if (u.includes('/api/admin/redeem/generate')) return json({ ok: true, codes: ['AB123', 'AB124'], count: 2 });
+  if (u.includes('/api/admin/redeem/list')) return json(mockDb.redeemCodes);
   if (u.includes('/api/admin/anon-grant')) return json({ anonCoupons: 3 });
   if (u.includes('/api/admin/delete-user')) return text('已删除用户');
   if (u.includes('/api/admin/market/config')) {
@@ -131,13 +163,24 @@ const secIpBans = await loadSection('ipbans.js');
 const secBlacklist = await loadSection('blacklist.js');
 const secHistory = await loadSection('history.js');
 const secTags = await loadSection('tags.js');
+const secExp = await loadSection('exp.js');
+const secLevelstyle = await loadSection('levelstyle.js');
+const secShop = await loadSection('shop.js');
+const secTasks = await loadSection('tasks.js');
+const secLottery = await loadSection('lottery.js');
+const secRedeem = await loadSection('redeem.js');
+const secIpgroup = await loadSection('ipgroup.js');
 globalThis.__sec = {
   dashboard: { default: secDashboard.default }, points: { default: secPoints.default },
   market: { default: secMarket.default }, usermodal: { default: secUsermodal.default },
   rooms: { default: secRooms.default }, users: { default: secUsers.default },
   bans: { default: secBans.default }, ipbans: { default: secIpBans.default },
   blacklist: { default: secBlacklist.default }, history: { default: secHistory.default },
-  tags: { default: secTags.default }
+  tags: { default: secTags.default },
+  exp: { default: secExp.default }, levelstyle: { default: secLevelstyle.default },
+  shop: { default: secShop.default }, tasks: { default: secTasks.default },
+  lottery: { default: secLottery.default }, redeem: { default: secRedeem.default },
+  ipgroup: { default: secIpgroup.default }
 };
 
 // app.js（替换 ROUTES 动态 import → 全局引用 + 替换 UserModal import）
@@ -166,9 +209,15 @@ assert(has('.av-topbar'), "顶栏渲染");
 assert(text('.av-brand').includes('CloudChat Admin'), "品牌栏");
 assert(text('.av-level').includes('super'), "超管徽标");
 
-console.log("== 侧边栏（super 显示 10 项）==");
+console.log("== 侧边栏（super 显示 17 项）==");
 const navs = qsAll('.av-nav-item');
-assert(navs.length === 10, "侧边栏 10 项，实际 " + navs.length);
+assert(navs.length === 17, "侧边栏 17 项，实际 " + navs.length);
+assert(navs.some(n => n.textContent.includes('等级管理')), "含等级管理");
+assert(navs.some(n => n.textContent.includes('商店管理')), "含商店管理");
+assert(navs.some(n => n.textContent.includes('任务管理')), "含任务管理");
+assert(navs.some(n => n.textContent.includes('抽奖管理')), "含抽奖管理");
+assert(navs.some(n => n.textContent.includes('同IP检测')), "含同IP检测");
+assert(navs.some(n => n.textContent.includes('兑换码')), "含兑换码");
 assert(navs.some(n => n.textContent.includes('房间列表')), "含房间列表");
 assert(navs.some(n => n.textContent.includes('用户标签')), "含用户标签(普通admin可见)");
 
@@ -319,6 +368,127 @@ console.log("== 用户标签 ==");
 await navTo('tags');
 assert(text('#admin-app').includes('VIP头衔'), "标签页装备物品渲染");
 assert(text('#admin-app').includes('Alice'), "标签用户 Alice");
+
+// ---------- 批2 积分/商店/抽奖域 ----------
+console.log("== 批2: 等级管理 ==");
+await navTo('exp');
+assert(text('#admin-app').includes('经验等级'), "等级标题");
+const expRows = qsAll('.av-table tbody tr');
+assert(expRows.length === 2, "等级表 2 行，实际 " + expRows.length);
+assert(text('#admin-app').includes('Lv.5'), "Alice Lv.5 徽章");
+const expAliceRow = expRows.find(r => r.textContent.includes('Alice'));
+const expInline = expAliceRow.querySelector('input[type=number]');
+expInline.value = '50';
+expInline.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+[...expAliceRow.querySelectorAll('.av-btn')].find(b => b.textContent === '+增加')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/exp/add') && c.includes('Alice') && c.includes('amount=50')), "行内+增加 Alice 调用 exp/add amount=50");
+assert(mockDb.exp.Alice.exp === 150, "本地更新 Alice exp=150");
+
+console.log("== 批2: 房间样式 ==");
+await navTo('levelstyle');
+assert(text('#admin-app').includes('房间样式'), "样式标题");
+const roomSelect = document.querySelector('.av-page select');
+assert(roomSelect.querySelectorAll('option').length >= 3, "房间下拉含 2 房间+占位，实际 " + roomSelect.querySelectorAll('option').length);
+roomSelect.value = 'room1';
+roomSelect.dispatchEvent(new w.Event('change', { bubbles: true }));
+await tick(50);
+const lvInput = document.querySelector('.av-page input[type=number]');
+lvInput.value = '3';
+lvInput.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '设置样式')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/level-style/set/room1') && c.includes('level=3')), "设置 room1 Lv.3 调用 level-style/set");
+
+console.log("== 批2: 商店管理 ==");
+await navTo('shop');
+assert(text('#admin-app').includes('商店管理'), "商店标题");
+assert(text('#admin-app').includes('红名卡'), "商品渲染红名卡");
+assert(qsAll('.av-table tbody tr').length === 1, "商品表 1 行，实际 " + qsAll('.av-table tbody tr').length);
+const nameInp = qsAll('.av-card input').find(i => i.placeholder === '商品名称');
+nameInp.value = '新装';
+nameInp.dispatchEvent(new w.Event('input', { bubbles: true }));
+const priceInp = qsAll('.av-card input').find(i => i.placeholder === '价格');
+priceInp.value = '50';
+priceInp.dispatchEvent(new w.Event('input', { bubbles: true }));
+const tagInp = qsAll('.av-card input').find(i => i.placeholder === '标签文字');
+tagInp.value = 'VIP';
+tagInp.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '添加商品')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/shop/item/add')), "添加商品调用 shop/item/add");
+
+console.log("== 批2: 任务管理 ==");
+await navTo('tasks');
+assert(text('#admin-app').includes('任务管理'), "任务标题");
+assert(text('#admin-app').includes('每日签到'), "任务渲染");
+assert(text('#admin-app').includes('1/1 个启用'), "任务统计 1/1 启用");
+findBtn('#admin-app', '禁用')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/tasks/task/toggle')), "禁用任务调用 task/toggle");
+
+console.log("== 批2: 抽奖管理 ==");
+await navTo('lottery');
+assert(text('#admin-app').includes('抽奖管理'), "抽奖标题");
+assert(text('#admin-app').includes('新手池'), "奖池渲染新手池");
+assert(text('#admin-app').includes('VIP头衔'), "奖品 chip 渲染");
+[...document.querySelectorAll('.av-btn')].find(b => b.textContent.includes('添加奖品'))?.click();
+await tick(100);
+assert(has('.av-modal-mask'), "奖品弹窗打开");
+const prName = document.querySelector('.av-modal input');
+prName.value = '新奖品';
+prName.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+[...document.querySelectorAll('.av-modal .av-btn')].find(b => b.textContent === '添加')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/lottery/prize/create')), "添加奖品调用 lottery/prize/create");
+[...document.querySelectorAll('.av-btn')].find(b => b.textContent.includes('新建奖池'))?.click();
+await tick(100);
+assert(has('.av-modal-mask'), "新建奖池弹窗打开");
+const poolName = document.querySelector('.av-modal input');
+poolName.value = '高级池';
+poolName.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('.av-modal', '保存')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/lottery/pool/create')), "新建奖池调用 pool/create");
+
+console.log("== 批2: 兑换码管理 ==");
+await navTo('redeem');
+assert(text('#admin-app').includes('兑换码管理'), "兑换码标题");
+const rcRows = qsAll('.av-table tbody tr');
+assert(rcRows.length === 2, "兑换码表 2 行，实际 " + rcRows.length);
+assert(rcRows[0].textContent.includes('ABC123') && rcRows[0].textContent.includes('未使用'), "未使用 ABC123 排最前");
+assert(rcRows[1].textContent.includes('USE999') && rcRows[1].textContent.includes('已使用'), "已使用 USE999 在后");
+const genPts = qsAll('.av-toolbar input').find(i => i.placeholder === '积分');
+genPts.value = '100';
+genPts.dispatchEvent(new w.Event('input', { bubbles: true }));
+const genCnt = qsAll('.av-toolbar input').find(i => i.placeholder === '数量');
+genCnt.value = '2';
+genCnt.dispatchEvent(new w.Event('input', { bubbles: true }));
+await tick(50);
+findBtn('#admin-app', '生成')?.click();
+await tick(180);
+assert(fetchCalls.some(c => c.includes('/api/admin/redeem/generate')), "批量生成调用 redeem/generate");
+
+console.log("== 批2: 同IP分组 ==");
+await navTo('ipgroup');
+assert(text('#admin-app').includes('同IP分组'), "同IP标题");
+assert(text('#admin-app').includes('共 2 个IP，其中 1 个IP有多个用户'), "统计文本");
+const ipCards = qsAll('.ipg-ip-header');
+assert(ipCards.length === 2, "IP 组 2 个，实际 " + ipCards.length);
+assert(ipCards[0].textContent.includes('9.9.9.9') && ipCards[0].textContent.includes('2 人'), "9.9.9.9 组 2 人排最前");
+ipCards[0].click();
+await tick(150);
+assert(text('#admin-app').includes('Alice') && text('#admin-app').includes('Bob'), "展开后显示 Alice/Bob");
+assert(!!findBtn('#admin-app', '封禁'), "展开后含封禁按钮");
+findBtn('#admin-app', '详情')?.click();
+await tick(200);
+assert(has('.av-modal-mask'), "用户详情弹窗从 IP 分组打开");
+assert(text('.av-modal').includes('VIP'), "弹窗显示标签 VIP");
 
 console.log("\n结果: " + pass + " 通过, " + fail + " 失败");
 process.exit(fail ? 1 : 0);
