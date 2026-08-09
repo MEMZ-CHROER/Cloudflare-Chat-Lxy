@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -35,6 +35,7 @@ export async function loadAll(storage) {
       storage.get("seasonState"),
       storage.get("seasonProgress"),
       storage.get("honorCoins"),
+      storage.get("oauthStates"),
     ]);
 
   return {
@@ -69,6 +70,7 @@ export async function loadAll(storage) {
     seasonState: seasonStateData || null,
     seasonProgress: seasonProgressData || null,
     honorCoins: honorCoinsData ? new Map(honorCoinsData) : new Map(),
+    oauthStates: oauthStatesData ? new Map(oauthStatesData) : new Map(),
   };
 }
 
@@ -179,4 +181,9 @@ export async function saveSeasonProgress(storage, data) {
 
 export async function saveHonorCoins(storage, data) {
   await storage.put("honorCoins", [...data]);
+}
+
+// 🔐 v1.46 OAuth state 生命周期持久化：Map<state,{provider,redirectUri,preAuthName,createdAt}>
+export async function saveOauthStates(storage, data) {
+  await storage.put("oauthStates", [...data]);
 }

@@ -278,4 +278,120 @@ async function showProfileEditor(name, data) {
       else alert("更新失败");
     } catch (e) { alert("更新失败: " + e.message); }
   });
+
+  // ====== v1.46 修改密码 + OAuth 绑定 ======
+  let token = getAuthToken();
+  let isLogged = !!token;
+  let boundList = [];
+  let oauthOnly = false;
+  if (isLogged) {
+    // 查询 OAuth 绑定状态（同时用于判断 oauthOnly 账号 → 只能走 OAuth 登录，改密码即「设置密码」）
+    try {
+      let br = await fetch("/api/oauth/bindings?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token));
+      let bd = await br.json();
+      if (bd) {
+        if (Array.isArray(bd.oauth)) boundList = bd.oauth;
+        oauthOnly = !!bd.oauthOnly;
+      }
+    } catch (e) {}
+  }
+
+  // ---- 修改密码 / 设置密码 ----
+  if (isLogged) {
+    let pwSection = document.createElement("div");
+    pwSection.style.cssText = "margin-top:16px;padding-top:12px;border-top:1px solid #ddd;";
+    let pwTitle = document.createElement("div");
+    pwTitle.style.cssText = "font-size:13px;font-weight:600;margin-bottom:8px;";
+    pwTitle.textContent = oauthOnly ? "设置密码" : "修改密码";
+    pwSection.appendChild(pwTitle);
+    if (!oauthOnly) {
+      let oldInput = document.createElement("input");
+      oldInput.type = "password";
+      oldInput.id = "profile-old-password";
+      oldInput.placeholder = "旧密码";
+      oldInput.style.cssText = "width:90%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-bottom:6px;font-size:13px;";
+      pwSection.appendChild(oldInput);
+    }
+    let newInput = document.createElement("input");
+    newInput.type = "password";
+    newInput.id = "profile-new-password";
+    newInput.placeholder = "新密码（至少6位）";
+    newInput.style.cssText = "width:90%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-bottom:6px;font-size:13px;";
+    pwSection.appendChild(newInput);
+    let confirmInput = document.createElement("input");
+    confirmInput.type = "password";
+    confirmInput.id = "profile-confirm-password";
+    confirmInput.placeholder = "确认新密码";
+    confirmInput.style.cssText = "width:90%;padding:6px;border:1px solid #ddd;border-radius:6px;margin-bottom:8px;font-size:13px;";
+    pwSection.appendChild(confirmInput);
+    let pwBtn = document.createElement("button");
+    pwBtn.className = "profile-edit-btn";
+    pwBtn.textContent = oauthOnly ? "设置密码" : "修改密码";
+    pwBtn.addEventListener("click", async () => {
+      let oldPassword = oauthOnly ? "" : document.getElementById("profile-old-password").value;
+      let newPassword = document.getElementById("profile-new-password").value;
+      let confirmPassword = document.getElementById("profile-confirm-password").value;
+      if (!newPassword || newPassword.length < 6) { alert("新密码至少6位"); return; }
+      if (newPassword !== confirmPassword) { alert("两次输入的新密码不一致"); return; }
+      try {
+        let r = await fetch("/api/user/password", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name, token, oldPassword, newPassword})});
+        let d = await r.json();
+        if (r.ok && d.ok) alert("密码已更新");
+        else alert((d && d.error) || "修改失败");
+      } catch (e) { alert("修改失败: " + e.message); }
+    });
+    pwSection.appendChild(pwBtn);
+    content.appendChild(pwSection);
+  }
+
+  // ---- OAuth 绑定区 ----
+  let oauthSection = document.createElement("div");
+  oauthSection.style.cssText = "margin-top:16px;padding-top:12px;border-top:1px solid #ddd;";
+  let oauthTitle = document.createElement("div");
+  oauthTitle.style.cssText = "font-size:13px;font-weight:600;margin-bottom:8px;";
+  oauthTitle.textContent = "第三方账号绑定";
+  oauthSection.appendChild(oauthTitle);
+  if (boundList.length === 0) {
+    let none = document.createElement("div");
+    none.style.cssText = "font-size:12px;color:#999;margin-bottom:8px;";
+    none.textContent = "尚未绑定任何第三方账号";
+    oauthSection.appendChild(none);
+  }
+  boundList.forEach(b => {
+    let row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;";
+    let label = document.createElement("span");
+    label.style.cssText = "font-size:13px;";
+    label.textContent = (b.provider === "github" ? "GitHub" : b.provider) + ": " + b.providerId;
+    row.appendChild(label);
+    let unbindBtn = document.createElement("button");
+    unbindBtn.className = "profile-edit-btn";
+    unbindBtn.textContent = "解绑";
+    unbindBtn.addEventListener("click", async () => {
+      if (!confirm("确定解绑该第三方账号？")) return;
+      try {
+        let r = await fetch("/api/oauth/unbind", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name, token, provider: b.provider})});
+        let d = await r.json();
+        if (r.ok && d.ok) { alert("已解绑"); showProfile(name); }
+        else alert((d && d.error) || "解绑失败");
+      } catch (e) { alert("解绑失败: " + e.message); }
+    });
+    row.appendChild(unbindBtn);
+    oauthSection.appendChild(row);
+  });
+  if (isLogged) {
+    let bindBtn = document.createElement("button");
+    bindBtn.className = "profile-edit-btn";
+    bindBtn.textContent = "绑定 GitHub";
+    bindBtn.addEventListener("click", () => {
+      location.href = "/api/oauth/start/github?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token);
+    });
+    oauthSection.appendChild(bindBtn);
+  } else {
+    let tip = document.createElement("div");
+    tip.style.cssText = "font-size:12px;color:#999;";
+    tip.textContent = "登录后可绑定 GitHub 账号";
+    oauthSection.appendChild(tip);
+  }
+  content.appendChild(oauthSection);
 }

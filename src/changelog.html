@@ -94,6 +94,22 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.46</span>
+    <span class="version-date">2026-08-09</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🐙</span><span class="text"><span class="tag tag-feature">功能</span><b>GitHub OAuth 一键登录</b> — 登录页新增 GitHub 按钮，未配置凭证时自动隐藏</span></div>
+    <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-feature">功能</span><b>第三方登录架构</b> — provider 注册表可扩展，预留 Google / Discord / Microsoft / Gitee / GitLab</span></div>
+    <div class="feature-item"><span class="icon">🔑</span><span class="text"><span class="tag tag-feature">功能</span><b>OAuth 替代找回密码</b> — 绑定 GitHub 即可免密码登录；登录后可修改密码，OAuth 账号可设置密码转正</span></div>
+    <div class="feature-item"><span class="icon">⚙️</span><span class="text"><span class="tag tag-feature">功能</span><b>OAuth 绑定 / 解绑管理</b> — 个人中心可管理第三方账号绑定</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-improve">安全</span><b>OAuth 安全</b> — state 单次消费防 CSRF、code 防重放、回调地址校验、OAuth 注册限频、防账户接管</span></div>
+    <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span><b>registeredAt 字段未写入 bug</b></span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.45</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>

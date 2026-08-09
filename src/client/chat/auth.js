@@ -149,6 +149,21 @@ export function startNameChooser() {
     if (e.key === "Enter") { e.preventDefault(); document.querySelector("#register-btn").click(); }
   });
   document.querySelector("#login-name").focus();
+
+  // ====== v1.46 GitHub OAuth 登录按钮 ======
+  // 默认隐藏，/api/oauth/status 确认 github 已启用（GITHUB_CLIENT_ID 已配置）再显示
+  let oauthBtn = document.querySelector("#oauth-github-btn");
+  if (oauthBtn) {
+    oauthBtn.style.display = "none";
+    oauthBtn.addEventListener("click", () => {
+      location.href = "/api/oauth/start/github";
+    });
+    fetch("/api/oauth/status").then(r => r.json()).then(s => {
+      if (s && Array.isArray(s.providers) && s.providers.indexOf("github") !== -1) {
+        oauthBtn.style.display = "block";
+      }
+    }).catch(() => {});
+  }
 }
 
 function showLoginForm() {

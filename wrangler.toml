@@ -54,3 +54,6 @@ CF_SCRIPT_NAME = "cloudflare-workers-chat"
 #   [[migrations]]
 #   tag = "v1"
 #   new_sqlite_classes = ["ChatRoom", "RoomRegistry", "VersionArchive", "FileBucket"]
+# v1.46 OAuth：GITHUB_CLIENT_SECRET 用 wrangler secret put 配置（勿写入仓库）；GITHUB_CLIENT_ID 填入 provider 后台的 Client ID
+GITHUB_CLIENT_ID = ""
+OAUTH_MOCK = "0"

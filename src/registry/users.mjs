@@ -84,7 +84,7 @@ export async function handleUsers(reg, request, url) {
       crypto.getRandomValues(saltBytes);
       let salt = Array.from(saltBytes, b => b.toString(16).padStart(2, '0')).join('');
       let hash = await sha256(salt + password);
-      reg.registeredUsers.set(name, {passwordHash: hash, salt, token: null, tokenExpiry: null, avatar: "", bio: "", anonCoupons: 0, exp: 0, achievements: [], stats: {msgCount: 0, checkinCount: 0, gameWins: 0, shopCount: 0}});
+      reg.registeredUsers.set(name, {passwordHash: hash, salt, token: null, tokenExpiry: null, avatar: "", bio: "", anonCoupons: 0, exp: 0, achievements: [], stats: {msgCount: 0, checkinCount: 0, gameWins: 0, shopCount: 0}, registeredAt: Date.now()});
       await reg.saveRegisteredUsers();
       // 🏆 v1.45 赛季基线：注册时若赛季进行中（未结束且未结算），为新用户建立基线快照（去重：该 name 已存在则跳过）
       if (reg.seasonState && reg.seasonState.status !== "ended" && !reg.seasonState.settled) {
@@ -134,6 +134,33 @@ export async function handleUsers(reg, request, url) {
       user.tokenExpiry = now + 30 * 24 * 3600 * 1000;
       await reg.saveRegisteredUsers();
       return new Response(JSON.stringify({ok: true, name, token}));
+    }
+
+    // 🔑 v1.46 改密码（OAuth 用户设置密码 / 普通用户改密）：token 鉴权，旧密码仅对非 oauthOnly 校验
+    case "/user-password": {
+      if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
+      let body = await request.json();
+      let name = body.name, token = body.token || "";
+      let oldPassword = body.oldPassword, newPassword = body.newPassword;
+      if (!name || !newPassword) return new Response(JSON.stringify({error: "请提供用户名和新密码"}), {status: 400});
+      let user = reg.registeredUsers.get(name);
+      if (!user) return new Response(JSON.stringify({error: "用户不存在"}), {status: 404});
+      if (!tokenValid(user, token)) return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      if (newPassword.length < 6) return new Response(JSON.stringify({error: "密码至少6个字符"}), {status: 400});
+      // 非 oauthOnly（有密码）用户须校验旧密码；oauthOnly 用户首次设置密码免旧密码
+      if (!user.oauthOnly) {
+        let hash = await sha256((user.salt || "") + (oldPassword || ""));
+        if (hash !== user.passwordHash) return new Response(JSON.stringify({error: "旧密码错误"}), {status: 401});
+      }
+      let saltBytes = new Uint8Array(16);
+      crypto.getRandomValues(saltBytes);
+      let newSalt = Array.from(saltBytes, b => b.toString(16).padStart(2, '0')).join('');
+      user.passwordHash = await sha256(newSalt + newPassword);
+      user.salt = newSalt;
+      user.oauthOnly = false;
+      await reg.saveRegisteredUsers();
+      // 保留现有 token 不吊销
+      return new Response(JSON.stringify({ok: true}));
     }
 
     case "/user-logout": {

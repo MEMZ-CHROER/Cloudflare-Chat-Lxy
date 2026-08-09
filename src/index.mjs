@@ -193,6 +193,7 @@ import { handleGame } from "./api/game.mjs";
 import { handleHacknetApi } from "./api/hacknet.mjs";
 import { handleSeasonApi } from "./api/season.mjs";
 import { handleHonorApi } from "./api/honor.mjs";
+import { handleOauthApi } from "./api/oauth.mjs";
 import ARCHIVE from "./archive.html";
 
 // Re-export Durable Object 类供 wrangler 识别
@@ -451,6 +452,9 @@ async function handleApi(apiPath, request, env) {
     case "honor":
       return handleHonorApi(apiPath, request, env);
 
+    case "oauth":
+      return handleOauthApi(apiPath, request, env);
+
     // 🔗 通用 Webhook 入站：POST /api/webhook/<room>?secret=xxx&channel=xxx
     // body: {content, sender?, channel?}；secret 也可放 X-Webhook-Secret header
     case "webhook": {
@@ -570,6 +574,12 @@ async function handleApi(apiPath, request, env) {
       let url = new URL(request.url); // 🔒 修复: handleApi 作用域无 url, 补定义防 ReferenceError → 用户主页500
       let rid = env.registry.idFromName("global");
       let stub = env.registry.get(rid);
+      // v1.46 修改密码：转发 registry /user-password（body 透传 name/token/oldPassword/newPassword）
+      if (apiPath[1] === "password" && request.method === "POST") {
+        let body = await request.json();
+        let r = await stub.fetch(new URL("https://dummy-url/user-password"), {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
+        return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
+      }
       let name = url.searchParams.get("name");
       if (!name) return new Response(JSON.stringify({error: "no name"}), {status: 400});
 
