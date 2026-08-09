@@ -105,6 +105,7 @@ body {
     <div class="feature-item"><span class="icon">⭐</span><span class="text"><span class="tag tag-feature">功能</span><b>通配符</b> — <b>*</b> 全部权限、<b>chat.admin.*</b> 前缀通配；解析优先级 精确 &gt; 前缀 &gt; 全局，同层 deny 优先；/lp check 名 节点 测试解析结果</span></div>
     <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-feature">功能</span><b>全链路接入</b> — 踢人 / 置顶 / 频道管理 / 精华 / 定时消息查看等 8+ 处鉴权点接入 hasPerm：LP 显式结果优先（可授权、可禁真管理员），未定义回退基础层（红青金管理员 / 登录用户 / 游客）</span></div>
     <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-feature">安全</span><b>权限门控</b> — /lp 命令需管理员标签或 chat.lp.manage 权限，命令转发 registry 执行（L1 脱敏）；名称/组名/节点正则白名单；修改即持久化（storage key lpData）；数据导出 /lp/data 预留网页编辑器接入</span></div>
+    <div class="feature-item"><span class="icon">🦵</span><span class="text"><span class="tag tag-feature">功能</span><b>踢人权限化</b> — 踢人统一由 chat.admin.kickUser 控制：普通用户默认不可踢（提示「你无权执行该操作」）；LP 显式 true 可授权任意用户踢人（管理员级无限频）；显式 false 连管理员/超管也硬拦；未定义回退基础层（管理员标签可踢）。原 30s/60s 限频踢人逻辑移除</span></div>
   </div>
 </div>
 

@@ -1,6 +1,6 @@
 // v1.49 LuckPerms 权限系统线上冒烟脚本 v2（诊断版）
 const BASE = "https://chat.liuxiyu.cn";
-const ROOM = "lp_smoke_room2";
+const ROOM = "lp_smoke_room3";
 const A = "hntest_1785912234", AP = "test123456";
 const B = "hntest533931", BP = "test123456";
 const SUPER = "9167c945079746dbfa6cd249df4ad64f102e9e34a366624539ee3ac7cfefa16e";
@@ -75,12 +75,9 @@ async function main() {
   check(errOf(m).includes("无权限使用 /lp"), "2. B 被拒", m);
   console.log("  A /lp groups →", await lpA(wsA, "/lp groups", "暂无权限组") ?? "TIMEOUT");
 
-  console.log("\n=== Phase 3: B 未授权踢人基线 ===");
+  console.log("\n=== Phase 3: B 未授权踢人基线（普通用户默认无权） ===");
   m = await actB(wsB, { type: "kick", target: "ghost1_xyz" });
-  check(errOf(m).includes("未找到用户 ghost1_xyz"), "3a. B 踢幽灵#1 未找到", m);
-  await sleep(900);
-  m = await actB(wsB, { type: "kick", target: "ghost1_xyz" });
-  check(errOf(m).includes("踢人操作太频繁"), "3b. B 30s 限频", m);
+  check(errOf(m).includes("你无权执行该操作"), "3a. B 普通用户踢人被拒", m);
 
   console.log("\n=== Phase 4: A 执行 LP 链（组授权 B kickUser） ===");
   let s = await lpA(wsA, "/lp creategroup thatcankick", "已创建权限组"); check(!!s, "4a. creategroup", s);
@@ -98,9 +95,13 @@ async function main() {
 
   console.log("\n=== Phase 6: B 授权后踢人（测组继承 hasPerm） ===");
   m = await actB(wsB, { type: "kick", target: "ghost1_xyz" });
-  if (errOf(m).includes("踢人操作太频繁")) { check(false, "6a. B kick 仍限频（组继承 hasPerm 未生效）", m); }
-  else if (errOf(m).includes("未找到用户 ghost1_xyz")) { check(true, "6a. B kick 跳过限频（hasPerm 生效）", m); }
-  else { check(false, "6a. 意外响应", m); }
+  check(errOf(m).includes("未找到用户 ghost1_xyz"), "6a. B 授权后能踢（hasPerm 生效）", m);
+
+  console.log("\n=== Phase 6.5: B 退出组后恢复无权 ===");
+  s = await lpA(wsA, `/lp user ${B} parent remove thatcankick`, "已退出组"); check(!!s, "6b. B 退出组", s);
+  m = await actB(wsB, { type: "kick", target: "ghost1_xyz" });
+  check(errOf(m).includes("你无权执行该操作"), "6c. B 退出组后踢人被拒", m);
+  s = await lpA(wsA, `/lp user ${B} parent add thatcankick`, "已加入组"); check(!!s, "6d. B 重新入组", s);
 
   console.log("\n=== Phase 7: LP false 覆盖管理员 ===");
   s = await lpA(wsA, `/lp user ${A} permission set chat.admin.pinMessage false`, "chat.admin.pinMessage = false"); check(!!s, "7a. A 设 false", s);
@@ -108,6 +109,13 @@ async function main() {
   m = await waitMsg(wsA, x => errOf(x).includes("仅管理员可置顶消息"), 4000);
   check(!!m, "7b. A pin 被拒（LP false 覆盖红标）", m);
   s = await lpA(wsA, `/lp user ${A} permission unset chat.admin.pinMessage`, "已移除用户"); check(!!s, "7c. A unset false", s);
+
+  console.log("\n=== Phase 7.5: LP false 硬拦管理员踢人（用户核心场景） ===");
+  s = await lpA(wsA, `/lp user ${A} permission set chat.admin.kickUser false`, "chat.admin.kickUser = false"); check(!!s, "7d. A 设 kick false", s);
+  wsA.send(JSON.stringify({ type: "kick", target: "ghost1_xyz" }));
+  m = await waitMsg(wsA, x => errOf(x).includes("你无权执行该操作"), 4000);
+  check(!!m, "7e. A(红标管理员)踢人被拒（LP false 硬拦）", m);
+  s = await lpA(wsA, `/lp user ${A} permission unset chat.admin.kickUser`, "已移除用户"); check(!!s, "7f. A unset kick false", s);
 
   console.log("\n=== Phase 8: 清理 ===");
   s = await lpA(wsA, "/lp deletegroup thatcankick", "已删除权限组"); check(!!s, "8a. 删组", s);

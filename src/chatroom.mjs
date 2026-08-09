@@ -1012,22 +1012,15 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "请先设置昵称后再踢人"}));
           return;
         }
-        // 🔒 安全修复（M10）：踢人限频（普通用户30秒内只能踢1次，管理员不限），防反复骚扰他人
-        // 🧪 v1.49 LP：管理员标签 或 chat.admin.kickUser 授权（含组继承/通配符）均可踢人
+        // 🧪 v1.49 LP：chat.admin.kickUser 显式控制踢人权限（LuckPerms 语义）：
+        //   · LP 显式 true  → 允许踢人（普通用户也可踢，视为管理员级无限频）
+        //   · LP 显式 false → 禁止踢人（即使管理员/超管也拦，提示「你无权执行该操作」）
+        //   · LP 未定义     → 回退基础层：管理员（红/青/金边）可踢，普通用户不可踢
+        // 原 v1.34 M10 的普通用户 30s/60s 限频踢人已移除，踢人权限统一由 LP 精确控制
         let isKickAdmin = await this.hasPerm(session, "chat.admin.kickUser");
-        // 🔒 安全修复（M10）：非管理员踢人必须是已认证（登录）用户，堵住游客换名重连绕限频
-        if (!isKickAdmin && !session.authenticated) {
-          webSocket.send(JSON.stringify({error: "请登录后再踢人"}));
-          return;
-        }
         if (!isKickAdmin) {
-          if (!this.lastKick) this.lastKick = new Map();
-          let last = this.lastKick.get(session.name) || 0;
-          if (Date.now() - last < 30000) {
-            webSocket.send(JSON.stringify({error: "踢人操作太频繁，请稍后再试"}));
-            return;
-          }
-          this.lastKick.set(session.name, Date.now());
+          webSocket.send(JSON.stringify({error: "你无权执行该操作"}));
+          return;
         }
         if (this.blacklist.has(session.name)) {
           webSocket.send(JSON.stringify({error: "你已被加入黑名单，无法踢人"}));
@@ -1075,16 +1068,6 @@ export class ChatRoom {
           }
         } catch (e) {}
 
-        // 🔒 安全修复（M10）：同一目标 60 秒内只能被踢一次（限频键为目标名，换名重连也无法绕过）
-        if (!isKickAdmin) {
-          if (!this.lastKickTarget) this.lastKickTarget = new Map();
-          let lastT = this.lastKickTarget.get(targetName) || 0;
-          if (Date.now() - lastT < 60000) {
-            webSocket.send(JSON.stringify({error: targetName + " 刚被踢出过，请稍后再试"}));
-            return;
-          }
-        }
-
         let kickedEntry = null;
         for (let [ws, s] of this.sessions) {
           if (s.name === targetName) {
@@ -1094,7 +1077,6 @@ export class ChatRoom {
         }
 
         if (kickedEntry) {
-          if (!isKickAdmin) this.lastKickTarget.set(targetName, Date.now());
           this.sessions.delete(kickedEntry.ws);
           kickedEntry.ws.close(1000, "kicked");
           this.broadcast({kicked: targetName});
