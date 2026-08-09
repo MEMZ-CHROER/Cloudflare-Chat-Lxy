@@ -53,9 +53,8 @@ export function applyUiColor(hex) {
   localStorage.setItem(UI_COLOR_KEY, hex);
 }
 
-function resetUiColor() {
-  localStorage.removeItem(UI_COLOR_KEY);
-  document.body.style.removeProperty("--frosted-r");
+export function resetUiColor() {
+  localStorage.removeItem(UI_COLOR_KEY);  document.body.style.removeProperty("--frosted-r");
   document.body.style.removeProperty("--frosted-g");
   document.body.style.removeProperty("--frosted-b");
   const resetBtn = document.getElementById("color-reset-btn");
@@ -109,7 +108,7 @@ export function applyWallpaper(url) {
   }
 }
 
-function restoreRandomWallpaper() {
+export function restoreRandomWallpaper() {
   localStorage.removeItem(WALLPAPER_KEY);
   const cancelBtn = document.getElementById("wallpaper-cancel-btn");
   if (cancelBtn) cancelBtn.style.display = "none";
@@ -170,7 +169,26 @@ export function cancelVideoWallpaper() {
 }
 
 // ---- 面板开闭 ----
+// v1.53 双轨：默认走 Vue3 弹窗管理器；localStorage.chatLegacyModals=1 时回退旧 overlay（保底可回退）
 export function openSettings() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openSettingsLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('settings')).catch(() => openSettingsLegacy());
+}
+
+export function closeSettings() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    document.getElementById("settings-overlay").classList.remove("show");
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('settings')).catch(() => {
+    document.getElementById("settings-overlay").classList.remove("show");
+  });
+}
+
+function openSettingsLegacy() {
   document.getElementById("settings-overlay").classList.add("show");
   // 同步当前值到控件
   const tint = getComputedStyle(document.body).getPropertyValue("--bg-tint").trim();
@@ -195,10 +213,6 @@ export function openSettings() {
       colorInput.value = rgbToHex(+r || 255, +g || 255, +b || 255);
     }
   }
-}
-
-export function closeSettings() {
-  document.getElementById("settings-overlay").classList.remove("show");
 }
 
 // ---- 初始化 ----
@@ -363,7 +377,7 @@ const THEME_KEY = "chatTheme";
 const CUSTOM_KEY = "customTheme";
 const PRESET_CLASSES = ["theme-liquid", "theme-flat", "theme-neon", "theme-hacknet"];
 
-const CUSTOM_DEFAULTS = {
+export const CUSTOM_DEFAULTS = {
   primary: "#4a6cf7",
   text: "#1f2940",
   textSecondary: "#5f6f93",
@@ -393,7 +407,7 @@ function shadeColor(hex, pct) {
 }
 
 // 读取并校验 localStorage 自定义主题（防注入：全部 hex 白名单 + radius 夹取）
-function loadCustomTheme() {
+export function loadCustomTheme() {
   try {
     const c = JSON.parse(localStorage.getItem(CUSTOM_KEY) || "null");
     if (!c || typeof c !== "object") return null;
@@ -406,7 +420,7 @@ function loadCustomTheme() {
   } catch (e) { return null; }
 }
 
-function removeCustomThemeVars() {
+export function removeCustomThemeVars() {
   const s = document.getElementById("custom-theme-vars");
   if (s) s.remove();
 }
@@ -493,7 +507,7 @@ function collectCustomControls() {
   };
 }
 
-function saveCustomTheme(c) {
+export function saveCustomTheme(c) {
   try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(c)); } catch (e) { showError(t("保存失败")); }
 }
 

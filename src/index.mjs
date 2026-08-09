@@ -66,6 +66,8 @@ import CHAT_EMOJI_PANEL from "./client/chat/emoji-panel.js";
 import CHAT_SEASON from "./client/chat/season.js";
 import CHAT_MARKET from "./client/chat/market.js";
 import CHAT_RELATION from "./client/chat/relation.js";
+import CHAT_MODAL_MANAGER from "./client/chat/modal-manager.js";
+import CHAT_MODAL_SETTINGS from "./client/chat/modals/settings.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -186,6 +188,10 @@ const CHAT_MODULES = {
   "chat/season.js": CHAT_SEASON,
   "chat/market.js": CHAT_MARKET,
   "chat/relation.js": CHAT_RELATION,
+  // 🧪 v1.53 聊天室 Vue3 弹窗管理器（复用 ADMIN_VUE，零重复下载）
+  "chat/vendor/vue.js": ADMIN_VUE,
+  "chat/modal-manager.js": CHAT_MODAL_MANAGER,
+  "chat/modals/settings.js": CHAT_MODAL_SETTINGS,
 };
 
 const ADMIN_MODULES = {

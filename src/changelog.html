@@ -94,6 +94,20 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.53</span>
+    <span class="version-date">2026-08-09</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🧩</span><span class="text"><span class="tag tag-feature">重构</span><b>聊天室改头换面 · 批0（地基 + settings 范式弹窗）</b> — 多运行时理念落地：「每个模块用专属于他的最好的框架」——消息流保持原生增量渲染，弹窗/表单/列表迁 Vue3 声明式。新建 <b>chat/modal-manager.js</b> Vue3 弹窗管理器（reactive 弹窗栈 + backdrop/Escape/关闭按钮三种关闭 + cm-fade/pop/slide 动画 + 懒加载 + registerModal 可覆盖），挂载点 #chat-modals（Teleport 到 body）；<b>chat/modals/settings.js</b> 设置弹窗 Vue 重写（6 主题卡片 / 自定义主题 7 行色板 / 语言中英 / 背景透明度+磨砂滑块 / 界面色调 / 壁纸视频 URL+文件上传），纯逻辑复用 settings.js 导出保证行为与旧 overlay 完全一致，样式全用聊天室 CSS 变量（--surface/--frosted/--radius）自动跟随明暗+4 主题</span></div>
+    <div class="feature-item"><span class="icon">🔄</span><span class="text"><span class="tag tag-feature">兼容</span><b>双轨回退开关</b> — localStorage <code>chatLegacyModals=1</code> 一键回退旧 overlay，任何弹窗出问题可局部回退；旧 chat.html overlay HTML 与旧模块文件全部保留不删（保底可回退）</span></div>
+    <div class="feature-item"><span class="icon">⚡</span><span class="text"><span class="tag tag-feature">性能</span><b>零重复下载</b> — <code>chat/vendor/vue.js</code> 复用 index.mjs 的 ADMIN_VUE 同一 import，聊天室与管理后台共享同一份 Vue 运行时（171KB 不重复拉取）</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>jsdom 端到端 34/34 全过（管理器栈/去重/三种关闭 + 主题切换/自定义色板/滑块/语言响应/legacy 回退）+ acorn 语法 4/4 + 线上冒烟（3 新模块 200 + 语法 + 双轨逻辑在位）</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.52</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>
