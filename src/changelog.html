@@ -94,6 +94,21 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.50</span>
+    <span class="version-date">2026-08-09</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔐</span><span class="text"><span class="tag tag-feature">功能</span><b>LuckPerms 网页权限编辑器（管理后台 /admin/lp）</b> — 完整复刻 LuckPermsWeb 编辑器 UI：左侧导航（组/用户分栏 + 搜索过滤 + 折叠）、右侧权限表（Permission / Value / 批量勾选 / 删除）、底部添加栏（节点类型选择 + true/false 切换 + 批量编辑）、顶部保存栏</span></div>
+    <div class="feature-item"><span class="icon">👥</span><span class="text"><span class="tag tag-feature">功能</span><b>组管理</b> — 创建/删除权限组、查看组内权限与父组继承、组内节点可切换 true/false、父组增删（BFS 防环）</span></div>
+    <div class="feature-item"><span class="icon">🪪</span><span class="text"><span class="tag tag-feature">功能</span><b>用户管理</b> — 全部注册用户可选择编辑（无 LP 记录用户也可见）、设置/删除节点权限、加入/移出组、删除用户权限记录（不影响聊天账号）、批量设值与批量删除</span></div>
+    <div class="feature-item"><span class="icon">🖱️</span><span class="text"><span class="tag tag-feature">功能</span><b>交互</b> — 点击 Value 列直接在 true/false 间切换、节点按 精确/前缀/全局 解析优先级排序、权限表列排序、选择集跨行操作（批量编辑/批量删除）</span></div>
+    <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-feature">安全</span><b>super-only 双闸</b> — 管理后台 /api/admin/lp/* 仅超管（admin.mjs 排除 adminAllowedPaths，普通 admin 403）；写操作经 /lp/exec 再校验 auth=super（registry 层常量时间比对），聊天室内部调用不受影响；/lp/data 合并全部注册用户（无 LP 记录也可编辑）</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.49</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>

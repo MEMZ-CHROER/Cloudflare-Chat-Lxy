@@ -27,6 +27,16 @@ function jsonRes(obj, status = 200) {
   return new Response(JSON.stringify(obj), {status, headers: {"Content-Type": "application/json"}});
 }
 
+// 常量时间字符串比较（admin API 转发 /lp/exec 时的 super 校验）
+function safeEqual(a, b) {
+  a = String(a || "");
+  b = String(b || "");
+  if (a.length !== b.length) return false;
+  let r = 0;
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+
 // ---------- 白名单 ----------
 
 const NAME_RE = /^[A-Za-z0-9_-]{1,24}$/;          // 组名 / 用户名
@@ -354,6 +364,13 @@ async function execCommand(reg, cmd) {
       return cmdOk(lines.join("\n"));
     }
 
+    // 🧪 v1.50 网页编辑器：删除用户 LP 记录（仅权限数据，不删聊天账号）
+    if (op === "delete") {
+      reg.lp.users.delete(name);
+      await reg.saveLp();
+      return cmdOk("已删除用户 " + name + " 的权限记录（聊天账号不受影响）");
+    }
+
     return cmdErr("未知子命令: /lp user " + name + " " + op + "（/lp help 查看用法）");
   }
 
@@ -379,6 +396,12 @@ export async function handleLp(reg, request, url) {
     // 命令执行：chatroom 门控后调用（POST，body {cmd}）
     if (path === "/lp/exec") {
       if (request.method !== "POST") return cmdErr("请使用POST");
+      // 🧪 v1.50 网页编辑器：admin API 转发时带 auth=super key，非 super 一律 403；
+      //    chatroom 内部调用不带 auth（已做 isAdminSession / chat.lp.manage 门控）→ 放行
+      let auth = url.searchParams.get("auth") || "";
+      if (auth && !(reg.env && reg.env.ADMIN_SECRET_KEY && safeEqual(auth, reg.env.ADMIN_SECRET_KEY))) {
+        return jsonRes({error: "无权限管理权限系统"}, 403);
+      }
       let body;
       try { body = await request.json(); } catch (e) { return cmdErr("请求解析失败"); }
       let cmdStr = body && body.cmd || "";
@@ -407,12 +430,18 @@ export async function handleLp(reg, request, url) {
           members: [...reg.lp.users].filter(([, u]) => u.groups.has(gname)).map(([un]) => un)
         });
       }
+      // 🧪 v1.50 网页编辑器：合并全部注册用户（registeredUsers）+ LP 记录用户，
+      //    无 LP 记录的注册用户也能被选中添加权限（permissions/groups 为空）
+      const lpNames = new Set(reg.lp.users.keys());
+      const allNames = new Set(reg.registeredUsers ? reg.registeredUsers.keys() : []);
+      for (const n of lpNames) allNames.add(n);
       const users = [];
-      for (const [uname, u] of [...reg.lp.users].sort((a, b) => a[0].localeCompare(b[0]))) {
+      for (const uname of [...allNames].sort((a, b) => a.localeCompare(b))) {
+        const u = reg.lp.users.get(uname);
         users.push({
           name: uname,
-          permissions: [...u.permissions],
-          groups: [...(u.groups || [])]
+          permissions: u ? [...u.permissions] : [],
+          groups: u ? [...(u.groups || [])] : []
         });
       }
       return jsonRes({ok: true, groups, users});

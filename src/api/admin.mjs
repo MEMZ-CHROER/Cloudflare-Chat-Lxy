@@ -21,6 +21,7 @@ import { handleAdminWebhooks } from "./admin/webhooks.mjs";
 import { handleAdminSeason } from "./admin/season.mjs";
 import { handleAdminHonor } from "./admin/honor.mjs";
 import { handleAdminMarket } from "./admin/market.mjs";
+import { handleAdminLp } from "./admin/lp.mjs";
 
 // M7：登录爆破限流（IP → {count, resetTs}），同 IP 10 分钟内失败 ≥20 次封禁
 // 局限：Workers 多实例不共享，属缓解措施
@@ -233,6 +234,15 @@ export async function handleAdmin(path, request, env) {
   // 💱 v1.47 交易市场管理（仅 super —— 不加入 adminAllowedPaths，普通 admin 在上方 403）
   if (!result && path[1] === "market")
     result = await handleAdminMarket(path, request, env, url);
+
+  // 🧪 v1.50 LuckPerms 权限系统网页编辑器（仅 super —— 不加入 adminAllowedPaths，普通 admin 在上方 403）
+  // 写操作经 /lp/exec 再校验 auth=super（registry 层），防绕过
+  if (!result && path[1] === "lp") {
+    if (permission !== "super") {
+      return new Response("无权限访问此管理功能。", { status: 403 });
+    }
+    result = await handleAdminLp(path, request, env, url);
+  }
 
   if (!result && ["anon-grant", "anon-log"].includes(path[1])) {
     // 🔒 安全修复（F1/F2）：anon-grant（匿名券铸券）/anon-log（匿名真实身份审计映射）仅限 super（ADMIN_SECRET_KEY）。
