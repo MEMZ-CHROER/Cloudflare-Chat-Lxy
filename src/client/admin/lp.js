@@ -183,10 +183,15 @@ function sessionNodes(type, name) {
 }
 
 // ---------- 渲染 ----------
+// 容器抽象：独立页面 /lp 传入全屏容器，admin 后台用默认 #lp-section
+let _root = null;
+function rerender() { if (_root) renderAll(_root); }
+
 export async function loadLpSection(container) {
   ensureCss();
-  const root = container || document.getElementById("lp-section");
+  const root = container || document.getElementById("lp-section") || _root;
   if (!root) return;
+  _root = root;
   root.textContent = "";
   root.appendChild(makeEl("div", {className: "lp-ed-loading"}, "加载权限数据中..."));
 
@@ -213,10 +218,10 @@ function renderMenu() {
 
   const f = makeEl("div", {className: "lp-ed-filter"});
   f.appendChild(makeEl("input", {type: "text", placeholder: "搜索...", value: st.filter,
-    oninput: function (e) { st.filter = e.target.value; renderAll(document.getElementById("lp-section")); }}));
+    oninput: function (e) { st.filter = e.target.value; rerender(); }}));
   if (st.filter) {
     f.appendChild(makeEl("button", {className: "lp-ed-filter-x", onclick: () => {
-      st.filter = ""; renderAll(document.getElementById("lp-section"));
+      st.filter = ""; rerender();
     }}, "✕"));
   }
   menu.appendChild(f);
@@ -227,14 +232,14 @@ function renderMenu() {
   const q = (st.filter || "").toLowerCase();
   const groups = st.groups.filter(g => g.name.toLowerCase().includes(q));
   body.appendChild(renderSection("groups", "权限组", groups.length, st.openSecs.groups,
-    () => { st.openSecs.groups = !st.openSecs.groups; renderAll(document.getElementById("lp-section")); },
+    () => { st.openSecs.groups = !st.openSecs.groups; rerender(); },
     () => addGroupFlow(),
     groups.map(g => makeGroupLi(g))));
 
   // ---- Users 分区 ----
   const users = st.users.filter(u => u.name.toLowerCase().includes(q));
   body.appendChild(renderSection("users", "用户", users.length, st.openSecs.users,
-    () => { st.openSecs.users = !st.openSecs.users; renderAll(document.getElementById("lp-section")); },
+    () => { st.openSecs.users = !st.openSecs.users; rerender(); },
     null,
     users.map(u => makeUserLi(u))));
 
@@ -266,7 +271,7 @@ function renderSection(key, title, count, open, onToggle, onAdd, lis) {
 
 function makeGroupLi(g) {
   const li = makeEl("li", {className: "lp-ed-sec-li" + (st.current && st.current.type === "group" && st.current.name === g.name ? " active" : ""),
-    onclick: () => { st.current = {type: "group", name: g.name}; st.selected = []; renderAll(document.getElementById("lp-section")); }});
+    onclick: () => { st.current = {type: "group", name: g.name}; st.selected = []; rerender(); }});
   const name = makeEl("span", {className: "lp-ed-sec-name"}, g.name);
   if (g.parents && g.parents.length) name.appendChild(makeEl("small", {}, g.parents.join(", ")));
   li.appendChild(name);
@@ -278,7 +283,7 @@ function makeGroupLi(g) {
 
 function makeUserLi(u) {
   const li = makeEl("li", {className: "lp-ed-sec-li" + (st.current && st.current.type === "user" && st.current.name === u.name ? " active" : ""),
-    onclick: () => { st.current = {type: "user", name: u.name}; st.selected = []; renderAll(document.getElementById("lp-section")); }});
+    onclick: () => { st.current = {type: "user", name: u.name}; st.selected = []; rerender(); }});
   li.appendChild(makeEl("span", {className: "lp-ed-sec-name"}, u.name));
   li.appendChild(makeEl("span", {className: "lp-ed-sec-meta"}, u.permissions.length + "权限/" + (u.groups ? u.groups.length : 0) + "组"));
   const hasLp = u.permissions.length > 0 || (u.groups && u.groups.length > 0);
@@ -336,16 +341,16 @@ function renderNodeList(nodes) {
   const head = makeEl("div", {className: "lp-ed-nl-head"});
   const cbAll = makeEl("div", {className: "lp-ed-nl-cb"});
   const cballInput = makeEl("input", {type: "checkbox", checked: nodes.length > 0 && st.selected.length === nodes.length,
-    onchange: (e) => { st.selected = e.target.checked ? nodes.map(n => ({key: n.key, kind: n.kind, value: n.value})) : []; renderAll(document.getElementById("lp-section")); }});
+    onchange: (e) => { st.selected = e.target.checked ? nodes.map(n => ({key: n.key, kind: n.kind, value: n.value})) : []; rerender(); }});
   cbAll.appendChild(cballInput);
   head.appendChild(cbAll);
 
-  const colPerm = makeEl("div", {className: "lp-ed-col-perm", onclick: () => { st.sort.method = "key"; st.sort.desc = !st.sort.desc; renderAll(document.getElementById("lp-section")); }});
+  const colPerm = makeEl("div", {className: "lp-ed-col-perm", onclick: () => { st.sort.method = "key"; st.sort.desc = !st.sort.desc; rerender(); }});
   colPerm.appendChild(makeEl("span", {}, "权限"));
   if (st.sort.method === "key") colPerm.appendChild(makeEl("span", {className: "lp-ed-sort-arrow"}, st.sort.desc ? "▲" : "▼"));
   head.appendChild(colPerm);
 
-  const colVal = makeEl("div", {className: "lp-ed-col-val", onclick: () => { st.sort.method = "value"; st.sort.desc = !st.sort.desc; renderAll(document.getElementById("lp-section")); }});
+  const colVal = makeEl("div", {className: "lp-ed-col-val", onclick: () => { st.sort.method = "value"; st.sort.desc = !st.sort.desc; rerender(); }});
   colVal.appendChild(makeEl("span", {}, "值"));
   if (st.sort.method === "value") colVal.appendChild(makeEl("span", {className: "lp-ed-sort-arrow"}, st.sort.desc ? "▲" : "▼"));
   head.appendChild(colVal);
@@ -373,7 +378,7 @@ function renderNodeRow(n) {
     onchange: (e) => {
       if (e.target.checked) st.selected.push({key: n.key, kind: n.kind, value: n.value});
       else st.selected = st.selected.filter(s => !(s.key === n.key && s.kind === n.kind));
-      renderAll(document.getElementById("lp-section"));
+      rerender();
     }});
   cb.appendChild(cbin);
   row.appendChild(cb);
@@ -416,7 +421,7 @@ function renderAddNode(nodes) {
     delBtn.onclick = batchDelete;
     batch.appendChild(delBtn);
     const clear = makeEl("button", {}, "取消选择");
-    clear.onclick = () => { st.selected = []; renderAll(document.getElementById("lp-section")); };
+    clear.onclick = () => { st.selected = []; rerender(); };
     batch.appendChild(clear);
     bar.appendChild(batch);
     return bar;
@@ -435,8 +440,8 @@ function renderAddNode(nodes) {
 
   // 值切换
   const vs = makeEl("div", {className: "lp-ed-val-switch"});
-  const vT = makeEl("button", {className: "lp-ed-vbtn true" + (st.addVal ? " active" : ""), onclick: () => { st.addVal = true; renderAll(document.getElementById("lp-section")); }}, "true");
-  const vF = makeEl("button", {className: "lp-ed-vbtn false" + (!st.addVal ? " active" : ""), onclick: () => { st.addVal = false; renderAll(document.getElementById("lp-section")); }}, "false");
+  const vT = makeEl("button", {className: "lp-ed-vbtn true" + (st.addVal ? " active" : ""), onclick: () => { st.addVal = true; rerender(); }}, "true");
+  const vF = makeEl("button", {className: "lp-ed-vbtn false" + (!st.addVal ? " active" : ""), onclick: () => { st.addVal = false; rerender(); }}, "false");
   vs.appendChild(vT); vs.appendChild(vF);
   inputBox.appendChild(vs);
 
@@ -446,7 +451,7 @@ function renderAddNode(nodes) {
     groupSel = renderGroupSelector();
     if (groupSel) inputBox.appendChild(groupSel);
   }
-  sel.onchange = () => { renderAll(document.getElementById("lp-section")); };
+  sel.onchange = () => { rerender(); };
 
   bar.appendChild(inputBox);
 
@@ -476,7 +481,7 @@ function renderGroupSelector() {
 // ---------- 操作流程 ----------
 function flashMsg(el, text, ok) {
   const msg = makeEl("div", {className: "lp-ed-msg " + (ok ? "ok" : "err")}, text);
-  const wrap = document.getElementById("lp-section");
+  const wrap = _root;
   if (wrap) wrap.insertBefore(msg, wrap.firstChild);
   setTimeout(() => msg.remove(), 2500);
 }

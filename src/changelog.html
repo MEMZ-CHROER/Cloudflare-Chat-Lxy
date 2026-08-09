@@ -104,6 +104,7 @@ body {
     <div class="feature-item"><span class="icon">🪪</span><span class="text"><span class="tag tag-feature">功能</span><b>用户管理</b> — 全部注册用户可选择编辑（无 LP 记录用户也可见）、设置/删除节点权限、加入/移出组、删除用户权限记录（不影响聊天账号）、批量设值与批量删除</span></div>
     <div class="feature-item"><span class="icon">🖱️</span><span class="text"><span class="tag tag-feature">功能</span><b>交互</b> — 点击 Value 列直接在 true/false 间切换、节点按 精确/前缀/全局 解析优先级排序、权限表列排序、选择集跨行操作（批量编辑/批量删除）</span></div>
     <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-feature">安全</span><b>super-only 双闸</b> — 管理后台 /api/admin/lp/* 仅超管（admin.mjs 排除 adminAllowedPaths，普通 admin 403）；写操作经 /lp/exec 再校验 auth=super（registry 层常量时间比对），聊天室内部调用不受影响；/lp/data 合并全部注册用户（无 LP 记录也可编辑）</span></div>
+    <div class="feature-item"><span class="icon">🖥️</span><span class="text"><span class="tag tag-feature">功能</span><b>独立 /lp 页面</b> — 编辑器单独做成全屏独立应用（仿原版 LuckPermsWeb）：顶部品牌栏 + 全屏权限表，独立页首次访问未超管时显示登录遮罩（输入密钥走 /api/admin/login，cookie 会话复用管理后台），管理后台导航「🔐 权限编辑」改为跳转独立页；lp.js 容器抽象化（模块级 _root + rerender()），同一编辑器同时支撑 admin 内嵌版与独立版</span></div>
   </div>
 </div>
 

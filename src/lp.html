@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>LuckPerms · 权限编辑</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; }
+  body { background:#0e0e14; color:#e6e6e6; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; overflow:hidden; }
+  #lp-shell { position:fixed; inset:0; display:flex; flex-direction:column; }
+  #lp-topbar { flex:0 0 auto; display:flex; align-items:center; gap:14px; padding:0 16px; height:46px; background:#17171e; border-bottom:1px solid rgba(255,255,255,.08); z-index:10; }
+  .lp-brand { font-size:14px; font-weight:bold; letter-spacing:.3px; }
+  .lp-brand .lp-ver { font-size:10px; font-weight:normal; opacity:.5; margin-left:6px; }
+  .lp-top-spacer { flex:1; }
+  .lp-top-link { color:rgba(255,255,255,.55); font-size:12px; text-decoration:none; padding:5px 10px; border-radius:4px; }
+  .lp-top-link:hover { color:#fff; background:rgba(255,255,255,.1); }
+  #lp-root { flex:1; min-height:0; overflow:hidden; }
+  /* 独立页全屏化：编辑器铺满剩余视口（覆盖内嵌版的 520/640 固定高度） */
+  #lp-root .lp-ed-wrap { height:100%; min-height:0; border:0; border-radius:0; }
+  #lp-root .lp-ed-menu, #lp-root .lp-ed-main { max-height:none; }
+  #lp-root .lp-ed-wrap { min-height:0; }
+
+  #lp-auth { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(10,10,14,.92); z-index:100; }
+  .lp-auth-box { width:340px; padding:26px 28px; background:#1b1b24; border:1px solid rgba(255,255,255,.1); border-radius:10px; text-align:center; }
+  .lp-auth-box h1 { font-size:16px; margin-bottom:6px; }
+  .lp-auth-box .lp-auth-sub { font-size:12px; color:rgba(255,255,255,.55); margin-bottom:18px; line-height:1.6; }
+  .lp-auth-box input { width:100%; padding:9px 12px; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.15); border-radius:6px; color:#fff; font-size:14px; outline:none; margin-bottom:12px; }
+  .lp-auth-box input:focus { border-color:#7aa2ff; }
+  .lp-auth-box button { width:100%; padding:9px; background:#7aa2ff; color:#0e0e14; border:0; border-radius:6px; font-size:14px; font-weight:bold; cursor:pointer; }
+  .lp-auth-box button:hover { opacity:.88; }
+  .lp-auth-err { color:#ff8a8a; font-size:12px; margin-top:10px; min-height:16px; }
+  .lp-auth-hint { margin-top:14px; font-size:11px; color:rgba(255,255,255,.4); }
+  .lp-auth-hint a { color:#7aa2ff; text-decoration:none; }
+</style>
+</head>
+<body>
+<div id="lp-shell">
+  <div id="lp-topbar">
+    <div class="lp-brand">🔐 LuckPerms 权限编辑器 <span class="lp-ver">v1.50</span></div>
+    <div class="lp-top-spacer"></div>
+    <a class="lp-top-link" href="/">🏠 聊天室</a>
+    <a class="lp-top-link" href="/admin/">⚙️ 管理后台</a>
+  </div>
+  <div id="lp-root"><div style="padding:40px;text-align:center;color:rgba(255,255,255,.45);font-size:13px">加载权限数据中...</div></div>
+</div>
+
+<div id="lp-auth">
+  <div class="lp-auth-box">
+    <h1>🔐 需要超管权限</h1>
+    <div class="lp-auth-sub" id="lp-auth-sub">此工具仅限超管（ADMIN_SECRET_KEY）使用。请输入管理密钥以继续。</div>
+    <input type="password" id="lp-key" placeholder="管理密钥" autocomplete="off">
+    <button id="lp-login">登录并进入</button>
+    <div class="lp-auth-err" id="lp-auth-err"></div>
+    <div class="lp-auth-hint">与 <a href="/admin/">管理后台</a> 使用同一套密钥</div>
+  </div>
+</div>
+
+<script type="module">
+import { loadLpSection } from '/static/admin/lp.js';
+
+const root = document.getElementById('lp-root');
+const authBox = document.getElementById('lp-auth');
+const errEl = document.getElementById('lp-auth-err');
+const subEl = document.getElementById('lp-auth-sub');
+
+function showErr(msg) { errEl.textContent = msg || ''; }
+
+async function boot() {
+  let level = null;
+  try {
+    const r = await fetch('/api/admin/auth-check');
+    if (r.ok) { const d = await r.json(); level = d.level; }
+  } catch (e) {}
+  if (level === 'super') {
+    authBox.style.display = 'none';
+    try { await loadLpSection(root); }
+    catch (e) { root.textContent = ''; root.appendChild(Object.assign(document.createElement('div'), {className:'lp-ed-msg err', textContent:'加载失败：' + (e && e.message || e)})); }
+    return;
+  }
+  authBox.style.display = 'flex';
+  if (level === 'admin') {
+    subEl.textContent = '当前登录的是普通管理员，权限编辑仅限超管。请输入超管密钥切换身份。';
+  }
+}
+
+document.getElementById('lp-login').addEventListener('click', async () => {
+  const k = document.getElementById('lp-key').value.trim();
+  if (!k) { showErr('请输入密钥'); return; }
+  errEl.textContent = '';
+  try {
+    const r = await fetch('/api/admin/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({key:k})});
+    const d = await r.json();
+    if (!r.ok || !d.ok) { showErr('密钥无效'); return; }
+    location.reload();
+  } catch (e) { showErr('网络错误，请重试'); }
+});
+document.getElementById('lp-key').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('lp-login').click(); });
+
+boot();
+</script>
+</body>
+</html>

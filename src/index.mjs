@@ -3,6 +3,7 @@ import ADMIN from "./admin.html";
 import TASKS from "./tasks.html";
 import CHANGELOG from "./changelog.html";
 import BUGS from "./bugs.html";
+import LP from "./lp.html";
 import FAVICON_B64 from "./favicon-data.mjs";
 import HELP from "./help.html";
 import ABOUT from "./about.html";
@@ -377,6 +378,10 @@ self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWi
 
         case "redeem":
           return new Response(REDEEM, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+
+        // 🧪 v1.50 LuckPerms 独立权限编辑器（全屏应用，仿 LuckPermsWeb；数据仍走 super-only /api/admin/lp）
+        case "lp":
+          return new Response(LP, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
 
         default:
           return new Response("未找到", {status: 404});
