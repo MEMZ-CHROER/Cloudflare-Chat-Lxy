@@ -493,6 +493,8 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus { border-colo
     <a class="nav-item nav-super" data-route="/admin/ip-group/" onclick="navigateTo('/admin/ip-group/')">同IP检测</a>
     <a class="nav-item nav-super" data-route="/admin/admin-key/" onclick="navigateTo('/admin/admin-key/')">管理员密钥</a>
     <a class="nav-item nav-super" data-route="/admin/redeem/" onclick="navigateTo('/admin/redeem/')">🎁 兑换码</a>
+    <a class="nav-item nav-super" data-route="/admin/season/" onclick="navigateTo('/admin/season/')">🏆 赛季管理</a>
+    <a class="nav-item nav-super" data-route="/admin/honor/" onclick="navigateTo('/admin/honor/')">🪙 荣誉管理</a>
     <a class="nav-item nav-super" data-route="/admin/log/" onclick="navigateTo('/admin/log/')">📜 操作日志</a>
   </nav>
   <div class="admin-content" id="admin-content">
@@ -889,6 +891,14 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus { border-colo
       <div style="color:#888;text-align:center;padding:30px;font-size:13px">加载中...</div>
     </div>
   </div>
+
+<!-- 🏆 v1.45 赛季管理（内容由 client/admin/season.js 渲染） -->
+<div id="season-section" class="page-section" data-route="/admin/season/" style="background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:16px;padding:16px">
+</div>
+
+<!-- 🪙 v1.45 荣誉管理（内容由 client/admin/honor.js 渲染） -->
+<div id="honor-section" class="page-section" data-route="/admin/honor/" style="background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:16px;padding:16px">
+</div>
 
 <!-- 操作日志 -->
 <div id="log-section" class="page-section" data-route="/admin/log/" style="background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:16px;padding:16px">

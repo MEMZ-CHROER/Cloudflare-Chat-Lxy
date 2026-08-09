@@ -18,6 +18,8 @@ import { loadBotSection } from './bot.js';
 import { loadRedeemSection } from './redeem.js';
 import { loadKickProtected } from './kickprotect.js';
 import { loadWebhooksSection } from './webhooks.js';
+import { loadSeasonSection } from './season.js';
+import { loadHonorSection } from './honor.js';
 
 export const routeToSection = {
   '/admin/': 'dashboard-section',
@@ -43,6 +45,8 @@ export const routeToSection = {
   '/admin/bot/': 'bot-section',
   '/admin/emoji/': 'emoji-section',
   '/admin/redeem/': 'redeem-section',
+  '/admin/season/': 'season-section',
+  '/admin/honor/': 'honor-section',
 };
 
 export function getCurrentRoute() {
@@ -96,6 +100,8 @@ function loadSectionData(sectionId) {
     case 'webhooks-section': loadWebhooksSection(); break;
     case 'bot-section': loadBotSection(); break;
     case 'redeem-section': loadRedeemSection(); break;
+    case 'season-section': loadSeasonSection(); break;
+    case 'honor-section': loadHonorSection(); break;
   }
 }
 

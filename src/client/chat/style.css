@@ -3321,6 +3321,80 @@ body.dark .poll-option {
   margin-left: 8px;
 }
 
+/* ---- 🏆 v1.45 Season Overlay（仿 shop-overlay 布局） ---- */
+#season-overlay {
+  display: none;
+  position: fixed;
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: center;
+}
+
+#season-overlay.show {
+  display: flex;
+}
+
+#season-overlay .season-card {
+  background: var(--surface-2);
+  border: 1px solid var(--frosted-border);
+  backdrop-filter: var(--frosted-blur);
+  -webkit-backdrop-filter: var(--frosted-blur);
+  border-radius: 16px;
+  max-width: 560px;
+  width: 92%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+#season-overlay .season-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: var(--text);
+}
+
+#season-overlay .season-header .season-close {
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  line-height: 1;
+  background: none;
+  border: none;
+  padding: 0 4px;
+}
+
+#season-overlay .season-header .season-close:hover {
+  color: var(--text);
+}
+
+#season-overlay .season-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+#season-overlay .season-empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
 /* ---- Settings Overlay ---- */
 #settings-overlay {
   display: none;

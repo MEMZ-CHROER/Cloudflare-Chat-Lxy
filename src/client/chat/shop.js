@@ -14,6 +14,7 @@ export function closeShop() {
 export function switchShopTab(tab) {
   document.querySelectorAll(".shop-tab").forEach(t => t.classList.toggle("active", t.dataset.shopTab === tab));
   if (tab === "buy") loadShopItems();
+  else if (tab === "honor") loadHonorItems();
   else loadInventory();
 }
 
@@ -89,6 +90,49 @@ export async function buyItem(itemId) {
   finally { _shopBusy.delete(itemId); }
 }
 
+// 🪙 v1.45 荣誉商城：加载荣誉商品 + 荣誉余额（含购买按钮）
+async function loadHonorItems() {
+  let container = document.getElementById("shop-content");
+  if (!isAuthenticated()) { container.innerHTML = '<div class="shop-empty">请先登录后使用荣誉商城</div>'; return; }
+  let name = getAuthName();
+  let honorBalance = "0";
+  try {
+    let hb = await fetch("/api/honor/get?name=" + encodeURIComponent(name));
+    let hd = await hb.json();
+    honorBalance = hd && hd.honor !== undefined ? String(hd.honor) : "0";
+  } catch (e) {}
+  try {
+    let r = await fetch("/api/honor/shop/items");
+    let items = await r.json();
+    let html = '<div class="shop-empty" style="padding:8px 0 12px;font-size:13px;color:#e67e22;font-weight:600">🪙 荣誉币：' + escapeHtml(honorBalance) + '</div>';
+    if (!items || items.length === 0) { container.innerHTML = html + '<div class="shop-empty">暂无荣誉商品</div>'; return; }
+    for (let item of items) {
+      let colorStyle = item.color && TAG_COLORS[item.color] ? "background:" + TAG_COLORS[item.color] : "background:#95a5a6";
+      let borderStyle = item.border && TAG_COLORS[item.border] ? ";outline:2px solid " + TAG_COLORS[item.border] + ";outline-offset:-1px" : "";
+      html += '<div class="shop-item">' +
+        '<span class="shop-item-tag" style="' + colorStyle + borderStyle + '">' + escapeHtml(item.tag) + '</span>' +
+        '<div class="shop-item-info"><div class="shop-item-name">' + escapeHtml(item.name) + '</div>' +
+        (item.description ? '<div class="shop-item-desc">' + escapeHtml(item.description) + '</div>' : '') +
+        '</div><span class="shop-item-price">' + escapeHtml(item.honorPrice) + ' 荣誉</span>' +
+        '<button class="shop-btn shop-btn-honor-buy" data-item-id="' + escapeHtml(item.id) + '">兑换</button></div>';
+    }
+    container.innerHTML = html;
+  } catch (e) { container.innerHTML = '<div class="shop-empty">加载失败: ' + e.message + '</div>'; }
+}
+
+// 🪙 v1.45 荣誉商品购买
+export async function buyHonorItem(itemId) {
+  if (_shopBusy.has(itemId)) return;
+  _shopBusy.add(itemId);
+  try {
+    let r = await fetch("/api/honor/shop/buy", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: getAuthName(), itemId, token: getAuthToken()})});
+    let data = await r.json();
+    if (data.error) alert(data.error);
+    else { alert("购买成功！"); loadHonorItems(); }
+  } catch (e) { alert("购买失败: " + e.message); }
+  finally { _shopBusy.delete(itemId); }
+}
+
 export async function equipItem(itemId) {
   if (_shopBusy.has(itemId)) return;
   _shopBusy.add(itemId);
@@ -124,6 +168,7 @@ export async function unequipItem() {
     if (btn.classList.contains("shop-btn-buy")) buyItem(id);
     else if (btn.classList.contains("shop-btn-equip")) equipItem(id);
     else if (btn.classList.contains("shop-btn-unequip")) unequipItem(id);
+    else if (btn.classList.contains("shop-btn-honor-buy")) buyHonorItem(id);
   });
 })();
 

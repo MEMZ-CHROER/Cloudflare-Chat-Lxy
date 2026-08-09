@@ -59,6 +59,7 @@ import CHAT_VOICE_RECORD from "./client/chat/voice-record.js";
 import CHAT_FILE_UPLOAD from "./client/chat/file-upload.js";
 import CHAT_MENTION from "./client/chat/mention.js";
 import CHAT_EMOJI_PANEL from "./client/chat/emoji-panel.js";
+import CHAT_SEASON from "./client/chat/season.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -90,6 +91,8 @@ import ADMIN_REDEEM from "./client/admin/redeem.js";
 import ADMIN_KICKPROTECT from "./client/admin/kickprotect.js";
 import ADMIN_LOG from "./client/admin/log.js";
 import ADMIN_WEBHOOKS from "./client/admin/webhooks.js";
+import ADMIN_SEASON from "./client/admin/season.js";
+import ADMIN_HONOR from "./client/admin/honor.js";
 
 // i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
 const CHAT_I18N = 'export { t, getLang, setLang, applyI18n, LANG_KEY } from "./state.js";';
@@ -140,6 +143,7 @@ const CHAT_MODULES = {
   "chat/file-upload.js": CHAT_FILE_UPLOAD,
   "chat/mention.js": CHAT_MENTION,
   "chat/emoji-panel.js": CHAT_EMOJI_PANEL,
+  "chat/season.js": CHAT_SEASON,
 };
 
 const ADMIN_MODULES = {
@@ -169,6 +173,8 @@ const ADMIN_MODULES = {
   "admin/kickprotect.js": ADMIN_KICKPROTECT,
   "admin/log.js": ADMIN_LOG,
   "admin/webhooks.js": ADMIN_WEBHOOKS,
+  "admin/season.js": ADMIN_SEASON,
+  "admin/honor.js": ADMIN_HONOR,
 };
 
 import { handleErrors } from "./utils.mjs";
@@ -185,6 +191,8 @@ import { handleArchive } from "./api/archive.mjs";
 import { handleRedeemApi } from "./api/redeem.mjs";
 import { handleGame } from "./api/game.mjs";
 import { handleHacknetApi } from "./api/hacknet.mjs";
+import { handleSeasonApi } from "./api/season.mjs";
+import { handleHonorApi } from "./api/honor.mjs";
 import ARCHIVE from "./archive.html";
 
 // Re-export Durable Object 类供 wrangler 识别
@@ -436,6 +444,12 @@ async function handleApi(apiPath, request, env) {
 
     case "hn":
       return handleHacknetApi(apiPath, request, env);
+
+    case "season":
+      return handleSeasonApi(apiPath, request, env);
+
+    case "honor":
+      return handleHonorApi(apiPath, request, env);
 
     // 🔗 通用 Webhook 入站：POST /api/webhook/<room>?secret=xxx&channel=xxx
     // body: {content, sender?, channel?}；secret 也可放 X-Webhook-Secret header

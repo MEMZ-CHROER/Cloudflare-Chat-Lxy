@@ -18,6 +18,8 @@ import { handleAdminRedeem } from "./admin/redeem.mjs";
 import { handleAdminLog } from "./admin/log.mjs";
 import { handleAdminMute } from "./admin/mute.mjs";
 import { handleAdminWebhooks } from "./admin/webhooks.mjs";
+import { handleAdminSeason } from "./admin/season.mjs";
+import { handleAdminHonor } from "./admin/honor.mjs";
 
 // M7：登录爆破限流（IP → {count, resetTs}），同 IP 10 分钟内失败 ≥20 次封禁
 // 局限：Workers 多实例不共享，属缓解措施
@@ -219,6 +221,13 @@ export async function handleAdmin(path, request, env) {
 
   if (!result && path[1] === "webhook")
     result = await handleAdminWebhooks(path, request, env, url);
+
+  // 🏆 v1.45 赛季/荣誉管理（仅 super —— 不加入 adminAllowedPaths，普通 admin 在上方 403）
+  if (!result && path[1] === "season")
+    result = await handleAdminSeason(path, request, env, url);
+
+  if (!result && path[1] === "honor")
+    result = await handleAdminHonor(path, request, env, url);
 
   if (!result && ["anon-grant", "anon-log"].includes(path[1])) {
     // 🔒 安全修复（F1/F2）：anon-grant（匿名券铸券）/anon-log（匿名真实身份审计映射）仅限 super（ADMIN_SECRET_KEY）。

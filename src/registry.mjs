@@ -24,9 +24,39 @@ import {
   saveTaskCompletions, saveLotteryPools, saveLotteryRecords, saveEmoji,
   saveRedeemCodes, saveKickProtected, saveMutes,
   saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid,
-  saveHacknetGames
+  saveHacknetGames,
+  saveSeasonState, saveSeasonProgress, saveHonorCoins
 } from "./registry/persistence.mjs";
 import { handleHacknet, processHnTimer } from "./registry/hacknet.mjs";
+import { handleSeason, processSeasonTimer } from "./registry/season.mjs";
+import { handleHonor } from "./registry/honor.mjs";
+
+// 🏆 v1.45 赛季 points 目标白名单：仅这 6 类正向入账计入赛季积分进度。
+// 排除 transfer（防自刷转账）与 admin（防管理员铸币灌入赛季进度）。
+const SEASON_POINT_TYPES = ["checkin", "task", "game", "lottery", "redpacket", "reward"];
+
+// 安全 BigInt 解析（同 shop.mjs / points.mjs 局部 toBigInt，避免引入模块耦合）
+function _toBigInt(val) {
+  if (val == null) return 0n;
+  try {
+    let s = String(val).trim().toLowerCase();
+    if (s.includes('e')) {
+      let [base, exp] = s.split('e');
+      let e = parseInt(exp, 10);
+      if (e < 0) return 0n;
+      if (e > 100000) return 0n;
+      let dot = base.indexOf('.');
+      if (dot === -1) s = base + '0'.repeat(e);
+      else {
+        let digits = base.replace('.', '');
+        let fracLen = base.length - 1 - dot;
+        let zeros = e - fracLen;
+        s = digits + (zeros > 0 ? '0'.repeat(zeros) : '');
+      }
+    }
+    return BigInt(s);
+  } catch { return 0n; }
+}
 
 // RoomRegistry Durable Object — 全局单例，跟踪所有房间、用户、商城、任务、抽奖等
 export class RoomRegistry {
@@ -68,6 +98,10 @@ export class RoomRegistry {
     this.hnTimers = [];              // [{at, type, gameId, payload}] 事件表（alarm 统一调度，从 game 状态可重建）
     this.hnTickets = new Map();      // room -> [{ticket, expiry}] 单次入场 ticket（内存，惰性清理）
     this.hnSessions = new Map();     // sid -> {name, expiry} 游戏会话（status 轮询轻量鉴权，省 user-check-auth）
+    // 🏆 v1.45 赛季 + 荣誉闭环（持久化 storage key：seasonState / seasonProgress / honorCoins）
+    this.seasonState = null;         // 赛季状态单对象（upcoming|active|ended，结算后 settled=true）
+    this.seasonProgress = null;      // {baselines:[[name,{msg,checkin,game,achieve}]], points:[[name,"积分"]]}
+    this.honorCoins = new Map();     // name -> 荣誉币字符串（BigInt 精度，同 userPoints）
     this._loadPromise = Promise.race([
       this.load(),
       new Promise(resolve => setTimeout(resolve, 10000))
@@ -111,9 +145,19 @@ export class RoomRegistry {
       this.hnRebuildTimers();
     }
 
+    // 🏆 v1.45：恢复赛季状态 / 进度 / 荣誉币
+    if (data.seasonState) this.seasonState = data.seasonState;
+    if (data.seasonProgress) this.seasonProgress = data.seasonProgress;
+    if (data.honorCoins) this.honorCoins = new Map(data.honorCoins);
+
     // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
     if (!this.shopItems.has("anon_coupon")) {
       this.shopItems.set("anon_coupon", {name: "匿名券", description: "匿名发言一次，消息显示为「匿名」🕶️ 紫色标签（真实身份仅管理员可查）", price: 50, consumable: true, enabled: true});
+    }
+
+    // 🏆 v1.45：冷启动重建赛季结算定时器（active 且未结算且 endAt 未到 → 排 alarm）
+    if (this.seasonState && this.seasonState.status === "active" && !this.seasonState.settled && this.seasonState.endAt > Date.now()) {
+      this.hnAddTimer({at: this.seasonState.endAt, type: "season_settle", payload: {}});
     }
   }
 
@@ -145,6 +189,11 @@ export class RoomRegistry {
 
   // 🎮 v1.43 Hacknet 对战：持久化 + alarm 调度 + 入场 ticket
   async saveHacknetGames() { await saveHacknetGames(this.storage, this.hacknetGames); }
+
+  // 🏆 v1.45 赛季 + 荣誉：持久化
+  async saveSeasonState() { await saveSeasonState(this.storage, this.seasonState); }
+  async saveSeasonProgress() { await saveSeasonProgress(this.storage, this.seasonProgress); }
+  async saveHonorCoins() { await saveHonorCoins(this.storage, this.honorCoins); }
 
   // 事件入表并重排 alarm（DO 同一时刻仅一个 pending alarm）
   hnAddTimer(timer) {
@@ -229,7 +278,11 @@ export class RoomRegistry {
     this.hnTimers = this.hnTimers.filter(t => t.at > now);
     for (const evt of due) {
       try {
-        if (processHnTimer) await processHnTimer(this, evt);
+        if (evt.type === "season_settle") {
+          if (processSeasonTimer) await processSeasonTimer(this, evt);
+        } else if (processHnTimer) {
+          await processHnTimer(this, evt);
+        }
       } catch (e) {
         console.error("hn timer failed:", evt && evt.type, e && e.message);
       }
@@ -241,6 +294,16 @@ export class RoomRegistry {
   async addLedger(name, delta, type, desc) {
     try {
       if (!name) return;
+      // 🏆 v1.45 赛季 points 目标：正向白名单入账时累加进 seasonProgress.points（BigInt 字符串和）。
+      // 排除 transfer（自刷）/ admin（铸币）。非热路径（仅在积分流水写入时触发，不进消息/签到热路径）。
+      if (SEASON_POINT_TYPES.includes(type) && _toBigInt(delta) > 0n &&
+          this.seasonState && this.seasonState.status === "active" && !this.seasonState.settled) {
+        if (!this.seasonProgress) this.seasonProgress = {baselines: [], points: []};
+        let pm = new Map(this.seasonProgress.points || []);
+        pm.set(name, String(_toBigInt(pm.get(name)) + _toBigInt(delta)));
+        this.seasonProgress.points = [...pm];
+        await this.saveSeasonProgress();
+      }
       let key = "ledger:" + name;
       let raw = await this.storage.get(key);
       let arr = [];
@@ -255,6 +318,30 @@ export class RoomRegistry {
   async getLedger(name, limit) {
     try {
       let raw = await this.storage.get("ledger:" + name);
+      if (!raw) return [];
+      let arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.slice(-(limit || 50)) : [];
+    } catch (e) { return []; }
+  }
+
+  // 🏆 v1.45 荣誉币流水账本（复制 addLedger，独立 key "honorLedger:"+name，上限 100 条）
+  async addHonorLedger(name, delta, type, desc) {
+    try {
+      if (!name) return;
+      let key = "honorLedger:" + name;
+      let raw = await this.storage.get(key);
+      let arr = [];
+      if (raw) { let p = JSON.parse(raw); if (Array.isArray(p)) arr = p; }
+      arr.push({ts: Date.now(), delta: String(delta), type: type || "other", desc: (desc || "").slice(0, 80)});
+      if (arr.length > 100) arr = arr.slice(-100);
+      await this.storage.put(key, JSON.stringify(arr));
+    } catch (e) {}
+  }
+
+  // 读取荣誉币流水
+  async getHonorLedger(name, limit) {
+    try {
+      let raw = await this.storage.get("honorLedger:" + name);
       if (!raw) return [];
       let arr = JSON.parse(raw);
       return Array.isArray(arr) ? arr.slice(-(limit || 50)) : [];
@@ -321,7 +408,10 @@ export class RoomRegistry {
       "/emoji/add", "/emoji/remove",
       "/room/webhook",
       "/anon/grant", "/anon/log",
-      "/exp/set", "/exp/add", "/exp/batch"
+      "/exp/set", "/exp/add", "/exp/batch",
+      "/admin/season/config", "/admin/season/create", "/admin/season/start", "/admin/season/end",
+      "/admin/honor-shop/items", "/admin/honor-shop/item/add", "/admin/honor-shop/item/toggle", "/admin/honor-shop/item/delete",
+      "/admin/honor/add"
     ]);
     let needsAdmin = adminExactPaths.has(path) || path.startsWith("/lottery/admin/") ||
       (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
@@ -345,6 +435,10 @@ export class RoomRegistry {
       handler = handleUsers;
     else if (path.startsWith("/hn/"))
       handler = handleHacknet;
+    else if (path.startsWith("/season/") || path.startsWith("/admin/season/"))
+      handler = handleSeason;
+    else if (path.startsWith("/honor/") || path.startsWith("/admin/honor/") || path.startsWith("/admin/honor-shop/"))
+      handler = handleHonor;
     else if (path.startsWith("/points/") || path.startsWith("/game/"))
       handler = handlePoints;
     else if (path.startsWith("/exp/"))

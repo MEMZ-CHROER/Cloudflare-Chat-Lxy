@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -32,6 +32,9 @@ export async function loadAll(storage) {
       storage.get("checkinByIp"),
       storage.get("taskRewardPaid"),
       storage.get("hacknetGames"),
+      storage.get("seasonState"),
+      storage.get("seasonProgress"),
+      storage.get("honorCoins"),
     ]);
 
   return {
@@ -63,6 +66,9 @@ export async function loadAll(storage) {
     checkinByIp: checkinByIpData ? new Map(checkinByIpData) : new Map(),
     taskRewardPaid: taskRewardPaidData ? new Map(taskRewardPaidData.map(([u, ids]) => [u, new Set(ids)])) : new Map(),
     hacknetGames: hacknetGamesData ? new Map(hacknetGamesData) : new Map(),
+    seasonState: seasonStateData || null,
+    seasonProgress: seasonProgressData || null,
+    honorCoins: honorCoinsData ? new Map(honorCoinsData) : new Map(),
   };
 }
 
@@ -160,4 +166,17 @@ export async function saveTaskRewardPaid(storage, data) {
 // 🎮 v1.43 Hacknet 对战小游戏：局状态 Map<gameId, game>（全纯对象/数组，无 Map/Set 嵌套，可 JSON 序列化）
 export async function saveHacknetGames(storage, data) {
   await storage.put("hacknetGames", [...data]);
+}
+
+// 🏆 v1.45 赛季系统：赛季状态（单对象）、赛季进度（{baselines:[[name,{msg,checkin,game,achieve}]], points:[[name,"积分"]]}）、荣誉币 Map<name,string>
+export async function saveSeasonState(storage, data) {
+  await storage.put("seasonState", data);
+}
+
+export async function saveSeasonProgress(storage, data) {
+  await storage.put("seasonProgress", data);
+}
+
+export async function saveHonorCoins(storage, data) {
+  await storage.put("honorCoins", [...data]);
 }

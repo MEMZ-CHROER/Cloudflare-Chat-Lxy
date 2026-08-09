@@ -86,6 +86,16 @@ export async function handleUsers(reg, request, url) {
       let hash = await sha256(salt + password);
       reg.registeredUsers.set(name, {passwordHash: hash, salt, token: null, tokenExpiry: null, avatar: "", bio: "", anonCoupons: 0, exp: 0, achievements: [], stats: {msgCount: 0, checkinCount: 0, gameWins: 0, shopCount: 0}});
       await reg.saveRegisteredUsers();
+      // 🏆 v1.45 赛季基线：注册时若赛季进行中（未结束且未结算），为新用户建立基线快照（去重：该 name 已存在则跳过）
+      if (reg.seasonState && reg.seasonState.status !== "ended" && !reg.seasonState.settled) {
+        if (!reg.seasonProgress) reg.seasonProgress = {baselines: [], points: []};
+        let bm = new Map(reg.seasonProgress.baselines || []);
+        if (!bm.has(name)) {
+          bm.set(name, {msg: 0, checkin: 0, game: 0, achieve: 0});
+          reg.seasonProgress.baselines = [...bm];
+          await reg.saveSeasonProgress();
+        }
+      }
       return new Response(JSON.stringify({ok: true}));
     }
 
@@ -375,6 +385,22 @@ export async function handleUsers(reg, request, url) {
         reg.saveGlobalBlacklist(), reg.saveBanned(), reg.saveKickProtected(),
         reg.saveTaskClaims(), reg.saveTaskCompletions()
       ]);
+      // 🏆 v1.45 赛季/荣誉清理：同步移除该用户的赛季基线、赛季积分与荣誉币，防残留脏数据
+      if (reg.seasonProgress) {
+        let bm = new Map(reg.seasonProgress.baselines || []);
+        let pm = new Map(reg.seasonProgress.points || []);
+        if (bm.has(userName) || pm.has(userName)) {
+          bm.delete(userName);
+          pm.delete(userName);
+          reg.seasonProgress.baselines = [...bm];
+          reg.seasonProgress.points = [...pm];
+          await reg.saveSeasonProgress();
+        }
+      }
+      if (reg.honorCoins.has(userName)) {
+        reg.honorCoins.delete(userName);
+        await reg.saveHonorCoins();
+      }
       return new Response("用户 " + userName + " 已删除", { status: 200 });
     }
 

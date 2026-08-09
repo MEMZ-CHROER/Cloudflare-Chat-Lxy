@@ -82,11 +82,12 @@
       <div class="or-divider"><span data-i18n="or">或者</span></div>
       <button id="go-private" data-i18n="createPrivate">✨ 创建私人房间</button>
     </div>
-    <div style="display:flex;gap:8px;justify-content:center;max-width:400px;margin:12px auto 0">
+    <div style="display:flex;gap:8px;justify-content:center;max-width:460px;margin:12px auto 0">
       <button class="shop-entry-btn" onclick="openShop()" style="flex:1;margin:0" data-i18n="shop">🏪 商城</button>
       <button class="task-entry-btn" onclick="openLottery()" style="flex:1;margin:0" data-i18n="lottery">🎰 抽奖</button>
       <button class="task-entry-btn" onclick="openTasks()" style="flex:1;margin:0" data-i18n="tasks">📋 任务</button>
       <button class="game-entry-btn" onclick="openGames()" style="flex:1;margin:0" data-i18n="games">🎮 游戏</button>
+      <button class="game-entry-btn" onclick="openSeason()" style="flex:1;margin:0" title="赛季">🏆 赛季</button>
     </div>
     <div id="room-list-header" data-i18n="existingRooms">已有房间</div>
     <div id="room-list">
@@ -295,9 +296,22 @@
       <div class="shop-tabs">
         <button class="shop-tab active" data-shop-tab="buy" onclick="switchShopTab('buy')">商品列表</button>
         <button class="shop-tab" data-shop-tab="inventory" onclick="switchShopTab('inventory')">我的背包</button>
+        <button class="shop-tab" data-shop-tab="honor" onclick="switchShopTab('honor')">🪙 荣誉</button>
       </div>
       <div class="shop-content" id="shop-content">
         <div class="shop-empty" id="shop-loading">加载中...</div>
+      </div>
+    </div>
+  </div>
+  <!-- 🏆 v1.45 赛季弹窗 -->
+  <div id="season-overlay">
+    <div class="season-card">
+      <div class="season-header">
+        <span>🏆 赛季</span>
+        <button class="season-close" onclick="closeSeason()">&times;</button>
+      </div>
+      <div class="season-content" id="season-content">
+        <div class="season-empty" id="season-loading">加载中...</div>
       </div>
     </div>
   </div>
