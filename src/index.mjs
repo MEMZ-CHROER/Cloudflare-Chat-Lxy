@@ -60,6 +60,7 @@ import CHAT_FILE_UPLOAD from "./client/chat/file-upload.js";
 import CHAT_MENTION from "./client/chat/mention.js";
 import CHAT_EMOJI_PANEL from "./client/chat/emoji-panel.js";
 import CHAT_SEASON from "./client/chat/season.js";
+import CHAT_MARKET from "./client/chat/market.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -93,6 +94,7 @@ import ADMIN_LOG from "./client/admin/log.js";
 import ADMIN_WEBHOOKS from "./client/admin/webhooks.js";
 import ADMIN_SEASON from "./client/admin/season.js";
 import ADMIN_HONOR from "./client/admin/honor.js";
+import ADMIN_MARKET from "./client/admin/market.js";
 
 // i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
 const CHAT_I18N = 'export { t, getLang, setLang, applyI18n, LANG_KEY } from "./state.js";';
@@ -144,6 +146,7 @@ const CHAT_MODULES = {
   "chat/mention.js": CHAT_MENTION,
   "chat/emoji-panel.js": CHAT_EMOJI_PANEL,
   "chat/season.js": CHAT_SEASON,
+  "chat/market.js": CHAT_MARKET,
 };
 
 const ADMIN_MODULES = {
@@ -175,6 +178,7 @@ const ADMIN_MODULES = {
   "admin/webhooks.js": ADMIN_WEBHOOKS,
   "admin/season.js": ADMIN_SEASON,
   "admin/honor.js": ADMIN_HONOR,
+  "admin/market.js": ADMIN_MARKET,
 };
 
 import { handleErrors } from "./utils.mjs";
@@ -193,6 +197,7 @@ import { handleGame } from "./api/game.mjs";
 import { handleHacknetApi } from "./api/hacknet.mjs";
 import { handleSeasonApi } from "./api/season.mjs";
 import { handleHonorApi } from "./api/honor.mjs";
+import { handleMarket } from "./api/market.mjs";
 import { handleOauthApi } from "./api/oauth.mjs";
 import ARCHIVE from "./archive.html";
 
@@ -451,6 +456,9 @@ async function handleApi(apiPath, request, env) {
 
     case "honor":
       return handleHonorApi(apiPath, request, env);
+
+    case "market":
+      return handleMarket(apiPath, request, env);
 
     case "oauth":
       return handleOauthApi(apiPath, request, env);

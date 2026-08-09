@@ -31,6 +31,8 @@ const lazyMods = {
   openGames: ['games', 'openGames'], closeGames: ['games', 'closeGames'],
   switchGame: ['games', 'switchGame'],
   openSeason: ['season', 'openSeason'], closeSeason: ['season', 'closeSeason'],
+  openMarket: ['market', 'openMarket'], closeMarket: ['market', 'closeMarket'],
+  switchMarketTab: ['market', 'switchMarketTab'],
 };
 for (let [k, v] of Object.entries(lazyMods)) window[k] = lazyMod(v[0], v[1]);
 
@@ -246,7 +248,7 @@ document.addEventListener("keydown", function(e) {
 });
 
 // 全局 Escape
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeShop(); closeTasks(); closeGames(); closeSettings(); closeMusic(); closeSeason(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeShop(); closeMarket(); closeTasks(); closeGames(); closeSettings(); closeMusic(); closeSeason(); } });
 
 // 启动登录界面
 initSettings();

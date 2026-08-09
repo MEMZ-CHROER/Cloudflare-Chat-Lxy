@@ -20,6 +20,7 @@ import { loadKickProtected } from './kickprotect.js';
 import { loadWebhooksSection } from './webhooks.js';
 import { loadSeasonSection } from './season.js';
 import { loadHonorSection } from './honor.js';
+import { loadMarketSection } from './market.js';
 
 export const routeToSection = {
   '/admin/': 'dashboard-section',
@@ -47,6 +48,7 @@ export const routeToSection = {
   '/admin/redeem/': 'redeem-section',
   '/admin/season/': 'season-section',
   '/admin/honor/': 'honor-section',
+  '/admin/market/': 'market-section',
 };
 
 export function getCurrentRoute() {
@@ -102,6 +104,7 @@ function loadSectionData(sectionId) {
     case 'redeem-section': loadRedeemSection(); break;
     case 'season-section': loadSeasonSection(); break;
     case 'honor-section': loadHonorSection(); break;
+    case 'market-section': loadMarketSection(); break;
   }
 }
 

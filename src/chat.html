@@ -89,6 +89,7 @@
       <button class="task-entry-btn" onclick="openTasks()" style="flex:1;margin:0" data-i18n="tasks">📋 任务</button>
       <button class="game-entry-btn" onclick="openGames()" style="flex:1;margin:0" data-i18n="games">🎮 游戏</button>
       <button class="game-entry-btn" onclick="openSeason()" style="flex:1;margin:0" title="赛季">🏆 赛季</button>
+      <button class="game-entry-btn" onclick="openMarket()" style="flex:1;margin:0" title="交易市场">💱 市场</button>
     </div>
     <div id="room-list-header" data-i18n="existingRooms">已有房间</div>
     <div id="room-list">
@@ -302,6 +303,18 @@
       <div class="shop-content" id="shop-content">
         <div class="shop-empty" id="shop-loading">加载中...</div>
       </div>
+    </div>
+  </div>
+  <!-- 💱 v1.47 交易市场弹窗 -->
+  <div id="market-overlay">
+    <div class="shop-card">
+      <div class="shop-header"><span>💱 交易市场</span><span class="shop-points" id="market-points-display">0 积分</span><button class="shop-close" onclick="closeMarket()">&times;</button></div>
+      <div class="shop-tabs">
+        <button class="shop-tab active" data-market-tab="list" onclick="switchMarketTab('list')">市场</button>
+        <button class="shop-tab" data-market-tab="mine" onclick="switchMarketTab('mine')">我的挂单</button>
+        <button class="shop-tab" data-market-tab="sell" onclick="switchMarketTab('sell')">我的背包</button>
+      </div>
+      <div class="shop-content" id="market-content"><div class="shop-empty">加载中...</div></div>
     </div>
   </div>
   <!-- 🏆 v1.45 赛季弹窗 -->

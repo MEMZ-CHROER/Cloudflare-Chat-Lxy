@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData, marketOrdersData, marketConfigData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -36,6 +36,8 @@ export async function loadAll(storage) {
       storage.get("seasonProgress"),
       storage.get("honorCoins"),
       storage.get("oauthStates"),
+      storage.get("marketOrders"),
+      storage.get("marketConfig"),
     ]);
 
   return {
@@ -71,6 +73,8 @@ export async function loadAll(storage) {
     seasonProgress: seasonProgressData || null,
     honorCoins: honorCoinsData ? new Map(honorCoinsData) : new Map(),
     oauthStates: oauthStatesData ? new Map(oauthStatesData) : new Map(),
+    marketOrders: marketOrdersData ? marketOrdersData : [],
+    marketConfig: marketConfigData || null,
   };
 }
 
@@ -187,3 +191,7 @@ export async function saveHonorCoins(storage, data) {
 export async function saveOauthStates(storage, data) {
   await storage.put("oauthStates", [...data]);
 }
+
+// 💱 v1.47 交易市场持久化：挂单数组 + 市场配置单对象
+export async function saveMarketOrders(storage, data) { await storage.put("marketOrders", data); }
+export async function saveMarketConfig(storage, data) { await storage.put("marketConfig", data); }

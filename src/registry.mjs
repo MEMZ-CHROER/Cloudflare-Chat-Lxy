@@ -25,12 +25,14 @@ import {
   saveRedeemCodes, saveKickProtected, saveMutes,
   saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid,
   saveHacknetGames,
-  saveSeasonState, saveSeasonProgress, saveHonorCoins, saveOauthStates
+  saveSeasonState, saveSeasonProgress, saveHonorCoins, saveOauthStates,
+  saveMarketOrders, saveMarketConfig
 } from "./registry/persistence.mjs";
 import { handleHacknet, processHnTimer } from "./registry/hacknet.mjs";
 import { handleSeason, processSeasonTimer } from "./registry/season.mjs";
 import { handleHonor } from "./registry/honor.mjs";
 import { handleOauth } from "./registry/oauth.mjs";
+import { handleMarket } from "./registry/market.mjs";
 
 // 🏆 v1.45 赛季 points 目标白名单：仅这 6 类正向入账计入赛季积分进度。
 // 排除 transfer（防自刷转账）与 admin（防管理员铸币灌入赛季进度）。
@@ -105,6 +107,9 @@ export class RoomRegistry {
     this.honorCoins = new Map();     // name -> 荣誉币字符串（BigInt 精度，同 userPoints）
     // 🔐 v1.46 OAuth state 生命周期（持久化 storage key "oauthStates"）：Map<state,{provider,redirectUri,preAuthName,createdAt}>
     this.oauthStates = new Map();
+    // 💱 v1.47 交易市场（持久化 storage key：marketOrders / marketConfig）
+    this.marketOrders = [];   // 交易市场挂单（storage key "marketOrders"）
+    this.marketConfig = { feePercent: 5, enabled: true, maxOpenOrders: 20, maxPrice: "10000000" };
     this._loadPromise = Promise.race([
       this.load(),
       new Promise(resolve => setTimeout(resolve, 10000))
@@ -154,6 +159,9 @@ export class RoomRegistry {
     if (data.honorCoins) this.honorCoins = new Map(data.honorCoins);
     // 🔐 v1.46 OAuth state 恢复
     if (data.oauthStates) this.oauthStates = new Map(data.oauthStates);
+    // 💱 v1.47 交易市场恢复
+    if (data.marketOrders) this.marketOrders = data.marketOrders;
+    if (data.marketConfig) this.marketConfig = Object.assign({feePercent:5,enabled:true,maxOpenOrders:20,maxPrice:"10000000"}, data.marketConfig);
 
     // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
     if (!this.shopItems.has("anon_coupon")) {
@@ -202,6 +210,10 @@ export class RoomRegistry {
 
   // 🔐 v1.46 OAuth state 持久化
   async saveOauthStates() { await saveOauthStates(this.storage, this.oauthStates); }
+
+  // 💱 v1.47 交易市场持久化
+  async saveMarketOrders() { await saveMarketOrders(this.storage, this.marketOrders); }
+  async saveMarketConfig() { await saveMarketConfig(this.storage, this.marketConfig); }
 
   // 事件入表并重排 alarm（DO 同一时刻仅一个 pending alarm）
   hnAddTimer(timer) {
@@ -419,7 +431,8 @@ export class RoomRegistry {
       "/exp/set", "/exp/add", "/exp/batch",
       "/admin/season/config", "/admin/season/create", "/admin/season/start", "/admin/season/end",
       "/admin/honor-shop/items", "/admin/honor-shop/item/add", "/admin/honor-shop/item/toggle", "/admin/honor-shop/item/delete",
-      "/admin/honor/add"
+      "/admin/honor/add",
+      "/admin/market/config", "/admin/market/orders", "/admin/market/delist"
     ]);
     let needsAdmin = adminExactPaths.has(path) || path.startsWith("/lottery/admin/") ||
       (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
@@ -455,6 +468,8 @@ export class RoomRegistry {
       handler = handleExp;
     else if (path.startsWith("/shop/") || path.startsWith("/admin/shop/") || path.startsWith("/anon/"))
       handler = handleShop;
+    else if (path.startsWith("/market/") || path.startsWith("/admin/market/"))
+      handler = handleMarket;
     else if (path.startsWith("/task") || path.startsWith("/tasks") || path.startsWith("/admin/task"))
       handler = handleTasks;
     else if (path.startsWith("/lottery"))

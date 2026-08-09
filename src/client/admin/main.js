@@ -40,6 +40,7 @@ import { loadLogSection, clearLog } from './log.js';
 import { loadWebhooksSection, genWebhook, delWebhook } from './webhooks.js';
 import { loadSeasonSection, seasonAddGoalRow, seasonCreate, seasonStart, seasonEnd } from './season.js';
 import { loadHonorSection, honorAddItem, honorToggleItem, honorDeleteItem, honorManualAdd } from './honor.js';
+import { loadMarketSection, saveMarketConfig, delistOrder } from './market.js';
 
 // ======== 暴露到 window 供 onclick 调用 ========
 
@@ -179,6 +180,11 @@ window.honorAddItem = honorAddItem;
 window.honorToggleItem = honorToggleItem;
 window.honorDeleteItem = honorDeleteItem;
 window.honorManualAdd = honorManualAdd;
+
+// 💱 市场管理
+window.loadMarketSection = loadMarketSection;
+window.saveMarketConfig = saveMarketConfig;
+window.delistOrder = delistOrder;
 
 // ======== 事件绑定 ========
 
