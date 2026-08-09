@@ -61,6 +61,7 @@ import CHAT_MENTION from "./client/chat/mention.js";
 import CHAT_EMOJI_PANEL from "./client/chat/emoji-panel.js";
 import CHAT_SEASON from "./client/chat/season.js";
 import CHAT_MARKET from "./client/chat/market.js";
+import CHAT_RELATION from "./client/chat/relation.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -147,6 +148,7 @@ const CHAT_MODULES = {
   "chat/emoji-panel.js": CHAT_EMOJI_PANEL,
   "chat/season.js": CHAT_SEASON,
   "chat/market.js": CHAT_MARKET,
+  "chat/relation.js": CHAT_RELATION,
 };
 
 const ADMIN_MODULES = {
@@ -199,6 +201,7 @@ import { handleSeasonApi } from "./api/season.mjs";
 import { handleHonorApi } from "./api/honor.mjs";
 import { handleMarket } from "./api/market.mjs";
 import { handleOauthApi } from "./api/oauth.mjs";
+import { handleRelation } from "./api/relation.mjs";
 import ARCHIVE from "./archive.html";
 
 // Re-export Durable Object 类供 wrangler 识别
@@ -462,6 +465,9 @@ async function handleApi(apiPath, request, env) {
 
     case "oauth":
       return handleOauthApi(apiPath, request, env);
+
+    case "rel":
+      return handleRelation(apiPath, request, env);
 
     // 🔗 通用 Webhook 入站：POST /api/webhook/<room>?secret=xxx&channel=xxx
     // body: {content, sender?, channel?}；secret 也可放 X-Webhook-Secret header

@@ -198,6 +198,11 @@
     <div class="user-menu-item" data-action="unblock" style="display:none">✅ 取消屏蔽</div>
     <div class="user-menu-item" data-action="profile"
       style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px;">👤 用户主页</div>
+    <button class="menu-btn" data-action="rel-follow" style="display:none">关注</button>
+    <button class="menu-btn" data-action="rel-unfollow" style="display:none">取消关注</button>
+    <button class="menu-btn" data-action="rel-friend" style="display:none">加好友</button>
+    <button class="menu-btn" data-action="rel-block" style="display:none">拉黑</button>
+    <button class="menu-btn" data-action="rel-unblock" style="display:none">解除拉黑</button>
   </div>
   <!-- Profile Modal -->
   <div id="profile-modal">
@@ -315,6 +320,20 @@
         <button class="shop-tab" data-market-tab="sell" onclick="switchMarketTab('sell')">我的背包</button>
       </div>
       <div class="shop-content" id="market-content"><div class="shop-empty">加载中...</div></div>
+    </div>
+  </div>
+  <!-- 👥 v1.48 关系链弹窗 -->
+  <div id="relation-overlay" style="display:none">
+    <div class="shop-card">
+      <div class="shop-header"><span>👥 关系链</span><button class="shop-close" onclick="closeRelations()">&times;</button></div>
+      <div class="relation-tabs">
+        <button data-tab="following" class="relation-tab">关注</button>
+        <button data-tab="followers" class="relation-tab">粉丝</button>
+        <button data-tab="friends" class="relation-tab">好友</button>
+        <button data-tab="blocked" class="relation-tab">拉黑</button>
+        <button data-tab="requests" class="relation-tab">申请</button>
+      </div>
+      <div id="relation-list"></div>
     </div>
   </div>
   <!-- 🏆 v1.45 赛季弹窗 -->

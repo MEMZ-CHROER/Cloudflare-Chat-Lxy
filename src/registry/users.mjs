@@ -412,6 +412,17 @@ export async function handleUsers(reg, request, url) {
         reg.saveGlobalBlacklist(), reg.saveBanned(), reg.saveKickProtected(),
         reg.saveTaskClaims(), reg.saveTaskCompletions()
       ]);
+      // 👥 v1.48 关系链清理：删本人记录 + 遍历所有人剔除本人（5 个 Set）
+      if (reg.userRelations) {
+        reg.userRelations.delete(userName);
+        let dirty = false;
+        for (let [, rel] of reg.userRelations) {
+          for (let set of ["following", "friends", "pendingOut", "pendingIn", "blocked"]) {
+            if (rel[set] && rel[set].has(userName)) { rel[set].delete(userName); dirty = true; }
+          }
+        }
+        if (dirty) await reg.saveUserRelations();
+      }
       // 🏆 v1.45 赛季/荣誉清理：同步移除该用户的赛季基线、赛季积分与荣誉币，防残留脏数据
       if (reg.seasonProgress) {
         let bm = new Map(reg.seasonProgress.baselines || []);

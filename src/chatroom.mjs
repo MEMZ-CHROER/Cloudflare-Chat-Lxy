@@ -1126,6 +1126,17 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "私信包含违规词汇，已拦截"}));
           return;
         }
+        // 👥 v1.48 关系链：对方拉黑我则私信拦截
+        try {
+          let rid = this.env.registry.idFromName("global");
+          let rstub = this.env.registry.get(rid);
+          let r = await rstub.fetch("https://dummy-url/rel/blocked?from=" + encodeURIComponent(targetName) + "&to=" + encodeURIComponent(session.name));
+          let d = await r.json();
+          if (d.blocked) {
+            webSocket.send(JSON.stringify({error: "对方已拉黑你，无法发送私信"}));
+            return;
+          }
+        } catch (e) {}
 
         let found = false;
         this.sessions.forEach((s, ws) => {
@@ -2104,6 +2115,16 @@ export class ChatRoom {
           if (tn === "all" || tn === "everyone" || tn === "everyone" || tn === "全体" || tn === "所有人") continue;
           if (tn === session.name) continue;
           if (!atTargets.includes(tn)) atTargets.push(tn);
+        }
+        // 👥 v1.48 关系链：被本消息发送者拉黑的目标不触发红点/补显（在线 ws.send 与离线 recordAtMention 一石二鸟跳过）
+        if (session.authenticated && atTargets.length > 0) {
+          try {
+            let rid = this.env.registry.idFromName("global");
+            let rstub = this.env.registry.get(rid);
+            let r = await rstub.fetch("https://dummy-url/rel/at-filter?from=" + encodeURIComponent(session.name) + "&names=" + encodeURIComponent(atTargets.join(",")));
+            let d = await r.json();
+            if (Array.isArray(d.allowed)) atTargets = d.allowed;
+          } catch (e) {}
         }
         for (let tn of atTargets) {
           this.sessions.forEach((s, ws) => {

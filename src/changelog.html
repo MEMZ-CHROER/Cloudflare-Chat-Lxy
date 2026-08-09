@@ -94,6 +94,23 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.48</span>
+    <span class="version-date">2026-08-09</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">👥</span><span class="text"><span class="tag tag-feature">功能</span><b>关系链系统</b> — 路线图方向一落地：<b>关注</b>（单向）+ <b>好友</b>（双向申请确认）+ <b>拉黑</b>（单向屏蔽），用户详情菜单与个人中心均可管理</span></div>
+    <div class="feature-item"><span class="icon">⭐</span><span class="text"><span class="tag tag-feature">功能</span><b>关注</b> — 一键关注/取关，我的关注 + 我的粉丝列表实时统计</span></div>
+    <div class="feature-item"><span class="icon">🤝</span><span class="text"><span class="tag tag-feature">功能</span><b>好友申请</b> — 发起申请、接受 / 拒绝、删除好友；好友双方镜像同步，拒绝后申请即失效可重新申请</span></div>
+    <div class="feature-item"><span class="icon">🚫</span><span class="text"><span class="tag tag-feature">功能</span><b>拉黑过滤</b> — 被拉黑后对方<b>私信直接拦截</b>（提示「对方已拉黑你」）、<b>@提及不触发红点/补显</b>；房间公共消息不受影响，双向互通保留</span></div>
+    <div class="feature-item"><span class="icon">✂️</span><span class="text"><span class="tag tag-feature">功能</span><b>拉黑自动切断</b> — 拉黑某人时自动解除好友、清理双向好友申请、取消关注对方（保留对方关注我），解除拉黑后恢复自由</span></div>
+    <div class="feature-item"><span class="icon">📖</span><span class="text"><span class="tag tag-feature">功能</span><b>关系管理页</b> — 个人中心「关系管理」弹窗五个页签：关注 / 粉丝 / 好友 / 拉黑 / 申请，各列表计数 + 行内操作</span></div>
+    <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-feature">安全</span><b>纵深防护</b> — 全部关系端点 token 鉴权（API 层 + registry 双重校验）、自操作 / 用户不存在 / 未登录分别 400/404/403、F2 原子变更、L1 脱敏；删除用户时自动清理其全部关系引用</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.47</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>

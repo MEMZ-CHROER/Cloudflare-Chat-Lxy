@@ -145,6 +145,14 @@ const i18nDict = {
     enter: "进入", or: "或者", createPrivate: "创建私人房间",
     shop: "商城", lottery: "抽奖", tasks: "任务", games: "游戏", market: "交易市场", existingRooms: "已有房间",
     registered: "已注册", logout: "退出登录", guest: "游客", loginRegister: "登录/注册",
+    // 👥 v1.48 关系链
+    relFollow: "关注", relUnfollow: "取消关注", relFollowTarget: "关注TA", relUnfollowTarget: "取消关注",
+    relAddFriend: "加好友", relDeleteFriend: "删除好友", relBlock: "拉黑", relUnblock: "解除拉黑",
+    relMyFollowing: "我的关注", relMyFollowers: "我的粉丝", relMyFriends: "我的好友", relMyBlocked: "我已拉黑",
+    relFriendRequests: "好友申请", relAccept: "接受", relReject: "拒绝",
+    relBlockedByCannotDm: "对方已拉黑你，无法私信", relPleaseLogin: "请先登录",
+    relSendRequest: "发送好友申请", relRequestSent: "已发送申请", relAlreadyFriends: "你们已是好友",
+    relOpFailed: "操作失败", relEmpty: "暂无数据", relManage: "关系管理", relClose: "关闭", relLoading: "加载中...",
   },
   en: {
     login: "Login", register: "Register", skipLogin: "Skip, enter as guest", send: "Send", settings: "Settings",
@@ -522,6 +530,26 @@ const i18nDict = {
     "价格必须是正整数": "Price must be a positive integer",
     "操作失败": "Operation failed",
     "加载失败": "Load failed",
+    // 👥 v1.48 关系链
+    relFollow: "Follow", relUnfollow: "Unfollow", relFollowTarget: "Follow", relUnfollowTarget: "Unfollow",
+    relAddFriend: "Add friend", relDeleteFriend: "Remove friend", relBlock: "Block", relUnblock: "Unblock",
+    relMyFollowing: "Following", relMyFollowers: "Followers", relMyFriends: "Friends", relMyBlocked: "Blocked",
+    relFriendRequests: "Friend requests", relAccept: "Accept", relReject: "Reject",
+    relBlockedByCannotDm: "You are blocked by this user, cannot DM", relPleaseLogin: "Please login first",
+    relSendRequest: "Send friend request", relRequestSent: "Friend request sent", relAlreadyFriends: "You are already friends",
+    relOpFailed: "Operation failed", relEmpty: "No data", relManage: "Relations", relClose: "Close", relLoading: "Loading...",
+    "请先登录": "Please login first",
+    "请提供用户名": "Please provide a username",
+    "请提供目标用户": "Please provide a target user",
+    "不能对自己操作": "Cannot operate on yourself",
+    "用户不存在": "User not found",
+    "对方已被你拉黑": "You have blocked this user",
+    "对方已拉黑你，无法发送申请": "You are blocked by this user, cannot send a request",
+    "你们已经是好友": "You are already friends",
+    "已发送过好友申请": "Friend request already sent",
+    "没有来自该用户的好友申请": "No friend request from this user",
+    "请使用POST": "Please use POST",
+    "关系链服务暂时不可用": "Relation service temporarily unavailable",
   }
 };
 export function getLang() {

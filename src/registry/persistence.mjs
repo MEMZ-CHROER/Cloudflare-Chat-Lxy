@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData, marketOrdersData, marketConfigData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData, marketOrdersData, marketConfigData, userRelationsData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -38,6 +38,7 @@ export async function loadAll(storage) {
       storage.get("oauthStates"),
       storage.get("marketOrders"),
       storage.get("marketConfig"),
+      storage.get("userRelations"),
     ]);
 
   return {
@@ -75,6 +76,13 @@ export async function loadAll(storage) {
     oauthStates: oauthStatesData ? new Map(oauthStatesData) : new Map(),
     marketOrders: marketOrdersData ? marketOrdersData : [],
     marketConfig: marketConfigData || null,
+    userRelations: userRelationsData ? new Map(userRelationsData.map(([n, rel]) => [n, {
+      following: new Set(rel.following || []),
+      friends: new Set(rel.friends || []),
+      pendingOut: new Set(rel.pendingOut || []),
+      pendingIn: new Set(rel.pendingIn || []),
+      blocked: new Set(rel.blocked || [])
+    }])) : new Map(),
   };
 }
 
@@ -195,3 +203,18 @@ export async function saveOauthStates(storage, data) {
 // 💱 v1.47 交易市场持久化：挂单数组 + 市场配置单对象
 export async function saveMarketOrders(storage, data) { await storage.put("marketOrders", data); }
 export async function saveMarketConfig(storage, data) { await storage.put("marketConfig", data); }
+
+// 👥 v1.48 关系链持久化：Map<name,{following,friends,pendingOut,pendingIn,blocked} 均 Set>
+export async function saveUserRelations(storage, data) {
+  let serialized = [];
+  for (let [name, rel] of data) {
+    serialized.push([name, {
+      following: [...(rel.following || [])],
+      friends: [...(rel.friends || [])],
+      pendingOut: [...(rel.pendingOut || [])],
+      pendingIn: [...(rel.pendingIn || [])],
+      blocked: [...(rel.blocked || [])]
+    }]);
+  }
+  await storage.put("userRelations", serialized);
+}

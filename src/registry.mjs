@@ -26,13 +26,14 @@ import {
   saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid,
   saveHacknetGames,
   saveSeasonState, saveSeasonProgress, saveHonorCoins, saveOauthStates,
-  saveMarketOrders, saveMarketConfig
+  saveMarketOrders, saveMarketConfig, saveUserRelations
 } from "./registry/persistence.mjs";
 import { handleHacknet, processHnTimer } from "./registry/hacknet.mjs";
 import { handleSeason, processSeasonTimer } from "./registry/season.mjs";
 import { handleHonor } from "./registry/honor.mjs";
 import { handleOauth } from "./registry/oauth.mjs";
 import { handleMarket } from "./registry/market.mjs";
+import { handleRelations } from "./registry/relations.mjs";
 
 // 🏆 v1.45 赛季 points 目标白名单：仅这 6 类正向入账计入赛季积分进度。
 // 排除 transfer（防自刷转账）与 admin（防管理员铸币灌入赛季进度）。
@@ -110,6 +111,7 @@ export class RoomRegistry {
     // 💱 v1.47 交易市场（持久化 storage key：marketOrders / marketConfig）
     this.marketOrders = [];   // 交易市场挂单（storage key "marketOrders"）
     this.marketConfig = { feePercent: 5, enabled: true, maxOpenOrders: 20, maxPrice: "10000000" };
+    this.userRelations = new Map();   // 👥 v1.48 关系链：关注/好友/拉黑（storage key "userRelations"）
     this._loadPromise = Promise.race([
       this.load(),
       new Promise(resolve => setTimeout(resolve, 10000))
@@ -162,6 +164,8 @@ export class RoomRegistry {
     // 💱 v1.47 交易市场恢复
     if (data.marketOrders) this.marketOrders = data.marketOrders;
     if (data.marketConfig) this.marketConfig = Object.assign({feePercent:5,enabled:true,maxOpenOrders:20,maxPrice:"10000000"}, data.marketConfig);
+    // 👥 v1.48 关系链恢复（Map<name,{following,friends,pendingOut,pendingIn,blocked} 均 Set>）
+    if (data.userRelations) this.userRelations = data.userRelations;
 
     // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
     if (!this.shopItems.has("anon_coupon")) {
@@ -214,6 +218,9 @@ export class RoomRegistry {
   // 💱 v1.47 交易市场持久化
   async saveMarketOrders() { await saveMarketOrders(this.storage, this.marketOrders); }
   async saveMarketConfig() { await saveMarketConfig(this.storage, this.marketConfig); }
+
+  // 👥 v1.48 关系链持久化
+  async saveUserRelations() { await saveUserRelations(this.storage, this.userRelations); }
 
   // 事件入表并重排 alarm（DO 同一时刻仅一个 pending alarm）
   hnAddTimer(timer) {
@@ -454,6 +461,8 @@ export class RoomRegistry {
       handler = handleTags;
     else if (path.startsWith("/user-") || path === "/user/achievements" || path.startsWith("/xp/") || path === "/known-users" || path === "/user-init" || path === "/user-bio" || path === "/user-avatar" || path === "/user-profile")
       handler = handleUsers;
+    else if (path.startsWith("/rel/"))
+      handler = handleRelations;
     else if (path.startsWith("/hn/"))
       handler = handleHacknet;
     else if (path.startsWith("/season/") || path.startsWith("/admin/season/"))

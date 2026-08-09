@@ -31,6 +31,8 @@ export function showUserMenu(name, x, y) {
   menu.style.left = left + "px";
   menu.style.top = top + "px";
   menu.classList.add("show");
+  // 👥 v1.48 关系链：异步加载关系按钮显隐（fire-and-forget，失败静默）
+  try { import('./relation.js').then(m => m.loadRelationMenuButtons && m.loadRelationMenuButtons(name)).catch(() => {}); } catch (_) {}
 }
 
 export function hideUserMenu() {
@@ -172,7 +174,19 @@ export function handleMenuAction(action) {
       setNote(target, alias);
       break;
     }
+    // 👥 v1.48 关系链：关注 / 加好友 / 拉黑（relation.js 的动作函数自带 _relBusy 防抖）
+    case "rel-follow": relMenuAction("follow", target); break;
+    case "rel-unfollow": relMenuAction("unfollow", target); break;
+    case "rel-friend": relMenuAction("sendFriendRequest", target); break;
+    case "rel-block": relMenuAction("block", target); break;
+    case "rel-unblock": relMenuAction("unblock", target); break;
   }
+}
+
+// 👥 v1.48 关系链：菜单动作分发到 relation.js 的 window 函数（模块未加载则先动态 import）
+function relMenuAction(fnName, target) {
+  if (window[fnName]) { window[fnName](target); return; }
+  try { import('./relation.js').then(() => { if (window[fnName]) window[fnName](target); }).catch(() => {}); } catch (_) {}
 }
 
 import { saveBlockedUsers } from './state.js';
@@ -394,4 +408,22 @@ async function showProfileEditor(name, data) {
     oauthSection.appendChild(tip);
   }
   content.appendChild(oauthSection);
+
+  // ====== v1.48 关系链：关系管理入口 ======
+  let relBtn = document.createElement("button");
+  relBtn.className = "profile-edit-btn";
+  relBtn.textContent = t("relManage");
+  relBtn.addEventListener("click", () => {
+    try {
+      import('./relation.js').then(m => {
+        let fn = window.openRelations || (m && m.openRelations);
+        if (fn) fn("following");
+      }).catch(() => {});
+    } catch (_) {}
+  });
+  content.appendChild(relBtn);
 }
+
+// 👥 v1.48 关系链：暴露到 window 供 relation.js 点击名字复用用户菜单/用户主页
+window.showUserMenu = showUserMenu;
+window.showProfile = showProfile;
