@@ -105,6 +105,8 @@ body {
     <div class="feature-item"><span class="icon">🖱️</span><span class="text"><span class="tag tag-feature">功能</span><b>交互</b> — 点击 Value 列直接在 true/false 间切换、节点按 精确/前缀/全局 解析优先级排序、权限表列排序、选择集跨行操作（批量编辑/批量删除）</span></div>
     <div class="feature-item"><span class="icon">🔒</span><span class="text"><span class="tag tag-feature">安全</span><b>super-only 双闸</b> — 管理后台 /api/admin/lp/* 仅超管（admin.mjs 排除 adminAllowedPaths，普通 admin 403）；写操作经 /lp/exec 再校验 auth=super（registry 层常量时间比对），聊天室内部调用不受影响；/lp/data 合并全部注册用户（无 LP 记录也可编辑）</span></div>
     <div class="feature-item"><span class="icon">🖥️</span><span class="text"><span class="tag tag-feature">功能</span><b>独立 /lp 页面</b> — 编辑器单独做成全屏独立应用（仿原版 LuckPermsWeb）：顶部品牌栏 + 全屏权限表，独立页首次访问未超管时显示登录遮罩（输入密钥走 /api/admin/login，cookie 会话复用管理后台），管理后台导航「🔐 权限编辑」改为跳转独立页；lp.js 容器抽象化（模块级 _root + rerender()），同一编辑器同时支撑 admin 内嵌版与独立版</span></div>
+    <div class="feature-item"><span class="icon">⚡</span><span class="text"><span class="tag tag-feature">优化</span><b>增量写入</b> — 节点添加/删除/值切换/批量操作成功后不再整棵刷新（去掉了每次操作后的全量 loadLpSection），直接把那一条写进内存数据并纯内存重画（无网络请求）；提示条改为 body 级 toast 固定顶部，不再被重渲染清掉；组/用户增删自动清理相互引用</span></div>
+    <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span><b>继承节点选项点不动</b> — 添加栏节点类型下拉选「继承节点」时触发整棵重渲染、新 select 值被重置回「权限节点」；改为 onchange 局部动态增删组选择器 + 输入框占位提示（不再整棵重渲染），选组后直接添加继承</span></div>
   </div>
 </div>
 

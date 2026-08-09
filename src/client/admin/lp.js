@@ -446,12 +446,25 @@ function renderAddNode(nodes) {
   inputBox.appendChild(vs);
 
   // 继承时：组选择下拉（用户继承组 or 组继承父组）
+  // 动态增删（局部切换），不能整棵 rerender —— 否则新 select 值被重置回"权限节点"，表现为"继承节点点不动"
   let groupSel = null;
-  if (sel.value === "inh") {
-    groupSel = renderGroupSelector();
-    if (groupSel) inputBox.appendChild(groupSel);
+  const groupSlot = makeEl("div", {style: "display:contents;"});
+  function syncInhMode() {
+    const isInh = sel.value === "inh";
+    if (isInh && !groupSel) {
+      groupSel = renderGroupSelector();
+      if (groupSel) { groupSlot.textContent = ""; groupSlot.appendChild(groupSel); inputBox.insertBefore(groupSlot, vs); }
+    } else if (!isInh && groupSel) {
+      groupSel = null;
+      groupSlot.textContent = "";
+    }
+    nodeInput.disabled = isInh;
+    nodeInput.placeholder = isInh
+      ? (st.current.type === "group" ? "继承父组，直接在右侧选组" : "继承组，直接在右侧选组")
+      : (st.current.type === "group" ? "chat.admin.kickUser 或 chat.admin.*" : "chat.admin.kickUser");
   }
-  sel.onchange = () => { rerender(); };
+  sel.onchange = syncInhMode;
+  syncInhMode();
 
   bar.appendChild(inputBox);
 
@@ -479,20 +492,41 @@ function renderGroupSelector() {
 }
 
 // ---------- 操作流程 ----------
+// 提示条：body 级 toast（固定顶部），不随编辑器重渲染被清掉
 function flashMsg(el, text, ok) {
-  const msg = makeEl("div", {className: "lp-ed-msg " + (ok ? "ok" : "err")}, text);
-  const wrap = _root;
-  if (wrap) wrap.insertBefore(msg, wrap.firstChild);
+  let box = document.getElementById("lp-ed-toast");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "lp-ed-toast";
+    box.style.cssText = "position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;max-width:80vw;";
+    document.body.appendChild(box);
+  }
+  const msg = document.createElement("div");
+  msg.className = "lp-ed-msg " + (ok ? "ok" : "err");
+  msg.textContent = text;
+  box.appendChild(msg);
   setTimeout(() => msg.remove(), 2500);
 }
 
-async function runCmd(cmd, okText) {
-  if (st.busy) return;
+// 当前会话的记录对象（用户或组）
+function curRec() {
+  if (st.current.type === "group") return st.groups.find(g => g.name === st.current.name);
+  return st.users.find(u => u.name === st.current.name);
+}
+
+// 写操作统一入口：成功后若有 applyLocal 则增量更新内存数据并纯内存重画（无网络），否则全量刷新
+async function runCmd(cmd, okText, applyLocal) {
+  if (st.busy) return false;
   st.busy = true;
   try {
     const d = await apiExec(cmd);
     flashMsg(null, (d && d.text) || okText || "完成", true);
-    await loadLpSection();
+    if (typeof applyLocal === "function") {
+      applyLocal();
+      rerender();
+    } else {
+      await loadLpSection();
+    }
     return true;
   } catch (e) {
     flashMsg(null, e.message, false);
@@ -506,23 +540,41 @@ function addGroupFlow() {
   const name = prompt("新建权限组，组名（字母数字下划线连字符，1-24位）：", "");
   if (name === null) return;
   if (!NAME_RE.test(name)) { flashMsg(null, "组名仅限字母数字下划线连字符，1-24位", false); return; }
-  runCmd("/lp creategroup " + name, "已创建权限组 " + name);
+  runCmd("/lp creategroup " + name, "已创建权限组 " + name, () => {
+    if (!st.groups.some(g => g.name === name)) st.groups.push({name, permissions: [], parents: [], members: []});
+  });
 }
 
 function deleteGroupFlow(name) {
   if (!confirm("确定删除权限组 " + name + " ？将同时移除所有用户对该组的引用。")) return;
-  runCmd("/lp deletegroup " + name, "已删除权限组 " + name);
+  runCmd("/lp deletegroup " + name, "已删除权限组 " + name, () => {
+    st.groups = st.groups.filter(g => g.name !== name);
+    for (const g of st.groups) g.parents = g.parents.filter(p => p !== name);
+    for (const u of st.users) if (u.groups) u.groups = u.groups.filter(g => g !== name);
+    if (st.current && st.current.name === name) { st.current = null; st.selected = []; }
+  });
 }
 
 function deleteUserFlow(name) {
   if (!confirm("确定清除用户 " + name + " 的全部权限记录？（仅权限数据，聊天账号不受影响）")) return;
-  runCmd("/lp user " + name + " delete", "已清除用户 " + name + " 的权限记录");
+  runCmd("/lp user " + name + " delete", "已清除用户 " + name + " 的权限记录", () => {
+    const u = st.users.find(x => x.name === name);
+    if (u) { u.permissions = []; u.groups = []; }
+    if (st.current && st.current.type === "user" && st.current.name === name) { st.current = null; st.selected = []; }
+  });
 }
 
 function toggleNodeValue(n) {
+  if (n.kind !== "perm") return;
   const nv = !n.value;
   const cmd = "/lp " + st.current.type + " " + st.current.name + " permission set " + n.key + " " + nv;
-  runCmd(cmd, "已设置 " + n.key + " = " + nv);
+  runCmd(cmd, "已设置 " + n.key + " = " + nv, () => {
+    const rec = curRec();
+    if (!rec) return;
+    const i = rec.permissions.findIndex(p => p[0] === n.key);
+    if (i >= 0) rec.permissions[i][1] = nv;
+    else rec.permissions.push([n.key, nv]);
+  });
 }
 
 function deleteNodeFlow(n) {
@@ -533,7 +585,29 @@ function deleteNodeFlow(n) {
     if (st.current.type === "group") cmd = "/lp group " + st.current.name + " parent remove " + n.groupName;
     else cmd = "/lp user " + st.current.name + " parent remove " + n.groupName;
   }
-  runCmd(cmd, "已删除节点 " + n.key);
+  runCmd(cmd, "已删除节点 " + n.key, () => {
+    const rec = curRec();
+    if (!rec) return;
+    if (n.kind === "perm") rec.permissions = rec.permissions.filter(p => p[0] !== n.key);
+    else if (st.current.type === "group") rec.parents = rec.parents.filter(p => p !== n.groupName);
+    else rec.groups = rec.groups.filter(g => g !== n.groupName);
+  });
+}
+
+// 权限节点增量更新 helper：把 [key, value] 写入当前记录
+function applyPermLocal(key, value) {
+  const rec = curRec();
+  if (!rec) return;
+  const i = rec.permissions.findIndex(p => p[0] === key);
+  if (i >= 0) rec.permissions[i][1] = value;
+  else rec.permissions.push([key, value]);
+}
+// 继承节点增量更新 helper：写入当前记录（组→parents，用户→groups）
+function applyInhLocal(groupName) {
+  const rec = curRec();
+  if (!rec) return;
+  if (st.current.type === "group") { if (!rec.parents.includes(groupName)) rec.parents.push(groupName); }
+  else { if (!rec.groups.includes(groupName)) rec.groups.push(groupName); }
 }
 
 function addPermNode(input) {
@@ -549,17 +623,17 @@ function addPermNode(input) {
   if (st.current.type === "group") cmd = "/lp group " + st.current.name + " permission set " + parts[0] + " " + v;
   else cmd = "/lp user " + st.current.name + " permission set " + parts[0] + " " + v;
   if (parts.length > 1) {
-    // 多条依次执行（串行）
+    // 多条依次执行（串行），每条各自增量写入
     (async () => {
       for (const p of parts) {
         const c = "/lp " + st.current.type + " " + st.current.name + " permission set " + p + " " + v;
-        const ok = await runCmd(c, "已添加 " + p);
+        const ok = await runCmd(c, "已添加 " + p, () => applyPermLocal(p, v));
         if (!ok) break;
       }
     })();
     return;
   }
-  runCmd(cmd, "已添加 " + parts[0]);
+  runCmd(cmd, "已添加 " + parts[0], () => applyPermLocal(parts[0], v));
 }
 
 function addInhNode(groupName) {
@@ -567,7 +641,7 @@ function addInhNode(groupName) {
   let cmd;
   if (st.current.type === "group") cmd = "/lp group " + st.current.name + " parent add " + groupName;
   else cmd = "/lp user " + st.current.name + " parent add " + groupName;
-  runCmd(cmd, "已添加继承 " + groupName);
+  runCmd(cmd, "已添加继承 " + groupName, () => applyInhLocal(groupName));
 }
 
 async function batchSetValue(v) {
@@ -576,7 +650,7 @@ async function batchSetValue(v) {
   if (!confirm("将选中的 " + sel.length + " 个权限节点设为 " + v + " ？")) return;
   for (const s of sel) {
     const cmd = "/lp " + st.current.type + " " + st.current.name + " permission set " + s.key + " " + v;
-    const ok = await runCmd(cmd, "已设置 " + s.key);
+    const ok = await runCmd(cmd, "已设置 " + s.key, () => applyPermLocal(s.key, v));
     if (!ok) break;
   }
 }
@@ -590,7 +664,13 @@ async function batchDelete() {
       if (st.current.type === "group") cmd = "/lp group " + st.current.name + " parent remove " + s.groupName;
       else cmd = "/lp user " + st.current.name + " parent remove " + s.groupName;
     }
-    const ok = await runCmd(cmd, "已删除 " + s.key);
+    const ok = await runCmd(cmd, "已删除 " + s.key, () => {
+      const rec = curRec();
+      if (!rec) return;
+      if (s.kind === "perm") rec.permissions = rec.permissions.filter(p => p[0] !== s.key);
+      else if (st.current.type === "group") rec.parents = rec.parents.filter(p => p !== s.groupName);
+      else rec.groups = rec.groups.filter(g => g !== s.groupName);
+    });
     if (!ok) break;
   }
 }
