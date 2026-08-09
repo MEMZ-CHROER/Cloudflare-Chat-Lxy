@@ -105,6 +105,7 @@ body {
     <div class="feature-item"><span class="icon">⚙️</span><span class="text"><span class="tag tag-feature">功能</span><b>OAuth 绑定 / 解绑管理</b> — 个人中心可管理第三方账号绑定</span></div>
     <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-improve">安全</span><b>OAuth 安全</b> — state 单次消费防 CSRF、code 防重放、回调地址校验、OAuth 注册限频、防账户接管</span></div>
     <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span><b>registeredAt 字段未写入 bug</b></span></div>
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><b>GitHub 登录回调 5xx</b> — 回调异常加 try/catch 兜底（不再裸 5xx，返回可读错误）+ userinfo 请求补 User-Agent / Accept 头；线上端到端登录验证通过</span></div>
   </div>
 </div>
 

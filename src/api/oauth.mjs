@@ -72,78 +72,83 @@ export async function handleOauthApi(apiPath, request, env) {
 
   // ---------- callback/<provider>：消费 state → 换 token → 拉用户信息 → 登录/注册/绑定 ----------
   if (action === "callback") {
-    if (request.method !== "GET") return jsonRes({ error: "请使用GET" }, 405);
-    const provider = OAUTH_PROVIDERS.find((p) => p.id === apiPath[2]);
-    if (!provider) return jsonRes({ error: "不支持的第三方平台" }, 404);
-    const code = url.searchParams.get("code") || "";
-    const state = url.searchParams.get("state") || "";
-    if (!code || !state) return jsonRes({ error: "缺少 code 或 state" }, 400);
+    try {
+      if (request.method !== "GET") return jsonRes({ error: "请使用GET" }, 405);
+      const provider = OAUTH_PROVIDERS.find((p) => p.id === apiPath[2]);
+      if (!provider) return jsonRes({ error: "不支持的第三方平台" }, 404);
+      const code = url.searchParams.get("code") || "";
+      const state = url.searchParams.get("state") || "";
+      if (!code || !state) return jsonRes({ error: "缺少 code 或 state" }, 400);
 
-    const registryId = env.registry.idFromName("global");
-    const stub = env.registry.get(registryId);
-    // 消费 state（一次性，registry 层消费即删 + 10 分钟过期）
-    const consume = await stub.fetch(new URL("https://dummy-url/oauth/consume-state"), {
-      method: "POST",
-      body: JSON.stringify({ state }),
-      headers: { "Content-Type": "application/json" },
-    });
-    let cd;
-    try { cd = await consume.json(); } catch (e) { cd = {}; }
-    if (!consume.ok || !cd.ok || !cd.record) return jsonRes({ error: "state 无效或已过期" }, 400);
-    const record = cd.record;
-    if (record.provider !== provider.id) return jsonRes({ error: "state 与平台不匹配" }, 400);
-    const expectedRedirect = origin + provider.redirectPath;
-    if (record.redirectUri !== expectedRedirect) return jsonRes({ error: "回调地址不匹配" }, 400);
-
-    let info;
-    if (!provider.mock) {
-      // code 换 access_token（GitHub 返回 JSON）
-      const tokenResp = await fetch(provider.tokenUrl, {
+      const registryId = env.registry.idFromName("global");
+      const stub = env.registry.get(registryId);
+      // 消费 state（一次性，registry 层消费即删 + 10 分钟过期）
+      const consume = await stub.fetch(new URL("https://dummy-url/oauth/consume-state"), {
         method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: env[provider.clientIdEnv],
-          client_secret: env[provider.clientSecretEnv],
-          code,
-          redirect_uri: expectedRedirect,
-        }),
+        body: JSON.stringify({ state }),
+        headers: { "Content-Type": "application/json" },
       });
-      const tokenData = await tokenResp.json();
-      const accessToken = tokenData.access_token;
-      if (!accessToken) return jsonRes({ error: "获取 access_token 失败" }, 400);
-      const infoResp = await fetch(provider.userInfoUrl, {
-        headers: { Authorization: "Bearer " + accessToken },
+      let cd;
+      try { cd = await consume.json(); } catch (e) { cd = {}; }
+      if (!consume.ok || !cd.ok || !cd.record) return jsonRes({ error: "state 无效或已过期" }, 400);
+      const record = cd.record;
+      if (record.provider !== provider.id) return jsonRes({ error: "state 与平台不匹配" }, 400);
+      const expectedRedirect = origin + provider.redirectPath;
+      if (record.redirectUri !== expectedRedirect) return jsonRes({ error: "回调地址不匹配" }, 400);
+
+      let info;
+      if (!provider.mock) {
+        // code 换 access_token（GitHub 返回 JSON）
+        const tokenResp = await fetch(provider.tokenUrl, {
+          method: "POST",
+          headers: { "Accept": "application/json", "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: env[provider.clientIdEnv],
+            client_secret: env[provider.clientSecretEnv],
+            code,
+            redirect_uri: expectedRedirect,
+          }),
+        });
+        const tokenData = await tokenResp.json();
+        const accessToken = tokenData.access_token;
+        if (!accessToken) return jsonRes({ error: "获取 access_token 失败" }, 400);
+        const infoResp = await fetch(provider.userInfoUrl, {
+          headers: { Authorization: "Bearer " + accessToken, "User-Agent": "CloudChat-Lxy", Accept: "application/vnd.github+json" },
+        });
+        info = await infoResp.json();
+      } else {
+        // mock 分支：不请求外部，构造假用户
+        info = { id: "mock_" + provider.id, login: "mock_user_" + provider.id, avatar_url: "" };
+      }
+
+      const oauthRecord = {
+        provider: provider.id,
+        providerId: String(info[provider.idField]),
+        username: info[provider.usernameField],
+        avatar: info[provider.avatarField] || "",
+      };
+      const ip = request.headers.get("CF-Connecting-IP") || "";
+      const r = await stub.fetch(new URL("https://dummy-url/oauth/login-or-register"), {
+        method: "POST",
+        body: JSON.stringify({ ...oauthRecord, preAuthName: record.preAuthName || "", ip }),
+        headers: { "Content-Type": "application/json" },
       });
-      info = await infoResp.json();
-    } else {
-      // mock 分支：不请求外部，构造假用户
-      info = { id: "mock_" + provider.id, login: "mock_user_" + provider.id, avatar_url: "" };
+      let rj;
+      try { rj = await r.json(); } catch (e) { rj = {}; }
+
+      // 最小 HTML 回写登录态（内联 JSON 中所有 </script 必须转义为 <\/script，防闭合注入）
+      const payload = JSON.stringify({
+        ok: !!(rj && rj.ok),
+        name: (rj && rj.name) || "",
+        token: (rj && rj.token) || "",
+        error: (rj && rj.error) || "",
+      }).replace(/<\//g, "<\\/");
+      const html = `<!doctype html><meta charset="utf-8"><title>登录中...</title><script>const r=${payload};if(r&&r.ok){localStorage.setItem("chat_token",r.token);localStorage.setItem("chat_user",r.name);location.href="/";}else{alert((r&&r.error)||"登录失败");location.href="/";}<\/script>`;
+      return new Response(html, { headers: { "Content-Type": "text/html;charset=UTF-8", "X-Content-Type-Options": "nosniff" } });
+    } catch (e) {
+      console.error("OAuth callback error:", e);
+      return jsonRes({ error: "OAuth 回调异常: " + String((e && e.message) || e) }, 500);
     }
-
-    const oauthRecord = {
-      provider: provider.id,
-      providerId: String(info[provider.idField]),
-      username: info[provider.usernameField],
-      avatar: info[provider.avatarField] || "",
-    };
-    const ip = request.headers.get("CF-Connecting-IP") || "";
-    const r = await stub.fetch(new URL("https://dummy-url/oauth/login-or-register"), {
-      method: "POST",
-      body: JSON.stringify({ ...oauthRecord, preAuthName: record.preAuthName || "", ip }),
-      headers: { "Content-Type": "application/json" },
-    });
-    let rj;
-    try { rj = await r.json(); } catch (e) { rj = {}; }
-
-    // 最小 HTML 回写登录态（内联 JSON 中所有 </script 必须转义为 <\/script，防闭合注入）
-    const payload = JSON.stringify({
-      ok: !!(rj && rj.ok),
-      name: (rj && rj.name) || "",
-      token: (rj && rj.token) || "",
-      error: (rj && rj.error) || "",
-    }).replace(/<\//g, "<\\/");
-    const html = `<!doctype html><meta charset="utf-8"><title>登录中...</title><script>const r=${payload};if(r&&r.ok){localStorage.setItem("chat_token",r.token);localStorage.setItem("chat_user",r.name);location.href="/";}else{alert((r&&r.error)||"登录失败");location.href="/";}<\/script>`;
-    return new Response(html, { headers: { "Content-Type": "text/html;charset=UTF-8", "X-Content-Type-Options": "nosniff" } });
   }
 
   // ---------- unbind：转发 registry /oauth/unbind（body: name/token/provider） ----------
