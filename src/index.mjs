@@ -98,6 +98,8 @@ import ADMIN_SEASON from "./client/admin/season.js";
 import ADMIN_HONOR from "./client/admin/honor.js";
 import ADMIN_MARKET from "./client/admin/market.js";
 import ADMIN_LP from "./client/admin/lp.js";
+// 🧪 v1.51 Vue3 运行时（esm-browser.prod，含编译器），供 /static/admin/lp.js 使用
+import ADMIN_VUE from "./client/admin/vendor/vue.js";
 
 // i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
 const CHAT_I18N = 'export { t, getLang, setLang, applyI18n, LANG_KEY } from "./state.js";';
@@ -184,6 +186,7 @@ const ADMIN_MODULES = {
   "admin/honor.js": ADMIN_HONOR,
   "admin/market.js": ADMIN_MARKET,
   "admin/lp.js": ADMIN_LP,
+  "admin/vendor/vue.js": ADMIN_VUE,
 };
 
 import { handleErrors } from "./utils.mjs";

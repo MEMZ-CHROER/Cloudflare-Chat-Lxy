@@ -94,6 +94,20 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.51</span>
+    <span class="version-date">2026-08-09</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">⚙️</span><span class="text"><span class="tag tag-feature">重构</span><b>Vue 3 引擎重写权限编辑器</b> — 整个 lp 编辑器从手写 DOM 升级为 Vue 3 响应式框架：Vue 3.5 运行时本地内嵌（/static/admin/vendor/vue.js，171KB 含编译器，text-loader 链路随站分发、无外部 CDN），lp.js 重写为 reactive store + 6 个组件（左侧导航 / 权限行 / 权限表 / 添加栏 / 主区 / 根布局），组件划分贴近原版 LuckPermsWeb</span></div>
+    <div class="feature-item"><span class="icon">⚡</span><span class="text"><span class="tag tag-feature">功能</span><b>响应式增量写入</b> — Vue computed 自动追踪 store 数据变化即重画，节点增删 / 值切换 / 批量操作零整棵刷新；jsdom 端到端 20 项断言全过（渲染 / 切组 / 值翻转 / 排序 / 全选 / 切用户 / 搜索过滤）</span></div>
+    <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span><b>Vue3 解构 props 陷阱</b> — 节点 value 曾因 setup 捕获旧对象引用，父组件换新节点后点击切换界面不刷新；改为 computed(() =&gt; props.node.value) 响应父组件节点更新，点击值列即时翻转</span></div>
+    <div class="feature-item"><span class="icon">🖥️</span><span class="text"><span class="tag tag-feature">兼容</span><b>双形态不变</b> — 管理后台内嵌版 + 独立 /lp 全屏页共用同一编辑器（容器抽象化），super-only 双闸 / 登录遮罩 / cookie 会话复用全部保留；部署 9b30a2ff→5cb05317 线上冒烟 10/10 全过</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.50</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>
