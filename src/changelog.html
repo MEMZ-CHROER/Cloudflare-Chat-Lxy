@@ -94,6 +94,22 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.54</span>
+    <span class="version-date">2026-08-10</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">📈</span><span class="text"><span class="tag tag-feature">功能</span><b>运营数据看板</b> — 管理后台新增「📈 运营数据」页（sections/stats.js，Vue3）：<b>当前在线 / 今日峰值（含日期）/ 历史峰值（含时间）/ 注册用户 / 总积分</b> 五张大数字卡 + <b>每日消息量近 7 日柱状图</b>（缺日补 0）+ <b>积分吞吐近 7 日按类型汇总表</b>（签到/任务/游戏/抽奖/红包/转账/奖励/管理员/商店，笔数 + 净变动着色）+ <b>房间活跃度表</b>（房间/当前在线/峰值/峰值时间）。普通 admin 即可查看</span></div>
+    <div class="feature-item"><span class="icon">🎯</span><span class="text"><span class="tag tag-feature">功能</span><b>在线峰值埋点</b> — rooms.mjs <code>/update</code> 维护每房间 <code>peak/peakTs</code>（随 saveRooms 持久化，零新 key）+ 注册表全局今日/历史峰值（<code>opsStats</code> 新持久化字段，遍历各房间在线和 = 同时在线总数，跨天自动重置今日峰值）</span></div>
+    <div class="feature-item"><span class="icon">💬</span><span class="text"><span class="tag tag-feature">功能</span><b>消息量日桶</b> — chatroom.mjs 发消息主路径 + webhook 广播路径各计一个 <code>stat:msg:&lt;YYYY-MM-DD&gt;</code> 日桶（房间 DO 各自累计，就近零跨 DO）；新增只读 <code>/stats</code> 端点供注册表遍历聚合（非公开端点，仅内部/管理转发可达）</span></div>
+    <div class="feature-item"><span class="icon">💰</span><span class="text"><span class="tag tag-feature">功能</span><b>积分吞吐聚合</b> — addLedger（所有积分变动唯一咽喉）内新增按 date+type 分组的 <code>ledgerByDay</code> 日桶（count 笔数 + total 净变动，保留最近 30 天，非热路径一次额外持久化）</span></div>
+    <div class="feature-item"><span class="icon">🔌</span><span class="text"><span class="tag tag-feature">功能</span><b>聚合 API</b> — 新增 <code>/api/admin/ops-stats</code>（admin 可读）：registry 新增只读 <code>/ops/stats</code> 端点返回全局聚合（房间在线/峰值/积分流水/注册数/总积分 BigInt），handler 再遍历所有房间拉取 <code>/stats</code> 聚合每日消息量（复用 all-users 遍历房间模板）</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>jsdom 22/22（stats 看板渲染：5 大数字/7 消息柱/积分吞吐汇总/房间表）+ admin 回归 148/148（侧边栏扩到 27 项）+ 聊天室批4 回归 17/17；9 文件语法全过</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.53</span>
     <span class="version-date">2026-08-09</span>
     <span class="version-arrow open">▶</span>
@@ -113,6 +129,7 @@ body {
 	    <div class="feature-item"><span class="icon">⚡</span><span class="text"><span class="tag tag-feature">性能</span><b>消息流 DocumentFragment 批量渲染（批4）</b> — 连续渲染多条消息先攒进 DocumentFragment，一次上屏 + 一次滚动，取代逐条 appendChild+scrollBy。renderers.js 新增模块级 <b>beginBatch/endBatch</b>（批量期间 finishMsg/日期分隔线/系统消息全改入 fragment）+ <b>finishMsg</b> 公共收尾（批量入 fragment，单条保留 trim+append+scroll）；addChatMessage 主消息路径（文本/图片/文件/语音/gh-card 全走 renderChannelMessage 降级）统一收敛到 finishMsg；channels.js 新增 <b>renderChannelBatch</b>（切频道缓存历史入口）+ websocket.js channel-history 改用批量 → 切频道历史从「N 次 append + N 次滚动」变为「1 次 fragment 上屏 + 1 次滚动」，回复徽章 refreshReplyCounts 在 append 上屏后统一刷新</span></div>
 	    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>批4 jsdom 17/17（单条回归 append+scroll 各 1、批量 50 条 0 次上屏全在 fragment、renderChannelBatch 100 条仅 1 次 append + 跨天日期分隔线、空批/单条批、endBatch 后单条恢复）+ 批0-批3 全回归 182/182（34+45+62+21+20）；修复 addChatMessage 主路径未走 finishMsg 致批量失效的真实 bug；线上冒烟 renderers/channels/websocket 全 200 + beginBatch/finishMsg/renderChannelBatch 符号在位 + 首页含 #chat-modals/#chat-nav</span></div>
 	    <div class="feature-item"><span class="icon">🐛</span><span class="text"><span class="tag tag-fix">修复</span><b>导航浮钮全部重叠在右上角</b> — 根因：`.floating-btn` 通用 CSS 是 fixed + right:12px 但<b>无 bottom</b>，旧按钮靠各自 id 定位（#sound-toggle bottom:60 / #dark-toggle 104 / #search-toggle 148 / #settings-toggle 200 / #music-toggle 252 / #tag-warehouse-btn 60·right56 / #more-menu-btn 304），而 Vue 浮钮没带 id → 全部 bottom:auto 堆在右上角同一点。修复：7 个 Vue 浮钮模板加回旧 id → 桌面 bottom 定位 + 移动端媒体查询（.floating-btn 隐藏、仅 #dark-toggle/#sound-toggle 恢复显示）自动跟随旧 CSS，视觉零差异；批3b 测试加 7 浮钮 id 断言 21/21</span></div>
+	    <div class="feature-item"><span class="icon">📄</span><span class="text"><span class="tag tag-feature">更新</span><b>/about 技术栈补全</b> — 技术栈列表从 10 项扩到 18 项：新增 Vue 3（声明式 UI：管理后台 + 聊天室弹窗/导航壳）、Durable Objects 细化（ChatRoom/RoomRegistry/VersionArchive/FileBucket）、Markdown 渲染管线、LuckPerms 风格权限系统（/lp）、GitHub OAuth 第三方登录、Canvas 游戏引擎（Hacknet 双人对战）、实时动画特效引擎（/icco 入侵警告）、自定义 Emoji 系统、fflate（ZIP 打包·版本存档），并细化 WebSocket/CSS3（多主题）等描述；R2/KV/D1 未直接绑定不虚列</span></div>
   </div>
 </div>
 

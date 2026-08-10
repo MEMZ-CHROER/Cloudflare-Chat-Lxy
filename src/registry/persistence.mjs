@@ -3,7 +3,7 @@
 export async function loadAll(storage) {
   let [roomsData, bannedData, bannedIpsData, tagsData, knownUsersData,
     userIpsData, gbData, akData, pointsData, regUsers, shopData, invData,
-    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData, marketOrdersData, marketConfigData, userRelationsData, lpData] =
+    tasksData, taskCompsData, taskClaimsData, rateLimitExemptData, lotteryPoolsData, botCommandsData, emojiData, redeemCodesData, kickProtectedData, mutesData, gameDailyWinData, redPacketsData, checkinByIpData, taskRewardPaidData, hacknetGamesData, seasonStateData, seasonProgressData, honorCoinsData, oauthStatesData, marketOrdersData, marketConfigData, userRelationsData, lpData, opsStatsData] =
     await Promise.all([
       storage.get("rooms"),
       storage.get("banned"),
@@ -40,6 +40,7 @@ export async function loadAll(storage) {
       storage.get("marketConfig"),
       storage.get("userRelations"),
       storage.get("lpData"),
+      storage.get("opsStats"),
     ]);
 
   return {
@@ -89,6 +90,8 @@ export async function loadAll(storage) {
       users: new Map(lpData.users.map(([n, u]) => [n, {permissions: new Map(u.permissions || []), groups: new Set(u.groups || [])}])),
       groups: new Map(lpData.groups.map(([gn, g]) => [gn, {permissions: new Map(g.permissions || []), parents: new Set(g.parents || [])}]))
     } : {users: new Map(), groups: new Map()},
+    // 📈 v1.54 运营数据：{todayPeak, todayPeakTs, todayPeakDate, globalPeak, globalPeakTs, ledgerByDay}
+    opsStats: opsStatsData || null,
   };
 }
 
@@ -223,6 +226,11 @@ export async function saveUserRelations(storage, data) {
     }]);
   }
   await storage.put("userRelations", serialized);
+}
+
+// 📈 v1.54 运营数据持久化：{todayPeak, todayPeakTs, todayPeakDate, globalPeak, globalPeakTs, ledgerByDay}（纯对象可 JSON）
+export async function saveOpsStats(storage, data) {
+  await storage.put("opsStats", data);
 }
 
 // 🧪 v1.49 LuckPerms 权限系统持久化：{users, groups} 均 Map（内嵌 Map/Set 序列化）

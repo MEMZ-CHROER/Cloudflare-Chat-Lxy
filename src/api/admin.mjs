@@ -22,6 +22,7 @@ import { handleAdminSeason } from "./admin/season.mjs";
 import { handleAdminHonor } from "./admin/honor.mjs";
 import { handleAdminMarket } from "./admin/market.mjs";
 import { handleAdminLp } from "./admin/lp.mjs";
+import { handleAdminOpsStats } from "./admin/ops-stats.mjs";
 
 // M7：登录爆破限流（IP → {count, resetTs}），同 IP 10 分钟内失败 ≥20 次封禁
 // 局限：Workers 多实例不共享，属缓解措施
@@ -150,7 +151,7 @@ export async function handleAdmin(path, request, env) {
   // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
   // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
   // F1/F2 修复：移除 "anon-grant"/"anon-log"——匿名券发放（自助铸券）与匿名真实身份审计日志仅限 super（ADMIN_SECRET_KEY），普通 admin 无权
-  const adminAllowedPaths = ["clear-room", "kick-user", "room-kick-all", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin"];
+  const adminAllowedPaths = ["clear-room", "kick-user", "room-kick-all", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin", "ops-stats"];
 
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
@@ -243,6 +244,10 @@ export async function handleAdmin(path, request, env) {
     }
     result = await handleAdminLp(path, request, env, url);
   }
+
+  // 📈 v1.54 运营数据看板（普通 admin 可读）
+  if (!result && path[1] === "ops-stats")
+    result = await handleAdminOpsStats(path, request, env, url);
 
   if (!result && ["anon-grant", "anon-log"].includes(path[1])) {
     // 🔒 安全修复（F1/F2）：anon-grant（匿名券铸券）/anon-log（匿名真实身份审计映射）仅限 super（ADMIN_SECRET_KEY）。

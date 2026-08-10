@@ -8,6 +8,7 @@ import UserModal from '/static/admin/sections/usermodal.js';
 // 路由表：key -> 懒加载组件。批量迁移时在此追加。
 const ROUTES = {
   dashboard: () => import('/static/admin/sections/dashboard.js'),
+  stats: () => import('/static/admin/sections/stats.js'),
   rooms: () => import('/static/admin/sections/rooms.js'),
   users: () => import('/static/admin/sections/users.js'),
   bans: () => import('/static/admin/sections/bans.js'),
@@ -38,6 +39,7 @@ const ROUTES = {
 // 侧边栏导航（superOnly: true 仅超管可见；过渡期只列已迁移页）
 const NAV = [
   { key: 'dashboard', label: '📊 仪表盘' },
+  { key: 'stats', label: '📈 运营数据' },
   { key: 'rooms', label: '🏠 房间列表', superOnly: true },
   { key: 'users', label: '👥 在线用户', superOnly: true },
   { key: 'bans', label: '🚫 封禁用户', superOnly: true },

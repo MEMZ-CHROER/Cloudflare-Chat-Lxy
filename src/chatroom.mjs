@@ -237,6 +237,19 @@ export class ChatRoom {
           });
         }
 
+        case "/stats": {
+          // 📈 v1.54 运营数据：每日消息计数（只读，供 registry /ops/stats 遍历聚合；非公开端点，仅内部/管理转发可达）
+          let msgByDay = {};
+          let entries = await this.storage.list({ prefix: "stat:msg:" });
+          for (let [k, v] of entries) {
+            let d = k.slice("stat:msg:".length);
+            if (d) msgByDay[d] = Number(v) || 0;
+          }
+          return new Response(JSON.stringify({ room: this.roomName, msgByDay }), {
+            status: 200, headers: {"Content-Type": "application/json"}
+          });
+        }
+
         case "/files": {
           let channel = url.searchParams.get("channel") || "general"; // M11：不带频道默认只列/导 general
           let entries = await this.storage.list({reverse: true, limit: 100});
@@ -445,6 +458,8 @@ export class ChatRoom {
           }
           let key = new Date(data.timestamp).toISOString();
           await this.storage.put(key, dataStr);
+          // 📈 v1.54 运营数据：每日消息计数日桶（广播/webhook 消息同样计入）
+          await this.bumpMsgStat(data.timestamp);
           return new Response("消息已发送到房间 " + (this.roomName || "未知"), {status: 200});
         }
 
@@ -873,6 +888,15 @@ export class ChatRoom {
         if (s.name) count++;
       }
       await stub.fetch("https://dummy-url/update?name=" + encodeURIComponent(this.roomName) + "&count=" + count);
+    } catch (e) {}
+  }
+
+  // 📈 v1.54 运营数据：每日消息计数日桶（storage key "stat:msg:<YYYY-MM-DD>"，房间 DO 各自累计）
+  async bumpMsgStat(ts) {
+    try {
+      let dayKey = "stat:msg:" + new Date(ts || Date.now()).toISOString().slice(0, 10);
+      let cur = Number(await this.storage.get(dayKey)) || 0;
+      await this.storage.put(dayKey, cur + 1);
     } catch (e) {}
   }
 
@@ -2172,6 +2196,8 @@ export class ChatRoom {
       // 只写 storage 不进广播 dataStr，避免真实身份经 WS 泄漏给其他客户端
       let storeStr = anonFlag && session.name ? JSON.stringify({...data, _anonOwner: hashAnonOwner(session.name)}) : dataStr;
       await this.storage.put(key, storeStr);
+      // 📈 v1.54 运营数据：每日消息计数日桶（房间 DO 各自累计，registry /ops/stats 遍历聚合）
+      await this.bumpMsgStat(data.timestamp);
     } catch (err) {
       console.error("webSocketMessage 异常:", err.stack || err);
       webSocket.send(JSON.stringify({error: "消息处理错误"}));

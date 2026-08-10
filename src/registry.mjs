@@ -26,7 +26,7 @@ import {
   saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid,
   saveHacknetGames,
   saveSeasonState, saveSeasonProgress, saveHonorCoins, saveOauthStates,
-  saveMarketOrders, saveMarketConfig, saveUserRelations, saveLp
+  saveMarketOrders, saveMarketConfig, saveUserRelations, saveLp, saveOpsStats
 } from "./registry/persistence.mjs";
 import { handleHacknet, processHnTimer } from "./registry/hacknet.mjs";
 import { handleSeason, processSeasonTimer } from "./registry/season.mjs";
@@ -115,6 +115,9 @@ export class RoomRegistry {
     this.userRelations = new Map();   // 👥 v1.48 关系链：关注/好友/拉黑（storage key "userRelations"）
     // 🧪 v1.49 LuckPerms 权限系统（storage key "lpData"）：{users, groups} 均 Map
     this.lp = {users: new Map(), groups: new Map()};
+    // 📈 v1.54 运营数据（storage key "opsStats"）：今日/历史在线峰值 + 积分流水日桶聚合
+    // ledgerByDay: { "<YYYY-MM-DD>": { type: {count, total}, ... } }，保留最近 30 天
+    this.opsStats = { todayPeak: 0, todayPeakTs: 0, todayPeakDate: null, globalPeak: 0, globalPeakTs: 0, ledgerByDay: {} };
     // 🧪 v1.49 诊断：实例标识 + load 完成标记（区分冷启动/多实例，定位 LP 读不到问题）
     this._instId = (crypto && crypto.randomUUID) ? crypto.randomUUID().slice(0, 8) : String(Math.random()).slice(2, 8);
     this._loaded = false;
@@ -174,6 +177,8 @@ export class RoomRegistry {
     if (data.userRelations) this.userRelations = data.userRelations;
     // 🧪 v1.49 LuckPerms 权限系统恢复
     if (data.lp) this.lp = data.lp;
+    // 📈 v1.54 运营数据恢复（峰值 + 积分流水日桶）
+    if (data.opsStats) this.opsStats = Object.assign({ todayPeak: 0, todayPeakTs: 0, todayPeakDate: null, globalPeak: 0, globalPeakTs: 0, ledgerByDay: {} }, data.opsStats);
 
     // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
     if (!this.shopItems.has("anon_coupon")) {
@@ -234,6 +239,9 @@ export class RoomRegistry {
 
   // 🧪 v1.49 LuckPerms 权限系统持久化
   async saveLp() { await saveLp(this.storage, this.lp); }
+
+  // 📈 v1.54 运营数据持久化（峰值 + 积分流水日桶）
+  async saveOpsStats() { await saveOpsStats(this.storage, this.opsStats); }
 
   // 事件入表并重排 alarm（DO 同一时刻仅一个 pending alarm）
   hnAddTimer(timer) {
@@ -344,6 +352,8 @@ export class RoomRegistry {
         this.seasonProgress.points = [...pm];
         await this.saveSeasonProgress();
       }
+      // 📈 v1.54 运营数据：积分吞吐日桶聚合（按 date+type 分组，保留 30 天）
+      if (this._trackLedger(type, delta)) await this.saveOpsStats();
       let key = "ledger:" + name;
       let raw = await this.storage.get(key);
       let arr = [];
@@ -362,6 +372,28 @@ export class RoomRegistry {
       let arr = JSON.parse(raw);
       return Array.isArray(arr) ? arr.slice(-(limit || 50)) : [];
     } catch (e) { return []; }
+  }
+
+  // 📈 v1.54 运营数据：积分吞吐日桶聚合。返回是否变化（调用方据此决定是否持久化）。
+  // 按 date+type 分组累加 {count, total}，仅保留最近 30 天桶。
+  _trackLedger(type, delta) {
+    try {
+      if (!this.opsStats) return false;
+      if (!this.opsStats.ledgerByDay) this.opsStats.ledgerByDay = {};
+      let day = new Date().toISOString().slice(0, 10);
+      let dayMap = this.opsStats.ledgerByDay[day];
+      if (!dayMap) dayMap = this.opsStats.ledgerByDay[day] = {};
+      let t = type || "other";
+      if (!dayMap[t]) dayMap[t] = { count: 0, total: 0 };
+      dayMap[t].count++;
+      dayMap[t].total += Number(delta) || 0;
+      // 只保留最近 30 天桶（防止 opsStats 无限膨胀）
+      let days = Object.keys(this.opsStats.ledgerByDay).sort();
+      if (days.length > 30) {
+        for (let d of days.slice(0, days.length - 30)) delete this.opsStats.ledgerByDay[d];
+      }
+      return true;
+    } catch (e) { return false; }
   }
 
   // 🏆 v1.45 荣誉币流水账本（复制 addLedger，独立 key "honorLedger:"+name，上限 100 条）
@@ -458,6 +490,31 @@ export class RoomRegistry {
       (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
     if (needsAdmin && !this.adminAuthorized(auth)) {
       return new Response("无权操作", { status: 403 });
+    }
+
+    // 📈 v1.54 运营数据：聚合看板端点（只读，与 /list、/points/all 同级别——经 /api/admin 转发时受管理鉴权）
+    if (path === "/ops/stats") {
+      let rooms = [];
+      let online = 0;
+      for (let [name, info] of this.rooms) {
+        rooms.push({ name, count: info.count || 0, peak: info.peak || 0, peakTs: info.peakTs || 0 });
+        online += (info.count || 0);
+      }
+      rooms.sort((a, b) => b.count - a.count);
+      let totalPoints = 0n;
+      for (let [, p] of this.userPoints) { try { totalPoints += _toBigInt(p); } catch {} }
+      return new Response(JSON.stringify({
+        rooms,
+        online,
+        todayPeak: this.opsStats.todayPeak || 0,
+        todayPeakTs: this.opsStats.todayPeakTs || 0,
+        todayPeakDate: this.opsStats.todayPeakDate || null,
+        globalPeak: this.opsStats.globalPeak || 0,
+        globalPeakTs: this.opsStats.globalPeakTs || 0,
+        registeredUsers: this.registeredUsers.size,
+        totalPoints: String(totalPoints),
+        ledgerByDay: this.opsStats.ledgerByDay || {},
+      }), { headers: { "Content-Type": "application/json" } });
     }
 
     let handler = null;

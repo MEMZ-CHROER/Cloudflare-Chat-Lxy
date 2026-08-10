@@ -153,6 +153,7 @@ import ADMIN_VUE_SEC_SEASON from "./client/admin/sections/season.js";
 import ADMIN_VUE_SEC_HONOR from "./client/admin/sections/honor.js";
 import ADMIN_VUE_SEC_EMOJI from "./client/admin/sections/emoji.js";
 import ADMIN_VUE_SEC_USERMODAL from "./client/admin/sections/usermodal.js";
+import ADMIN_VUE_SEC_STATS from "./client/admin/sections/stats.js";
 
 // i18n 已内联进 state.js；此 re-export 兼容仍引用 ./i18n.js 的旧前端缓存，避免登录模块加载失败
 const CHAT_I18N = 'export { t, getLang, setLang, applyI18n, LANG_KEY } from "./state.js";';
@@ -289,6 +290,7 @@ const ADMIN_MODULES = {
   "admin/sections/honor.js": ADMIN_VUE_SEC_HONOR,
   "admin/sections/emoji.js": ADMIN_VUE_SEC_EMOJI,
   "admin/sections/usermodal.js": ADMIN_VUE_SEC_USERMODAL,
+  "admin/sections/stats.js": ADMIN_VUE_SEC_STATS,
 };
 
 import { handleErrors } from "./utils.mjs";

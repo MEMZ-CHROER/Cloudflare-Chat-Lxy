@@ -19,11 +19,28 @@ export async function handleRooms(reg, request, url) {
       if (!name) return new Response("请提供房间名", { status: 400 });
       let room = reg.rooms.get(name);
       if (!room) {
-        reg.rooms.set(name, { count: count || 0, password: null });
+        room = { count: count || 0, password: null };
+        reg.rooms.set(name, room);
       } else {
         room.count = count || 0;
       }
+      // 📈 v1.54 运营数据：房间在线峰值（随 saveRooms 持久化）+ 全局今日/历史峰值（opsStats 持久化）
+      let now = Date.now();
+      if ((room.peak || 0) < room.count) { room.peak = room.count; room.peakTs = now; }
+      let todayKey = new Date(now).toISOString().slice(0, 10);
+      if (!reg.opsStats) reg.opsStats = { todayPeak: 0, todayPeakTs: 0, todayPeakDate: null, globalPeak: 0, globalPeakTs: 0, ledgerByDay: {} };
+      if (reg.opsStats.todayPeakDate !== todayKey) {
+        reg.opsStats.todayPeakDate = todayKey;
+        reg.opsStats.todayPeak = 0;
+        reg.opsStats.todayPeakTs = 0;
+      }
+      // 全局同时在线总数 = 所有房间在线和（注册表遍历求和，房间数少可接受）
+      let totalOnline = 0;
+      for (let [, r] of reg.rooms) totalOnline += (r.count || 0);
+      if ((reg.opsStats.todayPeak || 0) < totalOnline) { reg.opsStats.todayPeak = totalOnline; reg.opsStats.todayPeakTs = now; }
+      if ((reg.opsStats.globalPeak || 0) < totalOnline) { reg.opsStats.globalPeak = totalOnline; reg.opsStats.globalPeakTs = now; }
       await reg.save();
+      await reg.saveOpsStats();
       return new Response("ok");
     }
 

@@ -268,9 +268,10 @@ assert(has('.av-topbar'), "顶栏渲染");
 assert(text('.av-brand').includes('CloudChat Admin'), "品牌栏");
 assert(text('.av-level').includes('super'), "超管徽标");
 
-console.log("== 侧边栏（super 显示 26 项）==");
+console.log("== 侧边栏（super 显示 27 项，v1.54 加运营数据）==");
 const navs = qsAll('.av-nav-item');
-assert(navs.length === 26, "侧边栏 26 项，实际 " + navs.length);
+assert(navs.length === 27, "侧边栏 27 项，实际 " + navs.length);
+assert(navs.some(n => n.textContent.includes('运营数据')), "含运营数据");
 assert(navs.some(n => n.textContent.includes('等级管理')), "含等级管理");
 assert(navs.some(n => n.textContent.includes('商店管理')), "含商店管理");
 assert(navs.some(n => n.textContent.includes('任务管理')), "含任务管理");
