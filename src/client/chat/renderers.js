@@ -167,7 +167,7 @@ function maybeDateDivider(ts) {
     div.className = "date-divider";
     div.style.cssText = "text-align:center;font-size:11px;color:var(--text-secondary);padding:6px 0 4px;user-select:none;border-bottom:1px solid var(--border);margin:4px 0 6px;";
     div.textContent = "—— " + dateStr + " ——";
-    state.chatlog.appendChild(div);
+    (_batchTarget || state.chatlog).appendChild(div);
   }
   _lastMsgDate = dateStr;
 }
@@ -481,8 +481,15 @@ function openMsgActions(wrapper, { name, text, timestamp, msgId, tag, tagColor, 
   });
 }
 
-// 公共收尾：裁剪 + 上屏 + 滚动到底
+// v1.53 批4 消息流批量：连续渲染多条消息先攒进 DocumentFragment，一次上屏 + 一次滚动（取代逐条 appendChild+scrollBy）
+// beginBatch/endBatch 之间 finishMsg/日期分隔线/系统消息全部改入 fragment；上屏 + 滚动由调用方统一完成
+let _batchTarget = null;
+export function beginBatch() { _batchTarget = document.createDocumentFragment(); return _batchTarget; }
+export function endBatch() { const f = _batchTarget; _batchTarget = null; return f; }
+
+// 公共收尾：裁剪 + 上屏 + 滚动到底（批量模式下仅入 fragment，裁剪/滚动由批量调用方统一做）
 function finishMsg(wrapper) {
+  if (_batchTarget) { _batchTarget.appendChild(wrapper); return; }
   trimChatlog();
   state.chatlog.appendChild(wrapper);
   state.chatlog.scrollBy(0, 1e8);
@@ -494,6 +501,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     let p = document.createElement("p");
     p.className = "system-msg";
     p.textContent = text;
+    if (_batchTarget) { _batchTarget.appendChild(p); return; }
     trimChatlog();
     state.chatlog.appendChild(p);
     state.chatlog.scrollBy(0, 1e8);
@@ -556,14 +564,12 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     ri.style.cssText = "font-size:10px;color:#888;margin-left:4px;vertical-align:middle;user-select:none;";
     wrapper.appendChild(ri);
   }
-  trimChatlog();
-  state.chatlog.appendChild(wrapper);
+  finishMsg(wrapper);
   if (window._readObserver) window._readObserver.observe(wrapper);
   if (!isSelf && name && timestamp && name !== "AI" && name !== "Bot") {
     let prev = wrapper.previousElementSibling;
     if (prev && prev.classList && prev.classList.contains("chat-msg") && prev.dataset.msgName === name) wrapper.classList.add("grouped");
   }
-  state.chatlog.scrollBy(0, 1e8);
 }
 
 export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar, level) {

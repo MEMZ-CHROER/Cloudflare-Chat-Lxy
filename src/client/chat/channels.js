@@ -1,6 +1,6 @@
 // 频道体系 — 频道栏 UI + 切换 + 非当前频道消息缓存
 import { state, t } from './state.js';
-import { addChatMessage, resetMsgDate, refreshReplyCounts } from './renderers.js';
+import { addChatMessage, beginBatch, endBatch, resetMsgDate, refreshReplyCounts } from './renderers.js';
 import { getAdminKey } from './ui.js';
 
 const MAX_CACHE = 150;
@@ -66,8 +66,7 @@ export function switchChannel(name) {
   state.lastSeenTimestamp = 0;
   resetMsgDate(); // 日期分组重新计数
   if (state.channelCache[name] && state.channelCache[name].length) {
-    state.channelCache[name].forEach(m => renderChannelMessage(m));
-    refreshReplyCounts();
+    renderChannelBatch(state.channelCache[name]);
     state.chatlog.scrollBy(0, 1e8);
   } else {
     const ld = document.createElement("p");
@@ -78,6 +77,16 @@ export function switchChannel(name) {
   if (state.currentWebSocket) {
     state.currentWebSocket.send(JSON.stringify({type: "switch-channel", channel: name}));
   }
+}
+
+// v1.53 批4 消息流批量：一扎消息攒进 DocumentFragment 一次上屏（channel-history 切频道历史共用），
+// 取代逐条 addChatMessage 的多次 appendChild + scrollBy；回复徽章在 append 上屏后统一刷新
+export function renderChannelBatch(messages) {
+  const frag = beginBatch();
+  (messages || []).forEach(m => renderChannelMessage(m));
+  if (frag.childNodes.length) state.chatlog.appendChild(frag);
+  endBatch();
+  refreshReplyCounts();
 }
 
 // 渲染一条频道消息（文本/图片/文件/语音统一走 addChatMessage，媒体降级为文本标记）
