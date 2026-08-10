@@ -44,6 +44,12 @@ export async function handleCommand(text) {
       addChatMessage(null, t("* 可用命令: /pay <用户> <数量> 转积分 | /ledger 查看积分流水 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /connect #房间 切换房间 | /dc 退出当前房间 | /kick <用户> 踢出 | /kickall 踢出本房间其他人(自己留下) | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /gh <owner>/<repo> 查GitHub仓库卡片 | /icco 全员触发入侵警告特效 | /destroy <口令> 销毁当前房间 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助"));
       break;
 
+    case "/kb":
+      // v1.56 房间知识库（通用入口，不依赖 nav 壳）
+      import('./modal-manager.js').then(m => m.openModal('kb', { room: state.roomname }))
+        .catch(() => showError(t("打开知识库失败")));
+      break;
+
     case "/kick": {
       if (!arg) { showError(t("用法: /kick <用户名>")); break; }
       let adminKey = getAdminKey();

@@ -68,6 +68,8 @@ import CHAT_MARKET from "./client/chat/market.js";
 import CHAT_RELATION from "./client/chat/relation.js";
 import CHAT_MODAL_MANAGER from "./client/chat/modal-manager.js";
 import CHAT_MODAL_SETTINGS from "./client/chat/modals/settings.js";
+import CHAT_DOC_STORE from "./client/chat/doc-store.js";
+import CHAT_MODAL_KB from "./client/chat/modals/kb.js";
 // 🧪 v1.53 批1 经济域弹窗 Vue 化
 import CHAT_MODAL_SHOP from "./client/chat/modals/shop.js";
 import CHAT_MODAL_MARKET from "./client/chat/modals/market.js";
@@ -212,6 +214,9 @@ const CHAT_MODULES = {
   "chat/vendor/vue.js": ADMIN_VUE,
   "chat/modal-manager.js": CHAT_MODAL_MANAGER,
   "chat/modals/settings.js": CHAT_MODAL_SETTINGS,
+  // v1.56 内容沉淀：房间知识库
+  "chat/doc-store.js": CHAT_DOC_STORE,
+  "chat/modals/kb.js": CHAT_MODAL_KB,
   "chat/modals/shop.js": CHAT_MODAL_SHOP,
   "chat/modals/market.js": CHAT_MODAL_MARKET,
   "chat/modals/lottery.js": CHAT_MODAL_LOTTERY,

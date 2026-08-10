@@ -148,7 +148,7 @@ export async function handleManage(room, session, data, webSocket) {
       webSocket.send(JSON.stringify({error: "超过2分钟无法编辑"}));
       return true;
     }
-    let maxMsgLen = (session.vip && session.vip.features ? session.vip.features.maxMsgLen : 256);
+    let maxMsgLen = room.getMaxMsgLen(session); // v1.56 收敛单点
     if (editMessage.length > maxMsgLen) {
       webSocket.send(JSON.stringify({error: "消息过长"}));
       return true;

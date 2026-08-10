@@ -94,6 +94,21 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.56</span>
+    <span class="version-date">2026-08-10</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">📝</span><span class="text"><span class="tag tag-feature">功能</span><b>内容沉淀 · 长文通道（路线图 #107 第一批）</b> — 输入框升级<b>多行 textarea</b>（Enter 发送 / Shift+Enter 换行 / 中文输入法组词回车不误发，自动增高 44~120px）；消息长度上限从 <b>256 字大幅提升到 5000 字</b>（VIP10+ 10000 字，服务端 <code>getMaxMsgLen</code> 单点收敛原 4 处重复校验）；超长消息（&gt;1500 字）自动<b>折叠为 420px 卡片 + 渐变遮罩 + 「展开全部 N 字」按钮</b>，点击展开不误触发整条复制</span></div>
+    <div class="feature-item"><span class="icon">🧩</span><span class="text"><span class="tag tag-feature">功能</span><b>Markdown 渲染全面增强</b> — markdownToHtml 重写为<b>块级状态机 + 逐段转义 + 行内占位符</b>两阶段管线：新增<b>标题 #、引用 &gt;、无序/有序列表 - * 1.、表格 |、水平线 ---、删除线 ~~</b>，与既有代码块/katex/加粗/斜体/URL/@提及/emoji 共存；根治三类误伤（fence 内代码被块级处理 / 列表 * 被斜体吃掉 / 块级生成的 HTML 标签内被行内正则扫入），并附带修复「fence 内内容被后续加粗/URL 二次处理」「行内代码内 ** 被误加粗」两个旧 bug</span></div>
+    <div class="feature-item"><span class="icon">📚</span><span class="text"><span class="tag tag-feature">功能</span><b>房间知识库（路线图 #107 第二批）</b> — 每个房间一个文档库（chatroom/doc.mjs）：<b>list/get 游客可读，create 需登录，update/delete 作者本人或管理员</b>（仿 relay-end 权限）。任意消息右键菜单「📚 存入知识库」一键沉淀（标题默认取消息前 20 字）；「📚 房间知识库」入口在更多菜单 + <code>/kb</code> 命令；知识库弹窗（modals/kb.js Vue3）支持列表/搜索/查看/新建/编辑/删除，正文完整 markdown 渲染。文档存 <code>documents</code> 元数据 + <code>doc:&lt;id&gt;</code> 正文分 key（规避 DO 128KiB 单值上限，单文档 ≤20000 字，每房间 ≤200 篇）</span></div>
+    <div class="feature-item"><span class="icon">🔗</span><span class="text"><span class="tag tag-feature">功能</span><b>文档引用</b> — 消息内 <code>[[docId:标题]]</code> 渲染为 📄 文档链接（.doc-ref），点击深链打开知识库对应文档；doc-store.js 统一 WS 事件路由（reqId 请求/响应关联 + 8s 超时 + 广播订阅刷新），旧客户端收到 doc 类型被显式分支吞掉不再显示 undefined</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>jsdom 46/46（markdown 21 断言：标题/引用/列表/表格/删除线/水平线/fence 隔离/行内代码保护/斜体列表区分/[[docId]]/XSS/URL 不二次包裹 + 折叠 4 断言 + doc 后端 16 断言 CRUD/权限/限长/脱敏 + kb 弹窗 5 断言）+ 线上冒烟 13/13（静态模块 200 + bundle 符号 + 2000 字长消息广播 + 6000 字超限被拒 + doc create/list/get 端到端）；修复 kb.js 模板 t() 未返回真实 bug</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.55</span>
     <span class="version-date">2026-08-10</span>
     <span class="version-arrow open">▶</span>

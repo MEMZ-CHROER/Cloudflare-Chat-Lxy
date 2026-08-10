@@ -59,14 +59,27 @@ export function startChat() {
       }
       if (event.key === "Escape") { hideMentionDropdown(); event.preventDefault(); return; }
     }
-    if (event.keyCode == 38) state.chatlog.scrollBy(0, -50);
-    else if (event.keyCode == 40) state.chatlog.scrollBy(0, 50);
+    // v1.56 长文通道：纯 Enter 发送、Shift+Enter 换行、IME 组词回车（isComposing）不发送
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      state.chatroom.requestSubmit();
+      return;
+    }
+    // 滚屏仅当输入框无换行且光标在边界（避免抢占多行文本的光标移动）
+    const v = state.chatInput.value;
+    if (event.keyCode == 38 && v.indexOf("\n") === -1 && state.chatInput.selectionStart === 0) state.chatlog.scrollBy(0, -50);
+    else if (event.keyCode == 40 && v.indexOf("\n") === -1 && state.chatInput.selectionStart === v.length) state.chatlog.scrollBy(0, 50);
     else if (event.keyCode == 33) state.chatlog.scrollBy(0, -state.chatlog.clientHeight + 50);
     else if (event.keyCode == 34) state.chatlog.scrollBy(0, state.chatlog.clientHeight - 50);
   });
 
   state.chatInput.addEventListener("input", event => {
-    if (event.currentTarget.value.length > 256) event.currentTarget.value = event.currentTarget.value.slice(0, 256);
+    // v1.56 长文通道：软上限 10000（覆盖服务端 VIP 上限，超出精确截断）替代原 256 硬截断
+    const MAX_LEN = 10000;
+    if (event.currentTarget.value.length > MAX_LEN) event.currentTarget.value = event.currentTarget.value.slice(0, MAX_LEN);
+    // 自动增高（clamp 44~120px，textarea 多行）
+    state.chatInput.style.height = "auto";
+    state.chatInput.style.height = Math.min(Math.max(state.chatInput.scrollHeight, 44), 120) + "px";
     if (event.currentTarget.value.trim()) sendTyping();
     localStorage.setItem("chat_draft", event.currentTarget.value);
   });
@@ -76,6 +89,7 @@ export function startChat() {
     if (state.currentWebSocket) {
       let text = state.chatInput.value;
       state.chatInput.value = "";
+      state.chatInput.style.height = "auto"; // v1.56 发送后复原 textarea 高度
       // L27: // 转义——以 // 开头时去掉一个前导斜杠，按普通文本发送（如 //about → /about）
       if (text.startsWith("//")) text = text.slice(1);
       else if (text.startsWith("/")) { handleCommand(text); return; }
@@ -301,6 +315,10 @@ export function startChat() {
             break;
           case "export":
             import('./ui.js').then(m => m.exportChatLog());
+            break;
+          case "kb":
+            // v1.56 房间知识库（legacy 兜底入口）
+            import('./modal-manager.js').then(m => m.openModal('kb', { room: state.roomname })).catch(() => {});
             break;
         }
       });

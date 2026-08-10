@@ -138,7 +138,7 @@
     <div id="typing-indicator"></div>
     <div id="reply-bar"></div>
     <button id="scroll-bottom-btn" type="button" title="滚动到底部">↓</button>
-    <input id="chat-input" placeholder="输入消息..." data-i18n-placeholder="chatInputPlaceholder">
+    <textarea id="chat-input" rows="1" placeholder="输入消息...（Shift+Enter 换行）" data-i18n-placeholder="chatInputPlaceholder" spellcheck="false"></textarea>
     <div id="md-toolbar"
       style="display:none;position:fixed;bottom:52px;left:12px;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:8px;z-index:25;align-items:center;">
       <span class="md-btn" data-wrap="**"
@@ -268,6 +268,8 @@
     <div class="more-menu-item" data-action="archive"><span class="mm-icon">📦</span><span class="mm-label">版本存档</span>
     </div>
     <div class="more-menu-item" data-action="export"><span class="mm-icon">📥</span><span class="mm-label">导出聊天</span>
+    </div>
+    <div class="more-menu-item" data-action="kb"><span class="mm-icon">📚</span><span class="mm-label">房间知识库</span>
     </div>
   </div>
   <!-- Search Bar -->

@@ -1,6 +1,7 @@
 import { handleErrors, safeEqual } from "./utils.mjs";
 import { handleMedia } from "./chatroom/media.mjs";
 import { handleManage, stripSensitiveMsg } from "./chatroom/manage.mjs";
+import { handleDoc } from "./chatroom/doc.mjs";
 
 // 🔒 安全修复（W20）：颜色白名单（色名 + #hex），消息颜色/房间等级样式统一使用
 const SAFE_COLOR_RE = /^(red|blue|green|purple|pink|cyan|gray|grey|orange|yellow|teal|indigo|brown|lime|deeporange|rose|crimson|coral|gold|amber|forest|seagreen|turquoise|steel|royalblue|mediumpurple|darkviolet|chocolate|olive|firebrick|slateblue|darkcyan|mediumseagreen|indianred|cadetblue|#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?)$/;
@@ -112,6 +113,15 @@ export class ChatRoom {
     this.relays = new Map();
     this._loadRelays = this.storage.get("relays").then(data => {
       if (data) this.relays = new Map(data);
+    });
+
+    // v1.56 内容沉淀：房间知识库文档（documents 存元数据 Map，正文在 doc:<id> 分 key，见 chatroom/doc.mjs）
+    this.documents = new Map();
+    this._loadDocuments = this.storage.get("documents").then(data => {
+      if (data) {
+        try { this.documents = new Map(JSON.parse(data).map(m => [m.id, m])); }
+        catch (e) { this.documents = new Map(); }
+      }
     });
 
     this.highlights = [];
@@ -313,6 +323,8 @@ export class ChatRoom {
           }
           let msgs = [];
           for (let [key, val] of entries) {
+            // v1.56 知识库正文走 doc:<id> 分 key，不混入消息流
+            if (key.startsWith("doc:")) continue;
             try {
               let msg = JSON.parse(val);
               if (msg.type !== "file" && (msg.channel || "general") === channel) {
@@ -385,6 +397,8 @@ export class ChatRoom {
           let entries = await this.storage.list({reverse: false});
           let msgs = [];
           for (let [key, val] of entries) {
+            // v1.56 知识库正文走 doc:<id> 分 key，不混入导出
+            if (key.startsWith("doc:")) continue;
             try {
               let msg = JSON.parse(val);
               if (msg && (msg.type === undefined || msg.type === "text" || msg.type === "image" || msg.type === "file" || msg.type === "zifu" || msg.type === "voice" || msg.type === "gh-card") && (!channel || (msg.channel || "general") === channel)) {
@@ -866,6 +880,19 @@ export class ChatRoom {
       }
     }
 
+    // v1.56 房间知识库：入房推送文档元数据列表（游客也可读）
+    if (this._loadDocuments) await this._loadDocuments;
+    if (this.documents && this.documents.size > 0) {
+      session.blockedMessages.push(JSON.stringify({
+        type: "doc", action: "list",
+        docs: [...this.documents.values()].map(d => ({
+          id: d.id, title: d.title, tags: d.tags || [],
+          createdBy: d.createdBy, createdAt: d.createdAt,
+          updatedAt: d.updatedAt, updatedBy: d.updatedBy
+        }))
+      }));
+    }
+
     if (this._loadChannels) await this._loadChannels;
     session.blockedMessages.push(JSON.stringify({type: "channels", channels: this.channels}));
 
@@ -1135,7 +1162,7 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "请先登录后再发送私信"}));
           return;
         }
-        let whisperMax = (session.vip && session.vip.features ? session.vip.features.maxMsgLen : 256);
+        let whisperMax = this.getMaxMsgLen(session);
         if (whisperMsg.length > whisperMax) {
           webSocket.send(JSON.stringify({error: "消息过长（VIP最高 " + whisperMax + " 字）"}));
           return;
@@ -1326,7 +1353,7 @@ export class ChatRoom {
           webSocket.send(JSON.stringify({error: "定时时间不能超过7天"}));
           return;
         }
-        let maxLen = (session.vip && session.vip.features ? session.vip.features.maxMsgLen : 256);
+        let maxLen = this.getMaxMsgLen(session);
         if (schedMsg.length > maxLen) {
           webSocket.send(JSON.stringify({error: "消息过长"}));
           return;
@@ -1641,6 +1668,8 @@ export class ChatRoom {
       }
 
       if (await handleManage(this, session, data, webSocket)) return;
+      // v1.56 房间知识库：文档操作不受公告频道只读限制（list/get/create/update/delete）
+      if (await handleDoc(this, session, data, webSocket)) return;
 
       if (this._loadChannels) await this._loadChannels; // 确保频道列表已加载（防热重启后自定义公告频道只读失效）
       let msgChannel = session.channel || "general";
@@ -1738,7 +1767,7 @@ export class ChatRoom {
         return;
       }
 
-      let maxMsgLen = (session.vip && session.vip.features ? session.vip.features.maxMsgLen : 256);
+      let maxMsgLen = this.getMaxMsgLen(session);
       if (data.message.length > maxMsgLen) {
         webSocket.send(JSON.stringify({error: "消息过长（VIP最高 " + maxMsgLen + " 字）"}));
         return;
@@ -2261,6 +2290,11 @@ export class ChatRoom {
       return;
     }
     send({system: "✅ 已回滚部署到版本 " + version + "，线上正在切换，稍后生效"});
+  }
+
+  // v1.56 长文通道：消息长度单点收敛（普通 5000 / VIP10+ 10000，值来自 getVipFeatures），替代 4 处重复取 features.maxMsgLen
+  getMaxMsgLen(session) {
+    return (session && session.vip && session.vip.features && session.vip.features.maxMsgLen) || 5000;
   }
 
   containsProfanity(text) {

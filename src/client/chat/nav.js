@@ -60,6 +60,8 @@ const NavBar = {
       changelog: () => window.open('/changelog', '_blank'),
       archive: () => window.open('/archive', '_blank'),
       export: lazy({ file: 'ui', fn: 'exportChatLog' }),
+      // v1.56 房间知识库：Vue 弹窗（懒加载 modals/kb.js）
+      kb: () => import('./modal-manager.js').then(m => m.openModal('kb', { room: state.roomname })),
     };
     const floatActions = {
       search: lazy({ file: 'search', fn: 'toggleSearch' }),
@@ -77,6 +79,7 @@ const NavBar = {
       { action: 'changelog', icon: '📋', label: t('更新日志') },
       { action: 'archive', icon: '📦', label: t('版本存档') },
       { action: 'export', icon: '📥', label: t('导出聊天') },
+      { action: 'kb', icon: '📚', label: t('房间知识库') },
     ];
     const bottomItems = [
       { key: 'sound', icon: () => soundMuted.value ? '🔇' : '🔊', title: '提示音', fn: toggleSound },

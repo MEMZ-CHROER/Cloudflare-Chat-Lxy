@@ -117,12 +117,12 @@ export function getVipFeatures(vip) {
   if (!vip) return {
     badge: false, vipColor: null,
     uploadImgMB: 1, uploadFileMB: 20,
-    kickProtect: false, maxMsgLen: 256
+    kickProtect: false, maxMsgLen: 5000
   };
   const t = vip.tier;
   let badge = true;
   let uploadImgMB = 1, uploadFileMB = 20;
-  let kickProtect = false, maxMsgLen = 256;
+  let kickProtect = false, maxMsgLen = 5000;
   let vipColor = null;
 
   if (t <= 3) {
@@ -138,25 +138,25 @@ export function getVipFeatures(vip) {
     uploadImgMB = 10;
     uploadFileMB = 100;
     kickProtect = true;
-    maxMsgLen = 500;
+    maxMsgLen = 5000;
     vipColor = '#9b59b6';
   } else if (t === 10) {
     uploadImgMB = 20;
     uploadFileMB = 200;
     kickProtect = true;
-    maxMsgLen = 2000;
+    maxMsgLen = 10000;
     vipColor = '#e74c3c';
   } else if (t === 11) {
     uploadImgMB = 50;
     uploadFileMB = 500;
     kickProtect = true;
-    maxMsgLen = 2000;
+    maxMsgLen = 10000;
     vipColor = '#f1c40f';
   } else {
     uploadImgMB = 100;
     uploadFileMB = 1000;
     kickProtect = true;
-    maxMsgLen = 2000;
+    maxMsgLen = 10000;
     vipColor = '#f1c40f';
   }
   return { badge, vipColor, uploadImgMB, uploadFileMB, kickProtect, maxMsgLen };

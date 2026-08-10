@@ -78,6 +78,18 @@ document.body.addEventListener("click", (e) => {
   if (mention) { e.preventDefault(); let name = mention.dataset.mention; if (name) showUserMenu(name, e.clientX, e.clientY); }
 });
 
+// v1.56 知识库引用 [[docId:标题]] 点击 → 打开知识库并深链到该文档
+document.body.addEventListener("click", (e) => {
+  let ref = e.target.closest(".doc-ref");
+  if (ref) {
+    e.preventDefault();
+    let docId = ref.dataset.docid;
+    import('./state.js').then(({ state }) => {
+      import('./modal-manager.js').then(m => m.openModal('kb', { room: state.roomname, openDocId: docId }));
+    }).catch(() => {});
+  }
+});
+
 // 代码复制
 document.body.addEventListener("click", (e) => {
   let btn = e.target.closest(".code-copy-btn");

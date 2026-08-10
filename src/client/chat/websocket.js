@@ -438,6 +438,9 @@ export async function join() {
       if (data.effect === "wave") applyWaveEffect();
       else if (data.effect === "crash") applyCrashEffect();
       else if (data.effect === "icco") applyIccoEffect();
+    } else if (data.type === "doc") {
+      // v1.56 房间知识库：路由到 doc-store（请求响应 + 广播刷新列表）；显式分支避免落入 else 兜底显示 undefined
+      import('./doc-store.js').then(m => m.applyServerEvent(data)).catch(() => {});
     } else if (data.type === "redpacket") {
       if (data.action === "new") {
         // 新红包（按频道隔离）

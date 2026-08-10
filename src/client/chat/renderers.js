@@ -178,30 +178,45 @@ export function escapeHtml(str) {
   return div.innerHTML;
 }
 
-export function markdownToHtml(text) {
-  let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-    return '<pre><code' + (lang ? ' class="language-' + lang + '"' : '') + '>' + code + '</code></pre>';
+// v1.56 内容沉淀 markdown 重写：块级状态机 + 逐段 escape + inline 占位符
+// 根治三类误伤：(a) fence 内代码被块级处理 (b) 列表 * 被斜体正则吃掉 (c) 块级生成的 HTML 标签内被行内正则扫入
+// 新增块级语法：标题 # / 引用 > / 列表 - * 1. / 表格 | / 水平线 --- / 删除线 ~~ / 知识库引用 [[docId:标题]]
+// 附带修复现有 bug：fence 内内容不再被后续 bold/url 二次处理；行内代码 `**x**` 不再被误加粗
+
+// 行内处理器：入参已是 escape 后的文本。①先占位保护行内代码/katex，②文本级转换，③还原占位符。
+function inlineRenderer(escaped) {
+  const tokens = [];
+  // ① 占位保护：行内代码 / katex 的内容绝不能被后续 bold/italic/url 改动
+  escaped = escaped.replace(/`([^`]+)`/g, (m, c) => {
+    const i = tokens.push({ html: '<code>' + c + '</code>' }) - 1;
+    return ' T' + i + ' ';
   });
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // LaTeX: display math $$...$$ (before inline to avoid $$ being matched as two $...$)
   if (typeof katex !== 'undefined') {
-    html = html.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
-      try { return katex.renderToString(tex.trim(), {displayMode: true, throwOnError: false}); }
-      catch(e) { return '$$' + tex + '$$'; }
+    escaped = escaped.replace(/\$\$([\s\S]*?)\$\$/g, (m, tex) => {
+      let html = m;
+      try { html = katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }); } catch (e) {}
+      const i = tokens.push({ html }) - 1;
+      return ' T' + i + ' ';
     });
-    html = html.replace(/\$([^$\n]+?)\$/g, (_, tex) => {
-      try { return katex.renderToString(tex.trim(), {displayMode: false, throwOnError: false}); }
-      catch(e) { return '$' + tex + '$'; }
+    escaped = escaped.replace(/\$([^$\n]+?)\$/g, (m, tex) => {
+      let html = m;
+      try { html = katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }); } catch (e) {}
+      const i = tokens.push({ html }) - 1;
+      return ' T' + i + ' ';
     });
   }
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/(\s|^)\*([^*\s][^*]*?)\*(\s|$)/g, '$1<em>$2</em>$3');
-  html = html.replace(/https?:\/\/[^\s<"]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>');
-  html = html.replace(/@([\w一-鿿\-_]+)/g, '<span class="mention" data-mention="$1">@$1</span>');
-  // Custom emoji :name:
+  // ② 文本级转换（占位符  T<n>  不含这些语法字符，天然免疫；先加粗后斜体防交叉）
+  escaped = escaped
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(\s|^)\*([^*\s][^*]*?)\*(\s|$)/g, '$1<em>$2</em>$3')
+    .replace(/~~(.+?)~~/g, '<del>$1</del>')
+    .replace(/\[\[([a-z0-9_\-]{8,48}):([^\]]{1,80})\]\]/g, (m, docId, title) =>
+      '<span class="doc-ref" data-docid="' + docId + '" title="' + title + '">📄 ' + title + '</span>')
+    .replace(/https?:\/\/[^\s<"]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>')
+    .replace(/@([\w一-鿿\-_]+)/g, '<span class="mention" data-mention="$1">@$1</span>');
+  // 自定义 emoji :name:
   if (state.customEmoji) {
-    html = html.replace(/:([a-zA-Z0-9_一-鿿]+):/g, (match, name) => {
+    escaped = escaped.replace(/:([a-zA-Z0-9_一-鿿]+):/g, (match, name) => {
       let dataUrl = state.customEmoji[name];
       if (dataUrl) {
         // 🔒 安全修复（LD6）：图片 src 一并转义引号，防属性逃逸注入 on* 事件
@@ -210,7 +225,119 @@ export function markdownToHtml(text) {
       return match;
     });
   }
-  return html;
+  // ③ 还原占位符
+  return escaped.replace(/ T(\d+) /g, (m, i) => tokens[i].html);
+}
+
+// 块级状态机：跑在【原始文本】上，逐行扫描；围栏内跳过所有块级/行内处理
+function parseBlocks(text) {
+  const lines = String(text).split('\n');
+  const segs = [];
+  let para = [];   // 普通段落缓冲（kind:'inline'，逐段 escape 后走 inlineRenderer）
+  let bq = [];     // 引用行缓冲
+  let list = null; // {ordered, items[]}
+  const flushPara = () => { if (para.length) { segs.push({ kind: 'inline', text: para.join('\n') }); para = []; } };
+  const flushBq = () => {
+    if (!bq.length) return;
+    segs.push({ kind: 'raw', html: '<blockquote>' + bq.map(l => '<p>' + inlineRenderer(escapeHtml(l)) + '</p>').join('') + '</blockquote>' });
+    bq = [];
+  };
+  const flushList = () => {
+    if (!list) return;
+    const tag = list.ordered ? 'ol' : 'ul';
+    segs.push({ kind: 'raw', html: '<' + tag + '>' + list.items.map(it => '<li>' + inlineRenderer(escapeHtml(it)) + '</li>').join('') + '</' + tag + '>' });
+    list = null;
+  };
+  const flushAll = () => { flushPara(); flushBq(); flushList(); };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // 围栏代码块 ```lang：内行原样，整体 escape，跳过所有块级/行内
+    const fm = line.match(/^\s*```(\w*)\s*$/);
+    if (fm) {
+      flushAll();
+      const lang = fm[1];
+      const code = [];
+      i++;
+      while (i < lines.length && !/^\s*```/.test(lines[i])) { code.push(lines[i]); i++; }
+      segs.push({ kind: 'raw', html: '<pre><code' + (lang ? ' class="language-' + lang + '"' : '') + '>' + escapeHtml(code.join('\n')) + '</code></pre>' });
+      continue;
+    }
+    // 标题 # ## ###
+    const hm = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (hm) {
+      flushAll();
+      const n = hm[1].length;
+      segs.push({ kind: 'raw', html: '<h' + n + '>' + inlineRenderer(escapeHtml(hm[2])) + '</h' + n + '>' });
+      continue;
+    }
+    // 水平线 --- *** ___
+    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)) {
+      flushAll();
+      segs.push({ kind: 'raw', html: '<hr>' });
+      continue;
+    }
+    // 引用 > 连续行合并
+    const bm = line.match(/^\s{0,3}>\s?(.*)$/);
+    if (bm) {
+      flushPara(); flushList();
+      bq.push(bm[1]);
+      continue;
+    }
+    // 列表 - * + / 1. 1)（块级先剥离标记，斜体正则不再吃到 *）
+    const lm = line.match(/^\s{0,3}([-*+]|\d{1,3}[.)])\s+(.*)$/);
+    if (lm) {
+      flushPara(); flushBq();
+      const ordered = /\d/.test(lm[1]);
+      if (!list || list.ordered !== ordered) { flushList(); list = { ordered, items: [] }; }
+      list.items.push(lm[2]);
+      continue;
+    }
+    // 表格：当前行含 | 且下一行是分隔行
+    if (line.indexOf('|') !== -1 && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1]) && lines[i + 1].indexOf('-') !== -1) {
+      flushAll();
+      const tableLines = [line];
+      i++;
+      while (i < lines.length && lines[i].indexOf('|') !== -1) { tableLines.push(lines[i]); i++; }
+      i--; // 回退到最后一个表格行（for 循环 i++ 会继续）
+      const cells = row => row.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
+      const header = cells(tableLines[0]);
+      const body = tableLines.slice(2).filter(r => r.trim()).map(cells);
+      let h = '<table><thead><tr>' + header.map(c => '<th>' + inlineRenderer(escapeHtml(c)) + '</th>').join('') + '</tr></thead>';
+      h += '<tbody>' + body.map(r => '<tr>' + r.map(c => '<td>' + inlineRenderer(escapeHtml(c)) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
+      segs.push({ kind: 'raw', html: h });
+      continue;
+    }
+    // 空行 flush 当前块
+    if (!line.trim()) { flushPara(); flushBq(); flushList(); continue; }
+    // 普通段落行
+    flushList(); flushBq();
+    para.push(line);
+  }
+  flushAll();
+  return segs;
+}
+
+export function markdownToHtml(text) {
+  if (text == null) text = '';
+  return parseBlocks(text).map(s => s.kind === 'raw' ? s.html : inlineRenderer(escapeHtml(s.text))).join('');
+}
+
+// v1.56 超长折叠：原始 markdown 源码 >1500 字折叠为 420px + 渐变遮罩 + "展开全部 N 字"按钮
+// 放在 hljs 之后执行（高亮不干扰高度计算）；按钮 click 需 stopPropagation 不触发 bubble 整条复制
+const MSG_COLLAPSE_LEN = 1500;
+function applyCollapse(bubble, len) {
+  if (len <= MSG_COLLAPSE_LEN) return;
+  bubble.classList.add("msg-collapsed");
+  const btn = document.createElement("button");
+  btn.className = "msg-fold-btn";
+  btn.textContent = t("展开全部 ") + len + t(" 字");
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    bubble.classList.remove("msg-collapsed");
+    btn.remove();
+  });
+  bubble.appendChild(btn);
 }
 
 export async function loadCustomEmoji() {
@@ -524,6 +651,7 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     pre.appendChild(copyBtn);
   });
   if (typeof hljs !== "undefined") bubble.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
+  applyCollapse(bubble, text.length); // v1.56 超长折叠（>1500 字）
   bubble.classList.add("copyable");
   bubble.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -825,6 +953,19 @@ function buildActionMenu(wrapper, opts) {
   if (text && timestamp) {
     addItem(t("🌐 翻译"), () => {
       showTranslation(wrapper, text, timestamp, name);
+    });
+  }
+
+  // v1.56 内容沉淀：任意文本消息一键存入房间知识库
+  if (text && timestamp && hasWs) {
+    addItem(t("📚 存入知识库"), () => {
+      const raw = text || "";
+      const title = prompt(t("文档标题（留空用消息前 20 字）"), raw.slice(0, 20));
+      if (title === null) return;
+      const finalTitle = (title || "").trim() || raw.slice(0, 20);
+      if (!finalTitle) { showError(t("标题不能为空")); return; }
+      state.currentWebSocket.send(JSON.stringify({ type: "doc", action: "create", title: finalTitle, content: raw }));
+      showSuccess(t("已存入知识库"));
     });
   }
 
