@@ -1,7 +1,19 @@
 // 附件/文件管理面板
 import { state, t } from './state.js';
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（居中 modal）；localStorage.chatLegacyModals=1 时回退旧 overlay（保底可回退）
 export function toggleFilesPanel() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    toggleFilesPanelLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => {
+    if (m.stack.some(x => x.name === 'filespanel')) m.closeModal('filespanel');
+    else m.openModal('filespanel');
+  }).catch(() => toggleFilesPanelLegacy());
+}
+
+function toggleFilesPanelLegacy() {
   let existing = document.getElementById("files-panel");
   if (existing) { existing.remove(); return; }
 

@@ -3,7 +3,19 @@ import { state, t } from './state.js';
 import { resetMsgDate, refreshReplyCounts, escapeHtml } from './renderers.js';
 import { renderChannelMessage } from './channels.js';
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（drawer 模式）；localStorage.chatLegacyModals=1 时回退旧 overlay（保底可回退）
 export function toggleSearch() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    toggleSearchLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => {
+    if (m.stack.some(x => x.name === 'search')) m.closeModal('search');
+    else m.openModal('search', {}, { mode: 'drawer' });
+  }).catch(() => toggleSearchLegacy());
+}
+
+function toggleSearchLegacy() {
   let bar = document.getElementById("search-bar");
   let opened = bar.classList.toggle("show");
   if (opened) {

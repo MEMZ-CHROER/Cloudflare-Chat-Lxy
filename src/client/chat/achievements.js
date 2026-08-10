@@ -3,7 +3,7 @@ import { state, t, showToast } from './state.js';
 import { escapeHtml } from './renderers.js';
 
 // 成就定义（前端展示用，与服务端 registry/achievements.mjs 保持一致）
-const ACH_DEFS = [
+export const ACH_DEFS = [
   { id: "first_msg",  icon: "💬", name: "初来乍到", desc: "发出第一条消息" },
   { id: "msg_100",    icon: "🗣️", name: "话痨",    desc: "累计发言 100 条" },
   { id: "msg_1000",   icon: "🔥", name: "舌战群儒", desc: "累计发言 1000 条" },
@@ -42,8 +42,24 @@ export function showAchievementToast(achievementIds) {
   if (names.length) showToast("🏆 " + t("成就解锁：") + names.join("、"), "success", 5000);
 }
 
-// 🎛️ 成就面板（浮层，仿 highlights.js）
-export async function toggleAchievementsPanel() {
+// 🎛️ 成就面板
+// v1.53 双轨：默认走 Vue3 弹窗管理器（居中 modal）；localStorage.chatLegacyModals=1 时回退旧浮层
+export function toggleAchievementsPanel() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    toggleAchievementsPanelLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => {
+    if (m.stack.some(x => x.name === 'achievements')) {
+      m.closeModal('achievements');
+    } else {
+      m.openModal('achievements');
+    }
+  }).catch(() => toggleAchievementsPanelLegacy());
+}
+
+// 旧浮层：创建/移除 #achv-panel overlay（仿 highlights.js）
+async function toggleAchievementsPanelLegacy() {
   let existing = document.getElementById("achv-panel");
   if (existing) { existing.remove(); return; }
 

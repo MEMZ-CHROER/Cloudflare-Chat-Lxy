@@ -14,8 +14,29 @@ export function updateDmBadge() {
   });
 }
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（drawer 模式 modals/dm.js）；localStorage.chatLegacyModals=1 时回退旧面板
 export function openDM(user) {
   if (user === state.username) { showError(t("不能给自己发私信")); return; }
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openDMLegacy(user);
+    return;
+  }
+  state.dmTarget = user;
+  state.dmUnread = 0;
+  updateDmBadge();
+  import('./modal-manager.js').then(m => m.openModal('dm', { user }, { mode: 'drawer' })).catch(() => openDMLegacy(user));
+}
+
+export function closeDM() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    closeDMLegacy();
+    return;
+  }
+  state.dmTarget = null;
+  import('./modal-manager.js').then(m => m.closeModal('dm')).catch(() => closeDMLegacy());
+}
+
+function openDMLegacy(user) {
   state.dmTarget = user;
   document.querySelector("#dm-username").textContent = t("私信: ") + user;
   document.querySelector("#dm-panel").style.display = "flex";
@@ -26,7 +47,7 @@ export function openDM(user) {
   if (inp) { inp.focus(); inp.select(); }
 }
 
-export function closeDM() {
+function closeDMLegacy() {
   document.querySelector("#dm-panel").style.display = "none";
   state.dmTarget = null;
 }

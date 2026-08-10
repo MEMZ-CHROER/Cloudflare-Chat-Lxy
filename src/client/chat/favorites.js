@@ -75,7 +75,23 @@ function scrollToMessage(timestamp) {
   toggleFavoritesPanel();
 }
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（居中 modal）；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function toggleFavoritesPanel() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    toggleFavoritesPanelLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => {
+    if (m.stack.some(x => x.name === 'favorites')) {
+      m.closeModal('favorites');
+    } else {
+      m.openModal('favorites');
+    }
+  }).catch(() => toggleFavoritesPanelLegacy());
+}
+
+// 旧 overlay：display:flex/none 切换 + 渲染列表（renderFavoritesPanel 供本函数使用）
+function toggleFavoritesPanelLegacy() {
   let panel = document.getElementById("favorites-panel");
   if (!panel) return;
   let show = panel.style.display !== "flex";

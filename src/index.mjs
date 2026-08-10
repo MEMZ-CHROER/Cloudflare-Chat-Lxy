@@ -75,6 +75,15 @@ import CHAT_MODAL_LOTTERY from "./client/chat/modals/lottery.js";
 import CHAT_MODAL_TASKS from "./client/chat/modals/tasks.js";
 import CHAT_MODAL_SEASON from "./client/chat/modals/season.js";
 import CHAT_MODAL_RELATION from "./client/chat/modals/relation.js";
+// 🧪 v1.53 批2 工具域弹窗/面板 Vue 化
+import CHAT_MODAL_MUSIC from "./client/chat/modals/music.js";
+import CHAT_MODAL_DM from "./client/chat/modals/dm.js";
+import CHAT_MODAL_FAVORITES from "./client/chat/modals/favorites.js";
+import CHAT_MODAL_ACHIEVEMENTS from "./client/chat/modals/achievements.js";
+import CHAT_MODAL_HIGHLIGHTS from "./client/chat/modals/highlights.js";
+import CHAT_MODAL_ROOMINFO from "./client/chat/modals/roominfo.js";
+import CHAT_MODAL_FILESPANEL from "./client/chat/modals/filespanel.js";
+import CHAT_MODAL_SEARCH from "./client/chat/modals/search.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -205,6 +214,14 @@ const CHAT_MODULES = {
   "chat/modals/tasks.js": CHAT_MODAL_TASKS,
   "chat/modals/season.js": CHAT_MODAL_SEASON,
   "chat/modals/relation.js": CHAT_MODAL_RELATION,
+  "chat/modals/music.js": CHAT_MODAL_MUSIC,
+  "chat/modals/dm.js": CHAT_MODAL_DM,
+  "chat/modals/favorites.js": CHAT_MODAL_FAVORITES,
+  "chat/modals/achievements.js": CHAT_MODAL_ACHIEVEMENTS,
+  "chat/modals/highlights.js": CHAT_MODAL_HIGHLIGHTS,
+  "chat/modals/roominfo.js": CHAT_MODAL_ROOMINFO,
+  "chat/modals/filespanel.js": CHAT_MODAL_FILESPANEL,
+  "chat/modals/search.js": CHAT_MODAL_SEARCH,
 };
 
 const ADMIN_MODULES = {

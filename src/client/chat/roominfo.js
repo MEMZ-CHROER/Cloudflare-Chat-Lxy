@@ -2,7 +2,19 @@
 import { state, t } from './state.js';
 import { escapeHtml } from './renderers.js';
 
+// v1.53 双轨：默认走 Vue3 弹窗管理器（居中 modal）；localStorage.chatLegacyModals=1 时回退旧 overlay（保底可回退）
 export function toggleRoomInfo() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    toggleRoomInfoLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => {
+    if (m.stack.some(x => x.name === 'roominfo')) m.closeModal('roominfo');
+    else m.openModal('roominfo');
+  }).catch(() => toggleRoomInfoLegacy());
+}
+
+function toggleRoomInfoLegacy() {
   let existing = document.getElementById("room-info-modal");
   if (existing) { existing.remove(); return; }
 

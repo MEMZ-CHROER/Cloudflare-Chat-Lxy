@@ -165,7 +165,24 @@ function ensureAudio() {
 }
 
 // ---- 面板开闭 ----
+// v1.53 双轨：默认走 Vue3 弹窗管理器（modals/music.js）；localStorage.chatLegacyModals=1 时回退旧 overlay
 export function openMusic() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    openMusicLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => m.openModal('music')).catch(() => openMusicLegacy());
+}
+
+export function closeMusic() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    closeMusicLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => m.closeModal('music')).catch(() => closeMusicLegacy());
+}
+
+function openMusicLegacy() {
   document.getElementById("music-overlay").classList.add("show");
   setTimeout(() => {
     const input = document.getElementById("music-search-input");
@@ -173,7 +190,7 @@ export function openMusic() {
   }, 50);
 }
 
-export function closeMusic() {
+function closeMusicLegacy() {
   document.getElementById("music-overlay").classList.remove("show");
 }
 

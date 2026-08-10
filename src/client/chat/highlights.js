@@ -2,7 +2,24 @@
 import { state } from './state.js';
 import { escapeHtml } from './renderers.js';
 
+// 精华消息面板
+// v1.53 双轨：默认走 Vue3 弹窗管理器（居中 modal）；localStorage.chatLegacyModals=1 时回退旧浮层
 export function showHighlightsPanel() {
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    showHighlightsPanelLegacy();
+    return;
+  }
+  import('./modal-manager.js').then(m => {
+    if (m.stack.some(x => x.name === 'highlights')) {
+      m.closeModal('highlights');
+    } else {
+      m.openModal('highlights');
+    }
+  }).catch(() => showHighlightsPanelLegacy());
+}
+
+// 旧浮层：创建/移除 #hl-panel overlay
+function showHighlightsPanelLegacy() {
   let existing = document.getElementById("hl-panel");
   if (existing) { existing.remove(); return; }
 
