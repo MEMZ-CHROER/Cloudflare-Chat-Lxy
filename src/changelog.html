@@ -94,6 +94,21 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.57</span>
+    <span class="version-date">2026-08-10</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-feature">工具链</span><b>补全 ESLint + Prettier + TypeScript 静态检查</b> — 新增 eslint 9 flat config（<b>温和模式</b>：只开真 bug 类规则 no-undef/no-redeclare/no-dupe-keys/use-isnan/valid-typeof 等，风格全关交给 prettier；基线 <b>0 errors</b>，全仓扫描即抓到真实 bug——state.js en 词典重复 key「 积分」已修）+ prettier 3（绿区 18 文件统一格式，其余 190 文件不碰避免海量 diff）+ tsc 5（<code>checkJs</code> 温和模式，带 <code>// @ts-check</code> 的文件静态检查，<b>项目级 0 errors</b>）；npm scripts：<code>npm run lint / format / typecheck</code></span></div>
+    <div class="feature-item"><span class="icon">📐</span><span class="text"><span class="tag tag-feature">类型</span><b>JSDoc 类型契约（TS 思想零迁移落地）</b> — 新建 <code>src/types.js</code> 单点契约源：<code>WsSession/SessionEntry/User/ChatMessage/Doc/Channel/VipInfo/WsCommandData/Env</code> 9 个跨模块类型；S/A/B 三层 <b>18+ 核心文件</b>（utils/chatroom 全模块/registry/index/state/renderers/websocket/core/commands/doc-store/nav/modal-manager/main/kb）加 <code>// @ts-check</code> + 全量 JSDoc（export 函数签名 + 数据模型 + 跨模块契约），获得编辑器提示与静态检查；<code>src/ambient.d.ts</code> 声明 CF 特有全局（WebSocketPair/katex/hljs）；新增 types.d.ts 改 ambient.d.ts 避免与 types.js 同基名拦截解析</span></div>
+    <div class="feature-item"><span class="icon">✂️</span><span class="text"><span class="tag tag-feature">重构</span><b>拆分 chatroom.mjs（2586 → 1194 行）</b> — DO 主体拆出 6 个模块，全部沿用 <code>handleXxx(room, session, data, webSocket)</code> 短路范式：<b>http.mjs</b>（-579 行，全部 fetch 端点，SAFE_COLOR_RE 上移 utils 共享）、<b>activity.mjs</b>（-364 行，投票/接龙/表情/红包）、<b>permissions.mjs</b>（权限/敏感词/长度，类上留薄包装）、<b>schedule.mjs</b>（定时创建/取消 + alarm 投递）、<b>conn.mjs</b>（handleSession 入房 + close 清理）、<b>rollback.mjs</b>（应急回滚 + multipart/zip）；部署冒烟 13/13 行为无损</span></div>
+    <div class="feature-item"><span class="icon">🧹</span><span class="text"><span class="tag tag-fix">清理</span><b>renderers.js 二进制污染修复</b> — v1.56 markdown 占位符遗留 10 个 NUL 字节 + CRLF，阻塞 eslint/prettier/tsc 三件套；统一清理为可打印哨兵 <code>~T&lt;n&gt;~</code> + 统一 LF，46/46 jsdom 回归无损</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>tsc 项目级 0 errors（21 处 <code>@ts-ignore</code> 均带中文理由注释，限运行时挂载 window 字段/CDN 全局）+ jsdom 46/46 + eslint 0 errors + 线上冒烟 13/13（拆分后 WS join/长消息/doc CRUD 全回归）</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.56</span>
     <span class="version-date">2026-08-10</span>
     <span class="version-arrow open">▶</span>

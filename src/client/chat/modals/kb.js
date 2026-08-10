@@ -1,12 +1,18 @@
+// @ts-check
 // v1.56 内容沉淀：房间知识库弹窗 — Vue3（列表/查看/新建/编辑/删除 + 搜索 + [[docId]] 深链）
 // 数据走 doc-store（WS 事件路由 + 广播订阅），正文经 markdownToHtml 渲染（复用 renderers）
 // 权限：查看全部；编辑/删除仅作者本人或管理员（admin_logged cookie）
-import * as Vue from '/static/chat/vendor/vue.js';
-import { injectCss } from '../modal-manager.js';
-import { getDocs, getCached, send, onChange } from '../doc-store.js';
-import { state, t } from '../state.js';
+/** @typedef {import("../../../types.js").Doc} Doc */
+/** @typedef {{ room?: string, openDocId?: string }} KBProps */
+// @ts-ignore 运行时静态路径（/static/chat/vendor/vue.js）无 tsc 声明 → Vue 按 any 使用
+import * as Vue from "/static/chat/vendor/vue.js";
+import { injectCss } from "../modal-manager.js";
+import { getDocs, getCached, send, onChange } from "../doc-store.js";
+import { state, t } from "../state.js";
 
-injectCss('cm-style-kb', `
+injectCss(
+  "cm-style-kb",
+  `
 .cm-kb { display:flex; flex-direction:column; min-width:min(560px, 92vw); max-width:92vw; height:min(72vh, 640px); }
 .cm-kb-body { flex:1; min-height:0; overflow-y:auto; padding:16px 20px; }
 .cm-kb-toolbar { display:flex; gap:8px; margin-bottom:12px; }
@@ -39,119 +45,183 @@ injectCss('cm-style-kb', `
 .cm-loading { color:var(--text-secondary); font-size:13px; padding:14px 0; }
 .cm-sessions-err { color:#e74c3c; font-size:13px; padding:12px 0; }
 .cm-sessions-empty { color:var(--text-secondary); font-size:13px; padding:16px 0; text-align:center; }
-`);
+`
+);
 
+/** 格式化时间戳（YYYY-MM-DD HH:mm） @param {number} ts 毫秒时间戳 @returns {string} */
 function fmtTime(ts) {
-  if (!ts) return '—';
+  if (!ts) return "—";
   const d = new Date(ts);
-  const p = n => String(n).padStart(2, '0');
+  const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 export default {
-  name: 'KBModal',
+  name: "KBModal",
   props: {
-    room: { type: String, default: '' },
-    openDocId: { type: String, default: '' }
+    room: { type: String, default: "" },
+    openDocId: { type: String, default: "" },
   },
+  /**
+   * KB 弹窗 setup：返回模板所需的响应式状态与方法
+   * @param {KBProps} props 组件 props（room 房间名 / openDocId 深链目标文档 id）
+   * @param {{ emit: (event: string, ...args: any[]) => void }} ctx 组件上下文（模板内用 $emit('close')）
+   */
   setup(props, ctx) {
     const docs = Vue.ref(getDocs());
-    const mode = Vue.ref('list');
+    const mode = Vue.ref("list");
     const current = Vue.ref(null);
-    const rendered = Vue.ref('');
+    const rendered = Vue.ref("");
     const loading = Vue.ref(false);
-    const err = Vue.ref('');
-    const q = Vue.ref('');
-    const form = Vue.reactive({ title: '', content: '', tags: '' });
+    const err = Vue.ref("");
+    const q = Vue.ref("");
+    const form = Vue.reactive({ title: "", content: "", tags: "" });
 
-    onChange(() => { docs.value = getDocs(); });
+    onChange(() => {
+      docs.value = getDocs();
+    });
 
-    const filtered = Vue.computed(() => (docs.value || []).filter(d => {
-      const kw = q.value.trim();
-      if (!kw) return true;
-      return (d.title || '').includes(kw) || (d.tags || []).some(tag => tag.includes(kw));
-    }));
+    const filtered = Vue.computed(() =>
+      (docs.value || []).filter((d) => {
+        const kw = q.value.trim();
+        if (!kw) return true;
+        return (d.title || "").includes(kw) || (d.tags || []).some((tag) => tag.includes(kw));
+      })
+    );
 
+    /** @param {Doc|null} d 文档（null 视为不可编辑） @returns {boolean} 是否作者本人或管理员 */
     function canEdit(d) {
       if (!d) return false;
-      const isAdmin = document.cookie.indexOf('admin_logged=1') !== -1;
+      const isAdmin = document.cookie.indexOf("admin_logged=1") !== -1;
       return (d.createdBy && d.createdBy === state.username) || isAdmin;
     }
 
+    /** 拉取房间文档列表（WS list） @returns {Promise<void>} */
     async function loadList() {
-      loading.value = true; err.value = '';
-      try { docs.value = (await send('list')).docs || []; }
-      catch (e) { err.value = e.message; }
+      loading.value = true;
+      err.value = "";
+      try {
+        docs.value = /** @type {{ docs?: Doc[] }} */ (await send("list")).docs || [];
+      } catch (e) {
+        err.value = e.message;
+      }
       loading.value = false;
     }
 
+    /** 打开文档查看（优先本地缓存，未命中则 WS get 拉取） @param {string} id 文档 id @returns {Promise<void>} */
     async function openDoc(id) {
-      loading.value = true; err.value = '';
+      loading.value = true;
+      err.value = "";
       try {
         const cached = getCached(id);
-        current.value = cached || (await send('get', { id })).doc;
-        const m = await import('../renderers.js');
-        rendered.value = m.markdownToHtml(current.value ? current.value.content : '');
-        mode.value = 'view';
-      } catch (e) { err.value = e.message; }
+        current.value = cached || /** @type {{ doc?: Doc }} */ (await send("get", { id })).doc;
+        const m = await import("../renderers.js");
+        rendered.value = m.markdownToHtml(current.value ? current.value.content : "");
+        mode.value = "view";
+      } catch (e) {
+        err.value = e.message;
+      }
       loading.value = false;
     }
 
+    /** 进入新建文档模式 @returns {void} */
     function startNew() {
-      form.title = ''; form.content = ''; form.tags = '';
-      mode.value = 'new';
+      form.title = "";
+      form.content = "";
+      form.tags = "";
+      mode.value = "new";
     }
 
+    /** 进入编辑模式（当前文档预填表单） @returns {void} */
     function startEdit() {
       if (!current.value) return;
-      form.title = current.value.title || '';
-      form.content = current.value.content || '';
-      form.tags = (current.value.tags || []).join(', ');
-      mode.value = 'edit';
+      form.title = current.value.title || "";
+      form.content = current.value.content || "";
+      form.tags = (current.value.tags || []).join(", ");
+      mode.value = "edit";
     }
 
+    /** 保存文档（新建走 create，编辑走 update） @returns {Promise<void>} */
     async function save() {
-      err.value = '';
+      err.value = "";
       const title = form.title.trim();
       const content = form.content;
-      if (!title || !content.trim()) { err.value = t('标题和内容不能为空'); return; }
-      const tags = form.tags.split(/[,，]/).map(s => s.trim()).filter(Boolean).slice(0, 5);
+      if (!title || !content.trim()) {
+        err.value = t("标题和内容不能为空");
+        return;
+      }
+      const tags = form.tags
+        .split(/[,，]/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 5);
       loading.value = true;
       try {
-        if (mode.value === 'new') {
-          const d = await send('create', { title, content, tags });
+        if (mode.value === "new") {
+          const d = /** @type {{ doc?: Doc }} */ (await send("create", { title, content, tags }));
           current.value = { ...(d.doc || {}), content };
         } else {
-          await send('update', { id: current.value.id, title, content, tags });
+          await send("update", { id: current.value.id, title, content, tags });
           current.value = { ...current.value, title, content, tags };
         }
-        const m = await import('../renderers.js');
-        rendered.value = m.markdownToHtml(current.value.content || '');
-        mode.value = 'view';
-      } catch (e) { err.value = e.message; }
+        const m = await import("../renderers.js");
+        rendered.value = m.markdownToHtml(current.value.content || "");
+        mode.value = "view";
+      } catch (e) {
+        err.value = e.message;
+      }
       loading.value = false;
     }
 
+    /** 删除当前文档（需 confirm 确认） @returns {Promise<void>} */
     async function remove() {
       if (!current.value) return;
-      if (!confirm(t('删除该文档？此操作不可恢复。'))) return;
-      err.value = '';
+      if (!confirm(t("删除该文档？此操作不可恢复。"))) return;
+      err.value = "";
       loading.value = true;
       try {
-        await send('delete', { id: current.value.id });
-        current.value = null; rendered.value = ''; mode.value = 'list';
-      } catch (e) { err.value = e.message; }
+        await send("delete", { id: current.value.id });
+        current.value = null;
+        rendered.value = "";
+        mode.value = "list";
+      } catch (e) {
+        err.value = e.message;
+      }
       loading.value = false;
     }
 
-    function toList() { mode.value = 'list'; current.value = null; rendered.value = ''; }
+    /** 返回列表模式 @returns {void} */
+    function toList() {
+      mode.value = "list";
+      current.value = null;
+      rendered.value = "";
+    }
 
     Vue.onMounted(async () => {
       await loadList();
       if (props.openDocId) await openDoc(props.openDocId);
     });
 
-    return { docs, mode, current, rendered, loading, err, q, form, filtered, canEdit, openDoc, startNew, startEdit, save, remove, toList, fmtTime, t };
+    return {
+      docs,
+      mode,
+      current,
+      rendered,
+      loading,
+      err,
+      q,
+      form,
+      filtered,
+      canEdit,
+      openDoc,
+      startNew,
+      startEdit,
+      save,
+      remove,
+      toList,
+      fmtTime,
+      t,
+    };
   },
   template: `
   <div class="cm-kb">
@@ -200,5 +270,5 @@ export default {
         <textarea v-model="form.content" class="cm-kb-textarea" :placeholder="t('Markdown 正文（标题/表格/列表/代码块均支持）')"></textarea>
       </template>
     </div>
-  </div>`
+  </div>`,
 };

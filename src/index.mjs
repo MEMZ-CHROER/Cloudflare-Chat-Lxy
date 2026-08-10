@@ -1,3 +1,9 @@
+// @ts-nocheck
+// v1.57 代码质量 A 层：Worker 入口（页面路由 + API 分发 + 前端模块字符串注册表）
+// 类型契约见 src/types.js（Env），工具见 src/utils.mjs
+// 说明：本文件是打包器入口，批量 import ~120 个前端模块（esbuild text loader，多数无
+// export default）及被 tsconfig exclude 的 chat.js/admin.js，@ts-check 会报 TS1192/TS2306
+// 海量错且无类型价值，故降级为 @ts-nocheck（JSDoc 仍保留作签名文档）。
 import HTML from "./chat.html";
 import ADMIN from "./admin.html";
 // v1.52 管理后台 Vue3 迁移 - 收尾切换：/admin 已正式指向 Vue3 新后台。
@@ -327,12 +333,7 @@ export { RoomRegistry } from "./registry.mjs";
 export { VersionArchive } from "./archive.mjs";
 export { FileBucket } from "./filebucket.mjs";
 
-/**
- * @typedef {Object} Env
- * @property {DurableObjectNamespace} rooms
- * @property {string} ADMIN_SECRET_KEY
- * @property {DurableObjectNamespace} registry
- */
+// Env 类型契约见 src/types.js（@typedef Env），此处不再重复定义
 
 // 通用安全响应头包装器
 function secureResponse(body, init) {
@@ -348,13 +349,33 @@ function secureResponse(body, init) {
 }
 
 export default {
+  /**
+   * Worker 入口：处理所有 HTTP 请求（页面路由 + 静态模块 + API 分发）
+   * @param {Request} request 原始请求
+   * @param {import("./types.js").Env} env Worker 环境（DO bindings + 密钥）
+   * @returns {Promise<Response>}
+   */
   async fetch(request, env) {
     return await handleErrors(request, async () => {
       let url = new URL(request.url);
-      let path = url.pathname.slice(1).split('/');
+      let path = url.pathname.slice(1).split("/");
 
       // IP 封禁检查
-      if (path[0] !== "admin" && path[0] !== "admin-vue" && path[0] !== "admin-legacy" && path[0] !== "tasks" && path[0] !== "help" && path[0] !== "about" && path[0] !== "leaderboard" && path[0] !== "user" && path[0] !== "rooms" && path[0] !== "online" && path[0] !== "stats" && path[0] !== "redeem" && !(path[0] === "api" && path[1] === "admin")) {
+      if (
+        path[0] !== "admin" &&
+        path[0] !== "admin-vue" &&
+        path[0] !== "admin-legacy" &&
+        path[0] !== "tasks" &&
+        path[0] !== "help" &&
+        path[0] !== "about" &&
+        path[0] !== "leaderboard" &&
+        path[0] !== "user" &&
+        path[0] !== "rooms" &&
+        path[0] !== "online" &&
+        path[0] !== "stats" &&
+        path[0] !== "redeem" &&
+        !(path[0] === "api" && path[1] === "admin")
+      ) {
         let clientIp = request.headers.get("CF-Connecting-IP") || "";
         if (clientIp) {
           try {
@@ -377,50 +398,88 @@ export default {
         let mod = CHAT_MODULES[modPath];
         if (!mod) mod = ADMIN_MODULES[modPath];
         if (mod) {
-          return new Response(mod, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate"}});
+          return new Response(mod, {
+            headers: { "Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate" },
+          });
         }
         if (modPath === "chat.js") {
-          return new Response(CHAT_JS, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Content-Type-Options": "nosniff"}});
+          return new Response(CHAT_JS, {
+            headers: {
+              "Content-Type": "text/javascript;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
         }
         if (modPath === "admin.js") {
-          return new Response(ADMIN_JS, {headers: {"Content-Type": "text/javascript;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Content-Type-Options": "nosniff"}});
+          return new Response(ADMIN_JS, {
+            headers: {
+              "Content-Type": "text/javascript;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
         }
         if (modPath === "chat/style.css") {
-          return new Response(CHAT_STYLE, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate"}});
+          return new Response(CHAT_STYLE, {
+            headers: { "Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate" },
+          });
         }
         if (modPath === "chat/game-style.css") {
-          return new Response(CHAT_GAME_STYLE, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate"}});
+          return new Response(CHAT_GAME_STYLE, {
+            headers: { "Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate" },
+          });
         }
         if (modPath === "styles/all-styles.css") {
-          return new Response(ALL_STYLES, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate"}});
+          return new Response(ALL_STYLES, {
+            headers: { "Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate" },
+          });
         }
         if (modPath === "styles/acrylic-theme.css") {
-          return new Response(ACRYLIC_THEME, {headers: {"Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate"}});
+          return new Response(ACRYLIC_THEME, {
+            headers: { "Content-Type": "text/css;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate" },
+          });
         }
         if (modPath === "theme-switch.js") {
-          return new Response(THEME_SWITCH_JS, {headers: {"Content-Type": "application/javascript;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate"}});
+          return new Response(THEME_SWITCH_JS, {
+            headers: {
+              "Content-Type": "application/javascript;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+            },
+          });
         }
       }
 
       if (!path[0]) {
-        return new Response(HTML, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+        return new Response(HTML, {
+          headers: {
+            "Content-Type": "text/html;charset=UTF-8",
+            "Cache-Control": "no-cache, must-revalidate",
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "same-origin",
+          },
+        });
       }
 
       if (path[0] === "manifest.json") {
-        return new Response(JSON.stringify({
-          name: "Cloud Chat",
-          short_name: "CloudChat",
-          description: "Cloudflare Workers 聊天室",
-          start_url: "/",
-          display: "standalone",
-          background_color: "#f0f2f5",
-          theme_color: "#4a6cf7",
-          icons: [
-            { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
-            { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-            { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
-          ]
-        }), {headers: {"Content-Type": "application/json"}});
+        return new Response(
+          JSON.stringify({
+            name: "Cloud Chat",
+            short_name: "CloudChat",
+            description: "Cloudflare Workers 聊天室",
+            start_url: "/",
+            display: "standalone",
+            background_color: "#f0f2f5",
+            theme_color: "#4a6cf7",
+            icons: [
+              { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+              { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+              { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+            ],
+          }),
+          { headers: { "Content-Type": "application/json" } }
+        );
       }
 
       if (path[0] === "icon.svg") {
@@ -429,14 +488,16 @@ export default {
             <rect width="512" height="512" rx="64" fill="#4a6cf7"/>
             <text x="256" y="340" font-size="280" font-weight="bold" fill="white" text-anchor="middle" font-family="sans-serif">C</text>
           </svg>`,
-          {headers: {"Content-Type": "image/svg+xml", "Cache-Control": "no-cache, must-revalidate"}}
+          { headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-cache, must-revalidate" } }
         );
       }
 
       if (path[0] === "favicon.ico") {
         // 聊天室图标（32x32 ICO，base64 由 favicon-data.mjs 内嵌）：替代原 204 空响应
-        let bytes = Uint8Array.from(atob(FAVICON_B64), c => c.charCodeAt(0));
-        return new Response(bytes, {headers: {"Content-Type": "image/x-icon", "Cache-Control": "no-cache, must-revalidate"}});
+        let bytes = Uint8Array.from(atob(FAVICON_B64), (c) => c.charCodeAt(0));
+        return new Response(bytes, {
+          headers: { "Content-Type": "image/x-icon", "Cache-Control": "no-cache, must-revalidate" },
+        });
       }
 
       if (path[0] === "sw.js") {
@@ -445,7 +506,7 @@ export default {
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["/","/admin/"])));self.skipWaiting();});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim();});
 self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).catch(()=>caches.match(e.request).then(m=>m||new Response("网络不可用",{status:503,headers:{"Content-Type":"text/plain"}}))));});`,
-          {headers: {"Content-Type": "application/javascript", "Cache-Control": "no-cache"}}
+          { headers: { "Content-Type": "application/javascript", "Cache-Control": "no-cache" } }
         );
       }
 
@@ -457,64 +518,191 @@ self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWi
         // v1.52 收尾切换：/admin 正式指向 Vue3 新后台（AdminApp）
         case "admin":
         case "admin-vue":
-          return new Response(ADMIN_VUE_HTML, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ADMIN_VUE_HTML, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         // v1.52 收尾：旧后台保底入口（代码/注册全保留，routing.js 前缀归一化兼容）
         case "admin-legacy":
-          return new Response(ADMIN, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ADMIN, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "tasks":
-          return new Response(TASKS, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(TASKS, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "changelog":
-          return new Response(CHANGELOG, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(CHANGELOG, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "bugs":
-          return new Response(BUGS, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(BUGS, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "help":
-          return new Response(HELP, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(HELP, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "about":
-          return new Response(ABOUT, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ABOUT, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "leaderboard":
-          return new Response(LEADERBOARD, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(LEADERBOARD, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "user":
-          return new Response(USERPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(USERPAGE, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "rooms":
-          return new Response(ROOMSPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ROOMSPAGE, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "online":
-          return new Response(ONLINEPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ONLINEPAGE, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "stats":
-          return new Response(STATSPAGE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(STATSPAGE, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "archive":
-          return new Response(ARCHIVE, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(ARCHIVE, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         case "redeem":
-          return new Response(REDEEM, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(REDEEM, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         // 🧪 v1.50 LuckPerms 独立权限编辑器（全屏应用，仿 LuckPermsWeb；数据仍走 super-only /api/admin/lp）
         case "lp":
-          return new Response(LP, {headers: {"Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache, must-revalidate", "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin"}});
+          return new Response(LP, {
+            headers: {
+              "Content-Type": "text/html;charset=UTF-8",
+              "Cache-Control": "no-cache, must-revalidate",
+              "X-Frame-Options": "DENY",
+              "X-Content-Type-Options": "nosniff",
+              "Referrer-Policy": "same-origin",
+            },
+          });
 
         default:
-          return new Response("未找到", {status: 404});
+          return new Response("未找到", { status: 404 });
       }
     });
-  }
-}
+  },
+};
 
 // ============ API 路由分发 ============
 
 // 🔗 通用 Webhook 入站限频（内存级缓解，多实例不共享，防单实例刷屏）
 const webhookRate = new Map();
 
+/**
+ * API 路由分发（/api/<action>/... → 对应 api 模块处理器）
+ * @param {string[]} apiPath API 路径段（不含 "api" 前缀，如 ["rooms", "list"]）
+ * @param {Request} request 原始请求
+ * @param {import("./types.js").Env} env Worker 环境
+ * @returns {Promise<Response>}
+ */
 async function handleApi(apiPath, request, env) {
   switch (apiPath[0]) {
     case "rooms":
@@ -535,17 +723,26 @@ async function handleApi(apiPath, request, env) {
         let name = body.name || "";
         let token = body.token || "";
         // 验证 token，防止冒名签到
-        let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
+        let authCheck = await stub.fetch(
+          new URL(
+            "https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)
+          )
+        );
         let authData = await authCheck.json();
         if (!authData.authenticated) {
-          return new Response(JSON.stringify({error: "请先登录"}), {status: 403, headers: {"Content-Type": "application/json"}});
+          return new Response(JSON.stringify({ error: "请先登录" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         // 🔒 安全修复（E4）：携带来源 IP 供签到按 IP 限频
         let ip = request.headers.get("CF-Connecting-IP") || "";
-        let r = await stub.fetch("https://dummy-url/points/checkin?name=" + encodeURIComponent(name) + "&ip=" + encodeURIComponent(ip));
-        return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
+        let r = await stub.fetch(
+          "https://dummy-url/points/checkin?name=" + encodeURIComponent(name) + "&ip=" + encodeURIComponent(ip)
+        );
+        return new Response(await r.text(), { status: r.status, headers: { "Content-Type": "application/json" } });
       }
-      return new Response("未找到", {status: 404});
+      return new Response("未找到", { status: 404 });
     }
 
     case "shop":
@@ -602,8 +799,16 @@ async function handleApi(apiPath, request, env) {
     case "webhook": {
       let url = new URL(request.url);
       let roomName = apiPath[1];
-      if (!roomName) return new Response(JSON.stringify({error: "缺少房间名"}), {status: 400, headers: {"Content-Type": "application/json"}});
-      if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405, headers: {"Content-Type": "application/json"}});
+      if (!roomName)
+        return new Response(JSON.stringify({ error: "缺少房间名" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      if (request.method !== "POST")
+        return new Response(JSON.stringify({ error: "请使用POST" }), {
+          status: 405,
+          headers: { "Content-Type": "application/json" },
+        });
       let rid = env.registry.idFromName("global");
       let stub = env.registry.get(rid);
       // 🔒 安全修复（F1）：优先从请求头取 secret，query 仅作兼容降级（前端已不再拼接 ?secret= URL）
@@ -611,39 +816,70 @@ async function handleApi(apiPath, request, env) {
       // 校验房间 webhook secret（常量时间比较在 registry 层）
       let verify = await stub.fetch(new URL("https://dummy-url/room/webhook-verify"), {
         method: "POST",
-        body: JSON.stringify({room: roomName, secret}),
-        headers: {"Content-Type": "application/json"}
+        body: JSON.stringify({ room: roomName, secret }),
+        headers: { "Content-Type": "application/json" },
       });
       let vd;
-      try { vd = await verify.json(); } catch (e) { vd = {}; }
-      if (!vd.ok) return new Response(JSON.stringify({error: vd.error || "Webhook校验失败"}), {status: 403, headers: {"Content-Type": "application/json"}});
+      try {
+        vd = await verify.json();
+      } catch (e) {
+        vd = {};
+      }
+      if (!vd.ok)
+        return new Response(JSON.stringify({ error: vd.error || "Webhook校验失败" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        });
       // 解析 body（🔒 F3：先解析成功再记限频，非法 body 直接返回、不写限频标记，防合法 secret+非法 body 阻塞该房间 5 秒）
       let body;
-      try { body = await request.json(); } catch (e) {
-        return new Response(JSON.stringify({error: "请求体不是合法JSON"}), {status: 400, headers: {"Content-Type": "application/json"}});
+      try {
+        body = await request.json();
+      } catch (e) {
+        return new Response(JSON.stringify({ error: "请求体不是合法JSON" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       // 限频：每房间每 5 秒 1 条（标记在 body 成功解析后才设置）
       let now = Date.now();
       // 🔒 F3：惰性清理超过 60 秒的限频条目，防 webhookRate Map 无限增长
-      for (let [k, t] of webhookRate) { if (now - t > 60000) webhookRate.delete(k); }
+      for (let [k, t] of webhookRate) {
+        if (now - t > 60000) webhookRate.delete(k);
+      }
       if (now - (webhookRate.get(roomName) || 0) < 5000) {
-        return new Response(JSON.stringify({error: "发送过于频繁，请5秒后再试"}), {status: 429, headers: {"Content-Type": "application/json"}});
+        return new Response(JSON.stringify({ error: "发送过于频繁，请5秒后再试" }), {
+          status: 429,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       webhookRate.set(roomName, now);
       let content = (body.content === undefined ? "" : String(body.content)).slice(0, 500);
-      if (!content.trim()) return new Response(JSON.stringify({error: "缺少消息内容"}), {status: 400, headers: {"Content-Type": "application/json"}});
+      if (!content.trim())
+        return new Response(JSON.stringify({ error: "缺少消息内容" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
       let sender = (body.sender === undefined ? "Webhook" : String(body.sender)).slice(0, 30);
       let channel = (body.channel === undefined ? "" : String(body.channel)).slice(0, 24);
       // 转发到房间 DO（仿 admin send-message 链路）
       let roomId;
       if (roomName.match(/^[0-9a-f]{64}$/)) roomId = env.rooms.idFromString(roomName);
       else if (roomName.length <= 32) roomId = env.rooms.idFromName(roomName);
-      else return new Response(JSON.stringify({error: "无效房间名"}), {status: 400, headers: {"Content-Type": "application/json"}});
+      else
+        return new Response(JSON.stringify({ error: "无效房间名" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
       let roomStub = env.rooms.get(roomId);
-      let doUrl = "https://dummy-url/broadcast-message?text=" + encodeURIComponent(content) + "&sender=" + encodeURIComponent(sender) + "&webhook=1";
+      let doUrl =
+        "https://dummy-url/broadcast-message?text=" +
+        encodeURIComponent(content) +
+        "&sender=" +
+        encodeURIComponent(sender) +
+        "&webhook=1";
       if (channel) doUrl += "&channel=" + encodeURIComponent(channel);
       let r = await roomStub.fetch(new URL(doUrl));
-      return new Response(await r.text(), {status: r.status});
+      return new Response(await r.text(), { status: r.status });
     }
 
     case "emoji": {
@@ -651,9 +887,9 @@ async function handleApi(apiPath, request, env) {
       let stub = env.registry.get(rid);
       if (apiPath[1] === "list") {
         let r = await stub.fetch("https://dummy-url/emoji/list");
-        return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
+        return new Response(await r.text(), { headers: { "Content-Type": "application/json" } });
       }
-      return new Response("未找到", {status: 404});
+      return new Response("未找到", { status: 404 });
     }
 
     case "mute-status": {
@@ -662,53 +898,94 @@ async function handleApi(apiPath, request, env) {
       let url = new URL(request.url);
       let name = url.searchParams.get("name") || "";
       let r = await stub.fetch("https://dummy-url/mute-status?name=" + encodeURIComponent(name));
-      return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
+      return new Response(await r.text(), { headers: { "Content-Type": "application/json" } });
     }
 
     case "translate": {
-      if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
+      if (request.method !== "POST") return new Response(JSON.stringify({ error: "请使用POST" }), { status: 405 });
       try {
         let body = await request.json();
         let text = (body.text || "").trim();
-        if (!text) return new Response(JSON.stringify({error: "请提供要翻译的文本"}), {status: 400});
+        if (!text) return new Response(JSON.stringify({ error: "请提供要翻译的文本" }), { status: 400 });
         // 🔒 安全修复（LD1）：要求登录（token 认证），堵死游客无认证刷付费 AI 翻译
         let name = body.name || "";
         let token = body.token || "";
         let rid = env.registry.idFromName("global");
         let stub = env.registry.get(rid);
-        let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
+        let authCheck = await stub.fetch(
+          new URL(
+            "https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)
+          )
+        );
         let authData = await authCheck.json();
         if (!authData.authenticated) {
-          return new Response(JSON.stringify({error: "请先登录后使用翻译"}), {status: 403, headers: {"Content-Type": "application/json"}});
+          return new Response(JSON.stringify({ error: "请先登录后使用翻译" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
         }
         // 🔒 安全修复（LD1）：目标语言白名单，防 target 参数注入系统提示
-        const LANG_WHITELIST = ["中文","英语","English","日语","韩语","法语","德语","西班牙语","俄语","阿拉伯语","葡萄牙语","意大利语","泰语","越南语","en","zh","ja","ko","fr","de","es","ru","ar","pt","it","th","vi"];
+        const LANG_WHITELIST = [
+          "中文",
+          "英语",
+          "English",
+          "日语",
+          "韩语",
+          "法语",
+          "德语",
+          "西班牙语",
+          "俄语",
+          "阿拉伯语",
+          "葡萄牙语",
+          "意大利语",
+          "泰语",
+          "越南语",
+          "en",
+          "zh",
+          "ja",
+          "ko",
+          "fr",
+          "de",
+          "es",
+          "ru",
+          "ar",
+          "pt",
+          "it",
+          "th",
+          "vi",
+        ];
         let targetLang = String(body.target || "中文");
         if (!LANG_WHITELIST.includes(targetLang)) targetLang = "中文";
         let resp = await fetch((env.AI_BASE_URL || "https://api.deepseek.com") + "/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer " + (env.AI_API_KEY || "")
+            Authorization: "Bearer " + (env.AI_API_KEY || ""),
           },
           body: JSON.stringify({
             model: env.AI_MODEL || "deepseek-chat",
             messages: [
-              {role: "system", content: "你是一个翻译助手。请将以下消息翻译成" + targetLang + "。只返回翻译结果，不要解释。"},
-              {role: "user", content: text}
+              {
+                role: "system",
+                content: "你是一个翻译助手。请将以下消息翻译成" + targetLang + "。只返回翻译结果，不要解释。",
+              },
+              { role: "user", content: text },
             ],
-            max_tokens: 1000
-          })
+            max_tokens: 1000,
+          }),
         });
         // 🔒 安全修复（LD1）：错误脱敏，不向调用者回显上游 AI 服务错误体
         if (!resp.ok) throw new Error("翻译服务暂时不可用");
         let data = await resp.json();
         let translated = data.choices?.[0]?.message?.content || "翻译失败";
-        return new Response(JSON.stringify({original: text, translated, target: targetLang}), {
-          headers: {"Content-Type": "application/json"}
+        return new Response(JSON.stringify({ original: text, translated, target: targetLang }), {
+          headers: { "Content-Type": "application/json" },
         });
       } catch (e) {
-        return new Response(JSON.stringify({error: "翻译失败，请稍后再试"}), {status: 500, headers: {"Content-Type": "application/json"}});
+        return new Response(JSON.stringify({ error: "翻译失败，请稍后再试" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -719,49 +996,82 @@ async function handleApi(apiPath, request, env) {
       // v1.46 修改密码：转发 registry /user-password（body 透传 name/token/oldPassword/newPassword）
       if (apiPath[1] === "password" && request.method === "POST") {
         let body = await request.json();
-        let r = await stub.fetch(new URL("https://dummy-url/user-password"), {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
-        return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
+        let r = await stub.fetch(new URL("https://dummy-url/user-password"), {
+          method: "POST",
+          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json" },
+        });
+        return new Response(await r.text(), { status: r.status, headers: { "Content-Type": "application/json" } });
       }
       let name = url.searchParams.get("name");
-      if (!name) return new Response(JSON.stringify({error: "no name"}), {status: 400});
+      if (!name) return new Response(JSON.stringify({ error: "no name" }), { status: 400 });
 
       if (apiPath[1] === "profile") {
         let r = await stub.fetch(new URL("https://dummy-url/user-profile?name=" + encodeURIComponent(name)));
-        return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
+        return new Response(await r.text(), { headers: { "Content-Type": "application/json" } });
       }
       if (apiPath[1] === "achievements") {
         let token = url.searchParams.get("token") || "";
-        let r = await stub.fetch(new URL("https://dummy-url/user/achievements?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
-        return new Response(await r.text(), {headers: {"Content-Type": "application/json"}});
+        let r = await stub.fetch(
+          new URL(
+            "https://dummy-url/user/achievements?name=" +
+              encodeURIComponent(name) +
+              "&token=" +
+              encodeURIComponent(token)
+          )
+        );
+        return new Response(await r.text(), { headers: { "Content-Type": "application/json" } });
       }
       if (apiPath[1] === "avatar" && request.method === "POST") {
         let body = await request.json();
         let token = body.token || "";
         // 验证 token
-        let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
+        let authCheck = await stub.fetch(
+          new URL(
+            "https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)
+          )
+        );
         let authData = await authCheck.json();
         if (!authData.authenticated) {
-          return new Response(JSON.stringify({error: "请先登录"}), {status: 403, headers: {"Content-Type": "application/json"}});
+          return new Response(JSON.stringify({ error: "请先登录" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
         }
-        let r = await stub.fetch("https://dummy-url/user-avatar?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
-        return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
+        let r = await stub.fetch("https://dummy-url/user-avatar?name=" + encodeURIComponent(name), {
+          method: "POST",
+          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json" },
+        });
+        return new Response(await r.text(), { status: r.status, headers: { "Content-Type": "application/json" } });
       }
       if (apiPath[1] === "bio" && request.method === "POST") {
         let body = await request.json();
         let token = body.token || "";
         // 验证 token
-        let authCheck = await stub.fetch(new URL("https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)));
+        let authCheck = await stub.fetch(
+          new URL(
+            "https://dummy-url/user-check-auth?name=" + encodeURIComponent(name) + "&token=" + encodeURIComponent(token)
+          )
+        );
         let authData = await authCheck.json();
         if (!authData.authenticated) {
-          return new Response(JSON.stringify({error: "请先登录"}), {status: 403, headers: {"Content-Type": "application/json"}});
+          return new Response(JSON.stringify({ error: "请先登录" }), {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          });
         }
-        let r = await stub.fetch("https://dummy-url/user-bio?name=" + encodeURIComponent(name), {method: "POST", body: JSON.stringify(body), headers: {"Content-Type": "application/json"}});
-        return new Response(await r.text(), {status: r.status, headers: {"Content-Type": "application/json"}});
+        let r = await stub.fetch("https://dummy-url/user-bio?name=" + encodeURIComponent(name), {
+          method: "POST",
+          body: JSON.stringify(body),
+          headers: { "Content-Type": "application/json" },
+        });
+        return new Response(await r.text(), { status: r.status, headers: { "Content-Type": "application/json" } });
       }
-      return new Response("未找到", {status: 404});
+      return new Response("未找到", { status: 404 });
     }
 
     default:
-      return new Response("未找到", {status: 404});
+      return new Response("未找到", { status: 404 });
   }
 }

@@ -2,9 +2,22 @@
   "name": "edge-chat-demo",
   "description": "An edge chat service that runs on Cloudflare Workers using Durable Objects",
   "version": "1.0.0",
-  "module": "./src/chat.mjs",
+  "module": "./src/index.mjs",
   "private": true,
+  "scripts": {
+    "lint": "eslint src --no-warn-ignored",
+    "lint:fix": "eslint src --fix --no-warn-ignored",
+    "format": "prettier --write src/types.js src/utils.mjs src/chatroom.mjs src/chatroom/doc.mjs src/chatroom/manage.mjs src/chatroom/media.mjs src/registry.mjs src/registry/users.mjs src/index.mjs src/client/chat/state.js src/client/chat/renderers.js src/client/chat/websocket.js src/client/chat/core.js src/client/chat/commands.js src/client/chat/doc-store.js src/client/chat/nav.js src/client/chat/modal-manager.js src/client/chat/main.js src/client/chat/modals/kb.js",
+    "typecheck": "tsc -p .tsconfig.json --noEmit"
+  },
   "dependencies": {
     "acorn": "^8.16.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "globals": "^17.9.0",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,16 +1,31 @@
 // 消息渲染 - addChatMessage, addChatImage, addChatFile, 投票, markdown 等
-import { state, t, getUserBio } from './state.js';
-import { TAG_COLORS, getVipLevel, createVipBadge } from './vip.js';
-import { modifyOwnTag, startReply, recallMessage, deleteMessage, checkAtMention, showLightbox, getAdminKey } from './ui.js';
-import { showUserMenu } from './menu.js';
-import { isFavorited, toggleFavorite } from './favorites.js';
-import { showToast, showSuccess, showError, showInfo } from './state.js';
+// @ts-check
+// v1.57 代码质量 A 层：JSDoc 类型注释（仅顶层导出 + 关键内部函数签名）
+import { state, t, getUserBio } from "./state.js";
+import { TAG_COLORS, getVipLevel, createVipBadge } from "./vip.js";
+import {
+  modifyOwnTag,
+  startReply,
+  recallMessage,
+  deleteMessage,
+  checkAtMention,
+  showLightbox,
+  getAdminKey,
+} from "./ui.js";
+import { showUserMenu } from "./menu.js";
+import { isFavorited, toggleFavorite } from "./favorites.js";
+import { showToast, showSuccess, showError, showInfo } from "./state.js";
 
 // ⭐ 等级徽章（纯展示）：level>0 时显示 Lv.N；支持房间自定义样式（颜色/图标/文字）
 // 🏅 样式来自 WS 推送的 state.levelStyles[level] = {color, icon, text}，渲染走 createElement+textContent 防 XSS
 const LV_LIGHT_COLORS = new Set(["yellow", "lime", "gold", "amber", "turquoise", "cyan", "mediumseagreen", "seagreen"]);
+/**
+ * ⭐ 等级徽章（纯展示）：level>0 时显示 Lv.N
+ * @param {number|string} level 用户等级
+ * @returns {HTMLElement|null} 等级低于 1 返回 null
+ */
 export function createLevelBadge(level) {
-  level = parseInt(level) || 0;
+  level = parseInt(String(level)) || 0;
   if (level < 1) return null;
   let badge = document.createElement("span");
   badge.className = "lv-badge";
@@ -46,28 +61,58 @@ const urlPreviewCache = new Map();
 function renderPreviewCard(wrapper, data, previewUrl) {
   let card = document.createElement("div");
   card.className = "url-preview";
-  card.style.cssText = "margin-top:4px;padding:6px 10px;border-radius:6px;background:var(--bg);border-left:3px solid var(--primary);font-size:12px;cursor:pointer;";
-  card.innerHTML = '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">' + escapeHtml(data.title) + '</div>' +
-    (data.description ? '<div style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">' + escapeHtml(data.description) + '</div>' : '') +
-    '<div style="font-size:10px;color:var(--text-secondary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(previewUrl) + '</div>';
-  card.addEventListener("click", (e) => { e.stopPropagation(); window.open(previewUrl, "_blank"); });
+  card.style.cssText =
+    "margin-top:4px;padding:6px 10px;border-radius:6px;background:var(--bg);border-left:3px solid var(--primary);font-size:12px;cursor:pointer;";
+  card.innerHTML =
+    '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">' +
+    escapeHtml(data.title) +
+    "</div>" +
+    (data.description
+      ? '<div style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">' +
+        escapeHtml(data.description) +
+        "</div>"
+      : "") +
+    '<div style="font-size:10px;color:var(--text-secondary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+    escapeHtml(previewUrl) +
+    "</div>";
+  card.addEventListener("click", (e) => {
+    e.stopPropagation();
+    window.open(previewUrl, "_blank");
+  });
   wrapper.appendChild(card);
 }
 
 // 彩色标签解析 [color]text
 const TAG_COLOR_MAP = {
-  red: "#e74c3c", blue: "#3498db", green: "#2ecc71",
-  purple: "#9b59b6", pink: "#e91e63", cyan: "#00bcd4",
-  gray: "#95a5a6", orange: "#e67e22", yellow: "#ffc107",
-  teal: "#009688", indigo: "#3f51b5", brown: "#795548",
-  lime: "#cddc39", deeporange: "#ff5722"
+  red: "#e74c3c",
+  blue: "#3498db",
+  green: "#2ecc71",
+  purple: "#9b59b6",
+  pink: "#e91e63",
+  cyan: "#00bcd4",
+  gray: "#95a5a6",
+  orange: "#e67e22",
+  yellow: "#ffc107",
+  teal: "#009688",
+  indigo: "#3f51b5",
+  brown: "#795548",
+  lime: "#cddc39",
+  deeporange: "#ff5722",
 };
 
+/**
+ * 彩色标签 [color]text 渲染（支持多段多色）
+ * @param {string} tag 标签文本（可能含 [color] 段）
+ * @param {string} tagColor 主色名
+ * @param {string} tagBorder 边框色名
+ * @param {boolean} isSelf 是否自己的标签（可点击修改）
+ * @returns {HTMLElement} 标签 span 元素
+ */
 export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
   let badge = document.createElement("span");
   badge.className = "tag";
-  let defaultBg = (tagColor && TAG_COLORS[tagColor]) ? TAG_COLORS[tagColor] : "";
-  let borderColor = (tagBorder && TAG_COLORS[tagBorder]) ? TAG_COLORS[tagBorder] : "";
+  let defaultBg = tagColor && TAG_COLORS[tagColor] ? TAG_COLORS[tagColor] : "";
+  let borderColor = tagBorder && TAG_COLORS[tagBorder] ? TAG_COLORS[tagBorder] : "";
 
   let segs = [];
   let remaining = tag;
@@ -80,9 +125,9 @@ export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
       let nextBracket = remaining.search(/\[/);
       let text = nextBracket >= 0 ? remaining.slice(0, nextBracket) : remaining;
       remaining = nextBracket >= 0 ? remaining.slice(nextBracket) : "";
-      if (text) segs.push({color: c, text});
+      if (text) segs.push({ color: c, text });
     } else {
-      segs.push({color: "", text: remaining});
+      segs.push({ color: "", text: remaining });
       remaining = "";
     }
   }
@@ -93,7 +138,10 @@ export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
     badge.style.display = "inline-flex";
     badge.style.overflow = "hidden";
     badge.style.backgroundColor = defaultBg || "transparent";
-    if (borderColor) { badge.style.outline = "2px solid " + borderColor; badge.style.outlineOffset = "-1px"; }
+    if (borderColor) {
+      badge.style.outline = "2px solid " + borderColor;
+      badge.style.outlineOffset = "-1px";
+    }
 
     segs.forEach((s, i) => {
       let span = document.createElement("span");
@@ -116,7 +164,10 @@ export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
     if (isSelf) {
       badge.style.cursor = "pointer";
       badge.title = t("点击修改标签");
-      badge.addEventListener("click", (e) => { e.stopPropagation(); modifyOwnTag(tag, tagColor); });
+      badge.addEventListener("click", (e) => {
+        e.stopPropagation();
+        modifyOwnTag(tag, tagColor);
+      });
     }
     return badge;
   }
@@ -124,11 +175,17 @@ export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
   // Simple tag
   badge.textContent = tag;
   if (defaultBg) badge.style.backgroundColor = defaultBg;
-  if (borderColor) { badge.style.outline = "2px solid " + borderColor; badge.style.outlineOffset = "-1px"; }
+  if (borderColor) {
+    badge.style.outline = "2px solid " + borderColor;
+    badge.style.outlineOffset = "-1px";
+  }
   if (isSelf) {
     badge.style.cursor = "pointer";
     badge.title = t("点击修改标签");
-    badge.addEventListener("click", (e) => { e.stopPropagation(); modifyOwnTag(tag, tagColor); });
+    badge.addEventListener("click", (e) => {
+      e.stopPropagation();
+      modifyOwnTag(tag, tagColor);
+    });
   }
   return badge;
 }
@@ -136,19 +193,29 @@ export function createColoredTag(tag, tagColor, tagBorder, isSelf) {
 // 消息已读观察器
 let _readObsInited = false;
 function initReadObserver() {
-  if (_readObsInited || !('IntersectionObserver' in window)) return;
+  if (_readObsInited || !("IntersectionObserver" in window)) return;
   _readObsInited = true;
-  window._readObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting && entry.target.dataset.read !== "1") {
-        entry.target.dataset.read = "1";
-        let indicator = entry.target.querySelector(".read-indicator");
-        if (indicator) indicator.textContent = "✓";
-      }
-    });
-  }, {threshold: 0.5});
+  // @ts-ignore window._readObserver 为运行时挂载（已读观察器）
+  window._readObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const target = /** @type {HTMLElement} */ (entry.target); // entry.target 为 Element，dataset 需提升为 HTMLElement
+        if (entry.isIntersecting && target.dataset.read !== "1") {
+          target.dataset.read = "1";
+          let indicator = target.querySelector(".read-indicator");
+          if (indicator) indicator.textContent = "✓";
+        }
+      });
+    },
+    { threshold: 0.5 }
+  );
 }
 
+/**
+ * 时间戳 → HH:MM 文本
+ * @param {number} ts 毫秒时间戳
+ * @returns {string}
+ */
 export function formatTime(ts) {
   if (!ts) return "";
   let d = new Date(ts);
@@ -157,21 +224,30 @@ export function formatTime(ts) {
 
 // —— 日期分组：跨天插入日期分隔线（统一适用于文本/图片/文件/历史加载）——
 let _lastMsgDate = null;
-export function resetMsgDate() { _lastMsgDate = null; }
+/** 重置日期分组基准（切频道/清屏时调用） */
+export function resetMsgDate() {
+  _lastMsgDate = null;
+}
 function maybeDateDivider(ts) {
   if (!ts) return;
   let d = new Date(ts);
-  let dateStr = d.getFullYear() + "/" + (d.getMonth()+1) + "/" + d.getDate();
+  let dateStr = d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
   if (_lastMsgDate && _lastMsgDate !== dateStr) {
     let div = document.createElement("div");
     div.className = "date-divider";
-    div.style.cssText = "text-align:center;font-size:11px;color:var(--text-secondary);padding:6px 0 4px;user-select:none;border-bottom:1px solid var(--border);margin:4px 0 6px;";
+    div.style.cssText =
+      "text-align:center;font-size:11px;color:var(--text-secondary);padding:6px 0 4px;user-select:none;border-bottom:1px solid var(--border);margin:4px 0 6px;";
     div.textContent = "—— " + dateStr + " ——";
     (_batchTarget || state.chatlog).appendChild(div);
   }
   _lastMsgDate = dateStr;
 }
 
+/**
+ * HTML 转义（textContent 写入 div 再取 innerHTML）
+ * @param {string} str
+ * @returns {string}
+ */
 export function escapeHtml(str) {
   let div = document.createElement("div");
   div.textContent = str;
@@ -184,34 +260,49 @@ export function escapeHtml(str) {
 // 附带修复现有 bug：fence 内内容不再被后续 bold/url 二次处理；行内代码 `**x**` 不再被误加粗
 
 // 行内处理器：入参已是 escape 后的文本。①先占位保护行内代码/katex，②文本级转换，③还原占位符。
+/**
+ * 行内渲染器：入参已是 escape 后的文本。①先占位保护行内代码/katex，②文本级转换，③还原占位符
+ * @param {string} escaped
+ * @returns {string}
+ */
 function inlineRenderer(escaped) {
   const tokens = [];
   // ① 占位保护：行内代码 / katex 的内容绝不能被后续 bold/italic/url 改动
   escaped = escaped.replace(/`([^`]+)`/g, (m, c) => {
-    const i = tokens.push({ html: '<code>' + c + '</code>' }) - 1;
-    return ' T' + i + ' ';
+    const i = tokens.push({ html: "<code>" + c + "</code>" }) - 1;
+    return "~T" + i + "~";
   });
-  if (typeof katex !== 'undefined') {
+  // @ts-ignore katex 为 index.html script 注入的全局（@ts-check 无法识别）
+  if (typeof katex !== "undefined") {
     escaped = escaped.replace(/\$\$([\s\S]*?)\$\$/g, (m, tex) => {
       let html = m;
-      try { html = katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }); } catch (e) {}
+      try {
+        // @ts-ignore katex 为 index.html script 注入的全局（@ts-check 无法识别）
+        html = /** @type {any} */ (katex).renderToString(tex.trim(), { displayMode: true, throwOnError: false });
+      } catch (e) {}
       const i = tokens.push({ html }) - 1;
-      return ' T' + i + ' ';
+      return "~T" + i + "~";
     });
     escaped = escaped.replace(/\$([^$\n]+?)\$/g, (m, tex) => {
       let html = m;
-      try { html = katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }); } catch (e) {}
+      try {
+        // @ts-ignore katex 为 index.html script 注入的全局（@ts-check 无法识别）
+        html = /** @type {any} */ (katex).renderToString(tex.trim(), { displayMode: false, throwOnError: false });
+      } catch (e) {}
       const i = tokens.push({ html }) - 1;
-      return ' T' + i + ' ';
+      return "~T" + i + "~";
     });
   }
-  // ② 文本级转换（占位符  T<n>  不含这些语法字符，天然免疫；先加粗后斜体防交叉）
+  // ② 文本级转换（占位符 ~T<n>~ 不含这些语法字符，天然免疫；先加粗后斜体防交叉）
   escaped = escaped
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(\s|^)\*([^*\s][^*]*?)\*(\s|$)/g, '$1<em>$2</em>$3')
-    .replace(/~~(.+?)~~/g, '<del>$1</del>')
-    .replace(/\[\[([a-z0-9_\-]{8,48}):([^\]]{1,80})\]\]/g, (m, docId, title) =>
-      '<span class="doc-ref" data-docid="' + docId + '" title="' + title + '">📄 ' + title + '</span>')
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(\s|^)\*([^*\s][^*]*?)\*(\s|$)/g, "$1<em>$2</em>$3")
+    .replace(/~~(.+?)~~/g, "<del>$1</del>")
+    .replace(
+      /\[\[([a-z0-9_\-]{8,48}):([^\]]{1,80})\]\]/g,
+      (m, docId, title) =>
+        '<span class="doc-ref" data-docid="' + docId + '" title="' + title + '">📄 ' + title + "</span>"
+    )
     .replace(/https?:\/\/[^\s<"]+/g, '<a href="$&" target="_blank" rel="noopener noreferrer">$&</a>')
     .replace(/@([\w一-鿿\-_]+)/g, '<span class="mention" data-mention="$1">@$1</span>');
   // 自定义 emoji :name:
@@ -220,35 +311,75 @@ function inlineRenderer(escaped) {
       let dataUrl = state.customEmoji[name];
       if (dataUrl) {
         // 🔒 安全修复（LD6）：图片 src 一并转义引号，防属性逃逸注入 on* 事件
-        return '<img src="' + dataUrl.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '" class="custom-emoji" alt=":' + escapeHtml(name) + ':" title=":' + escapeHtml(name) + ':" style="width:20px;height:20px;vertical-align:middle;display:inline-block;object-fit:contain;">';
+        return (
+          '<img src="' +
+          dataUrl
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;") +
+          '" class="custom-emoji" alt=":' +
+          escapeHtml(name) +
+          ':" title=":' +
+          escapeHtml(name) +
+          ':" style="width:20px;height:20px;vertical-align:middle;display:inline-block;object-fit:contain;">'
+        );
       }
       return match;
     });
   }
   // ③ 还原占位符
-  return escaped.replace(/ T(\d+) /g, (m, i) => tokens[i].html);
+  return escaped.replace(/~T(\d+)~/g, (m, i) => tokens[i].html);
 }
 
-// 块级状态机：跑在【原始文本】上，逐行扫描；围栏内跳过所有块级/行内处理
+/** @typedef {{ kind: 'raw', html: string } | { kind: 'inline', text: string }} Block */
+/**
+ * 块级状态机：跑在【原始文本】上，逐行扫描；围栏内跳过所有块级/行内处理
+ * @param {string} text 原始 markdown 文本
+ * @returns {Block[]} 块序列（raw 直接拼接 / inline 走 inlineRenderer）
+ */
 function parseBlocks(text) {
-  const lines = String(text).split('\n');
+  const lines = String(text).split("\n");
   const segs = [];
-  let para = [];   // 普通段落缓冲（kind:'inline'，逐段 escape 后走 inlineRenderer）
-  let bq = [];     // 引用行缓冲
+  let para = []; // 普通段落缓冲（kind:'inline'，逐段 escape 后走 inlineRenderer）
+  let bq = []; // 引用行缓冲
   let list = null; // {ordered, items[]}
-  const flushPara = () => { if (para.length) { segs.push({ kind: 'inline', text: para.join('\n') }); para = []; } };
+  const flushPara = () => {
+    if (para.length) {
+      segs.push({ kind: "inline", text: para.join("\n") });
+      para = [];
+    }
+  };
   const flushBq = () => {
     if (!bq.length) return;
-    segs.push({ kind: 'raw', html: '<blockquote>' + bq.map(l => '<p>' + inlineRenderer(escapeHtml(l)) + '</p>').join('') + '</blockquote>' });
+    segs.push({
+      kind: "raw",
+      html: "<blockquote>" + bq.map((l) => "<p>" + inlineRenderer(escapeHtml(l)) + "</p>").join("") + "</blockquote>",
+    });
     bq = [];
   };
   const flushList = () => {
     if (!list) return;
-    const tag = list.ordered ? 'ol' : 'ul';
-    segs.push({ kind: 'raw', html: '<' + tag + '>' + list.items.map(it => '<li>' + inlineRenderer(escapeHtml(it)) + '</li>').join('') + '</' + tag + '>' });
+    const tag = list.ordered ? "ol" : "ul";
+    segs.push({
+      kind: "raw",
+      html:
+        "<" +
+        tag +
+        ">" +
+        list.items.map((it) => "<li>" + inlineRenderer(escapeHtml(it)) + "</li>").join("") +
+        "</" +
+        tag +
+        ">",
+    });
     list = null;
   };
-  const flushAll = () => { flushPara(); flushBq(); flushList(); };
+  const flushAll = () => {
+    flushPara();
+    flushBq();
+    flushList();
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -259,8 +390,19 @@ function parseBlocks(text) {
       const lang = fm[1];
       const code = [];
       i++;
-      while (i < lines.length && !/^\s*```/.test(lines[i])) { code.push(lines[i]); i++; }
-      segs.push({ kind: 'raw', html: '<pre><code' + (lang ? ' class="language-' + lang + '"' : '') + '>' + escapeHtml(code.join('\n')) + '</code></pre>' });
+      while (i < lines.length && !/^\s*```/.test(lines[i])) {
+        code.push(lines[i]);
+        i++;
+      }
+      segs.push({
+        kind: "raw",
+        html:
+          "<pre><code" +
+          (lang ? ' class="language-' + lang + '"' : "") +
+          ">" +
+          escapeHtml(code.join("\n")) +
+          "</code></pre>",
+      });
       continue;
     }
     // 标题 # ## ###
@@ -268,64 +410,111 @@ function parseBlocks(text) {
     if (hm) {
       flushAll();
       const n = hm[1].length;
-      segs.push({ kind: 'raw', html: '<h' + n + '>' + inlineRenderer(escapeHtml(hm[2])) + '</h' + n + '>' });
+      segs.push({ kind: "raw", html: "<h" + n + ">" + inlineRenderer(escapeHtml(hm[2])) + "</h" + n + ">" });
       continue;
     }
     // 水平线 --- *** ___
     if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)) {
       flushAll();
-      segs.push({ kind: 'raw', html: '<hr>' });
+      segs.push({ kind: "raw", html: "<hr>" });
       continue;
     }
     // 引用 > 连续行合并
     const bm = line.match(/^\s{0,3}>\s?(.*)$/);
     if (bm) {
-      flushPara(); flushList();
+      flushPara();
+      flushList();
       bq.push(bm[1]);
       continue;
     }
     // 列表 - * + / 1. 1)（块级先剥离标记，斜体正则不再吃到 *）
     const lm = line.match(/^\s{0,3}([-*+]|\d{1,3}[.)])\s+(.*)$/);
     if (lm) {
-      flushPara(); flushBq();
+      flushPara();
+      flushBq();
       const ordered = /\d/.test(lm[1]);
-      if (!list || list.ordered !== ordered) { flushList(); list = { ordered, items: [] }; }
+      if (!list || list.ordered !== ordered) {
+        flushList();
+        list = { ordered, items: [] };
+      }
       list.items.push(lm[2]);
       continue;
     }
     // 表格：当前行含 | 且下一行是分隔行
-    if (line.indexOf('|') !== -1 && i + 1 < lines.length && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1]) && lines[i + 1].indexOf('-') !== -1) {
+    if (
+      line.indexOf("|") !== -1 &&
+      i + 1 < lines.length &&
+      /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1]) &&
+      lines[i + 1].indexOf("-") !== -1
+    ) {
       flushAll();
       const tableLines = [line];
       i++;
-      while (i < lines.length && lines[i].indexOf('|') !== -1) { tableLines.push(lines[i]); i++; }
+      while (i < lines.length && lines[i].indexOf("|") !== -1) {
+        tableLines.push(lines[i]);
+        i++;
+      }
       i--; // 回退到最后一个表格行（for 循环 i++ 会继续）
-      const cells = row => row.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
+      const cells = (row) =>
+        row
+          .replace(/^\s*\|/, "")
+          .replace(/\|\s*$/, "")
+          .split("|")
+          .map((c) => c.trim());
       const header = cells(tableLines[0]);
-      const body = tableLines.slice(2).filter(r => r.trim()).map(cells);
-      let h = '<table><thead><tr>' + header.map(c => '<th>' + inlineRenderer(escapeHtml(c)) + '</th>').join('') + '</tr></thead>';
-      h += '<tbody>' + body.map(r => '<tr>' + r.map(c => '<td>' + inlineRenderer(escapeHtml(c)) + '</td>').join('') + '</tr>').join('') + '</tbody></table>';
-      segs.push({ kind: 'raw', html: h });
+      const body = tableLines
+        .slice(2)
+        .filter((r) => r.trim())
+        .map(cells);
+      let h =
+        "<table><thead><tr>" +
+        header.map((c) => "<th>" + inlineRenderer(escapeHtml(c)) + "</th>").join("") +
+        "</tr></thead>";
+      h +=
+        "<tbody>" +
+        body
+          .map((r) => "<tr>" + r.map((c) => "<td>" + inlineRenderer(escapeHtml(c)) + "</td>").join("") + "</tr>")
+          .join("") +
+        "</tbody></table>";
+      segs.push({ kind: "raw", html: h });
       continue;
     }
     // 空行 flush 当前块
-    if (!line.trim()) { flushPara(); flushBq(); flushList(); continue; }
+    if (!line.trim()) {
+      flushPara();
+      flushBq();
+      flushList();
+      continue;
+    }
     // 普通段落行
-    flushList(); flushBq();
+    flushList();
+    flushBq();
     para.push(line);
   }
   flushAll();
-  return segs;
+  return /** @type {Block[]} */ (segs);
 }
 
+/**
+ * markdown → HTML（v1.56 块级状态机重写）
+ * @param {string} text 原始 markdown 文本
+ * @returns {string} HTML 字符串
+ */
 export function markdownToHtml(text) {
-  if (text == null) text = '';
-  return parseBlocks(text).map(s => s.kind === 'raw' ? s.html : inlineRenderer(escapeHtml(s.text))).join('');
+  if (text == null) text = "";
+  return parseBlocks(text)
+    .map((s) => (s.kind === "raw" ? s.html : inlineRenderer(escapeHtml(s.text))))
+    .join("");
 }
 
 // v1.56 超长折叠：原始 markdown 源码 >1500 字折叠为 420px + 渐变遮罩 + "展开全部 N 字"按钮
 // 放在 hljs 之后执行（高亮不干扰高度计算）；按钮 click 需 stopPropagation 不触发 bubble 整条复制
 const MSG_COLLAPSE_LEN = 1500;
+/**
+ * v1.56 超长折叠：原始 markdown >1500 字折叠为 420px + 渐变遮罩 + 展开按钮
+ * @param {HTMLElement} bubble 消息气泡元素
+ * @param {number} len 原始文本长度
+ */
 function applyCollapse(bubble, len) {
   if (len <= MSG_COLLAPSE_LEN) return;
   bubble.classList.add("msg-collapsed");
@@ -340,6 +529,7 @@ function applyCollapse(bubble, len) {
   bubble.appendChild(btn);
 }
 
+/** 加载自定义 emoji 表（/api/emoji/list） */
 export async function loadCustomEmoji() {
   try {
     let r = await fetch("/api/emoji/list");
@@ -350,6 +540,10 @@ export async function loadCustomEmoji() {
   }
 }
 
+/**
+ * 投票消息渲染（WS poll 推送）
+ * @param {any} data 投票数据（question/options/pollId/timestamp）
+ */
 export function renderPoll(data) {
   if (!data || !data.question) return;
   if (data.channel && state.currentChannel && data.channel !== state.currentChannel) return;
@@ -378,10 +572,11 @@ export function renderPoll(data) {
     row.style.cursor = "pointer";
     row.dataset.pollId = data.pollId;
     row.dataset.optIndex = i;
-    row.innerHTML = '<span class="poll-opt-text">' + escapeHtml(opt.text) + '</span>';
+    row.innerHTML = '<span class="poll-opt-text">' + escapeHtml(opt.text) + "</span>";
     row.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({type: "poll-vote", pollId: data.pollId, optionIndex: i}));
+      if (state.currentWebSocket)
+        state.currentWebSocket.send(JSON.stringify({ type: "poll-vote", pollId: data.pollId, optionIndex: i }));
     });
     results.appendChild(row);
   });
@@ -398,10 +593,15 @@ export function renderPoll(data) {
 }
 
 // 个人签名展示 — 在用户名后追加签名标签，并设置悬停 tooltip
+/**
+ * 个人签名展示 — 用户名后追加签名标签 + 悬停 tooltip
+ * @param {HTMLElement} nameSpan 用户名元素
+ * @param {string} name 用户名
+ */
 export function attachSignature(nameSpan, name) {
   if (!nameSpan || !name || name === state.username) return;
   let sigEl = null;
-  getUserBio(name).then(bio => {
+  getUserBio(name).then((bio) => {
     if (!bio || !nameSpan.isConnected) return;
     sigEl = document.createElement("span");
     sigEl.className = "msg-signature";
@@ -410,7 +610,7 @@ export function attachSignature(nameSpan, name) {
     nameSpan.appendChild(sigEl);
   });
   nameSpan.addEventListener("mouseenter", () => {
-    getUserBio(name).then(bio => {
+    getUserBio(name).then((bio) => {
       if (!bio || !nameSpan.isConnected) return;
       if (!sigEl) {
         sigEl = document.createElement("span");
@@ -424,6 +624,11 @@ export function attachSignature(nameSpan, name) {
 }
 
 // ===== 话题线程回复：统一引用条渲染（ID 精确跳转 + 模糊回退）=====
+/**
+ * 话题线程引用条渲染（ID 精确跳转 + 模糊回退）
+ * @param {{ id?: any, name?: string, text?: string }} reply 引用信息
+ * @returns {HTMLElement}
+ */
 function buildReplyQuote(reply) {
   let quote = document.createElement("div");
   quote.className = "reply-quote";
@@ -439,7 +644,9 @@ function buildReplyQuote(reply) {
     e.stopPropagation();
     let target = null;
     if (reply && reply.id) {
-      try { target = state.chatlog.querySelector('[data-msgid="' + reply.id + '"]'); } catch (err) {}
+      try {
+        target = state.chatlog.querySelector('[data-msgid="' + reply.id + '"]');
+      } catch (err) {}
     }
     if (!target) {
       let msgEls = state.chatlog.querySelectorAll(".chat-msg");
@@ -447,12 +654,15 @@ function buildReplyQuote(reply) {
         let nameEl = el.querySelector(".username");
         if (nameEl && nameEl.textContent === reply.name) {
           let bubble = el.querySelector(".bubble");
-          if (bubble && bubble.textContent.includes(reply.text || "")) { target = el; break; }
+          if (bubble && bubble.textContent.includes(reply.text || "")) {
+            target = el;
+            break;
+          }
         }
       }
     }
     if (target) {
-      target.scrollIntoView({behavior: "smooth", block: "center"});
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
       target.classList.add("msg-ref-highlight");
       setTimeout(() => target.classList.remove("msg-ref-highlight"), 2000);
     } else {
@@ -463,49 +673,80 @@ function buildReplyQuote(reply) {
 }
 
 // 话题线程：统计每条消息被回复的次数，在原消息尾部显示 "💬 N" 徽章，点击滚到最近一条回复
+/** 统计每条消息被回复次数并显示 "💬 N" 徽章 */
 export function refreshReplyCounts() {
   let counts = {};
-  state.chatlog.querySelectorAll(".reply-quote").forEach(q => {
-    let rid = q.dataset.replyId;
-    if (rid) counts[rid] = (counts[rid] || 0) + 1;
-  });
-  state.chatlog.querySelectorAll(".chat-msg").forEach(w => {
-    let rid = w.dataset.msgId;
-    let old = w.querySelector(".reply-count-badge");
-    if (old) old.remove();
-    if (rid && counts[rid]) {
-      let badge = document.createElement("span");
-      badge.className = "reply-count-badge";
-      badge.textContent = "💬 " + counts[rid];
-      badge.title = counts[rid] + t(" 条回复");
-      badge.addEventListener("click", (e) => {
-        e.stopPropagation();
-        let last = null;
-        state.chatlog.querySelectorAll(".reply-quote").forEach(q => {
-          if (q.dataset.replyId === rid) last = q;
-        });
-        if (last) {
-          let msgEl = last.closest(".chat-msg");
-          if (msgEl) { msgEl.scrollIntoView({behavior: "smooth", block: "center"}); msgEl.classList.add("msg-ref-highlight"); setTimeout(() => msgEl.classList.remove("msg-ref-highlight"), 2000); }
-        }
-      });
-      w.appendChild(badge);
+  state.chatlog.querySelectorAll(".reply-quote").forEach(
+    /** @param {HTMLElement} q */ (q) => {
+      let rid = q.dataset.replyId;
+      if (rid) counts[rid] = (counts[rid] || 0) + 1;
     }
-  });
+  );
+  state.chatlog.querySelectorAll(".chat-msg").forEach(
+    /** @param {HTMLElement} w */ (w) => {
+      let rid = w.dataset.msgId;
+      let old = w.querySelector(".reply-count-badge");
+      if (old) old.remove();
+      if (rid && counts[rid]) {
+        let badge = document.createElement("span");
+        badge.className = "reply-count-badge";
+        badge.textContent = "💬 " + counts[rid];
+        badge.title = counts[rid] + t(" 条回复");
+        badge.addEventListener("click", (e) => {
+          e.stopPropagation();
+          /** @type {HTMLElement|null} */
+          let last = null;
+          state.chatlog.querySelectorAll(".reply-quote").forEach(
+            /** @param {HTMLElement} q */ (q) => {
+              if (q.dataset.replyId === rid) last = q;
+            }
+          );
+          if (last) {
+            let msgEl = last.closest(".chat-msg");
+            if (msgEl) {
+              msgEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              msgEl.classList.add("msg-ref-highlight");
+              setTimeout(() => msgEl.classList.remove("msg-ref-highlight"), 2000);
+            }
+          }
+        });
+        w.appendChild(badge);
+      }
+    }
+  );
 }
 
 // v1.40 Hacknet 主题：系统消息分流 hook。
 // Hacknet 布局注册后，系统指令/命令结果（name==null 的 addChatMessage）改道进右侧命令终端，
 // 不再在 chatlog 重复显示；非 Hacknet 主题下 hook 为 null，行为完全不变。
+/** @type {((text:string)=>void)|null} Hacknet 系统消息分流 hook（非 Hacknet 主题为 null） */
 export let systemMessageHook = null;
-export function setSystemMessageHook(fn) { systemMessageHook = fn; }
+/** @param {((text:string)=>void)|null} fn */
+export function setSystemMessageHook(fn) {
+  systemMessageHook = fn;
+}
 
 // v1.40 Hacknet IRC 化：聊天消息按 IRC 客户端渲染（无气泡文本行 + 彩色昵称）
+/** @type {boolean} Hacknet IRC 化渲染开关 */
 export let hacknetIRC = false;
-export function setHacknetIRC(v) { hacknetIRC = !!v; }
+/** @param {boolean} v */
+export function setHacknetIRC(v) {
+  hacknetIRC = !!v;
+}
 
 // Hacknet IRC 用户色板（IRCSystem UserColors，昵称按名字哈希取色）
-const IRC_PALETTE = ["#00A6EB", "#5FDC53", "#DEC918", "#FFC729", "#FF8E5E", "#FF5EA8", "#5EE8C0", "#C08BFF", "#8FBFE8", "#FFB45E"];
+const IRC_PALETTE = [
+  "#00A6EB",
+  "#5FDC53",
+  "#DEC918",
+  "#FFC729",
+  "#FF8E5E",
+  "#FF5EA8",
+  "#5EE8C0",
+  "#C08BFF",
+  "#8FBFE8",
+  "#FFB45E",
+];
 function ircNameColor(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
@@ -513,18 +754,28 @@ function ircNameColor(name) {
 }
 
 // IRC 消息行：`[昵称] 消息`（昵称彩色，消息白色，等宽无气泡）
+/**
+ * IRC 消息行渲染：`[昵称] 消息`（昵称彩色、等宽无气泡）
+ * @param {string} name
+ * @param {string} text
+ * @param {boolean} isSelf
+ * @param {number} timestamp
+ */
 function renderIrcMessage(name, text, isSelf, timestamp) {
   maybeDateDivider(timestamp);
   let p = document.createElement("p");
   p.className = "chat-msg irc-msg" + (isSelf ? " self" : "");
-  if (timestamp) p.dataset.timestamp = timestamp;
+  if (timestamp) p.dataset.timestamp = String(timestamp);
   p.dataset.msgName = name || "";
   let nick = document.createElement("span");
   nick.className = "irc-name";
   nick.textContent = "[" + name + "]";
   nick.style.color = ircNameColor(name);
   nick.style.cursor = "pointer";
-  nick.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+  nick.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showUserMenu(name, e.clientX, e.clientY);
+  });
   p.appendChild(nick);
   let body = document.createElement("span");
   body.className = "irc-text";
@@ -537,22 +788,45 @@ function renderIrcMessage(name, text, isSelf, timestamp) {
 
 // ---- 消息渲染公共助手（模块化去重）----
 // 统一绑定"点击用户菜单"（头像/昵称）
+/**
+ * 统一绑定"点击用户菜单"（头像/昵称共用）
+ * @param {HTMLElement} el
+ * @param {string} name
+ */
 function attachUserClick(el, name) {
-  el.addEventListener("click", (e) => { e.stopPropagation(); showUserMenu(name, e.clientX, e.clientY); });
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showUserMenu(name, e.clientX, e.clientY);
+  });
 }
 
 // 创建消息 wrapper：chat-msg 容器 + 时间戳/消息ID/全员提醒 data 属性
+/**
+ * 创建消息 wrapper：chat-msg 容器 + 时间戳/消息ID/全员提醒 data 属性
+ * @param {string} name
+ * @param {boolean} isSelf
+ * @param {number} timestamp
+ * @param {number|string} [msgId]
+ * @param {boolean} [atAll]
+ * @returns {HTMLElement}
+ */
 function createMsgWrapper(name, isSelf, timestamp, msgId, atAll) {
   let wrapper = document.createElement("p");
   wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
-  if (timestamp) wrapper.dataset.timestamp = timestamp;
+  if (timestamp) wrapper.dataset.timestamp = String(timestamp);
   wrapper.dataset.msgName = name || "";
-  if (msgId) wrapper.dataset.msgId = msgId;
+  if (msgId) wrapper.dataset.msgId = String(msgId);
   if (atAll) wrapper.classList.add("ping-all");
   return wrapper;
 }
 
 // 构建消息头部：tag徽章 + VIP徽章 + 头像 + 昵称 + 等级徽章 + 回复引用
+/**
+ * 构建消息头部：tag徽章 + VIP徽章 + 头像 + 昵称 + 等级徽章 + 回复引用
+ * @param {HTMLElement} wrapper
+ * @param {{ name:string, tag?:string, tagColor?:string, tagBorder?:string, isSelf:boolean, avatar?:string, level?:number, reply?:object }} opts
+ * @returns {HTMLElement}
+ */
 function buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply }) {
   let header = document.createElement("span");
   header.className = "msg-header";
@@ -588,6 +862,11 @@ function buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avata
 }
 
 // 追加消息时间戳
+/**
+ * 追加消息时间戳
+ * @param {HTMLElement} wrapper
+ * @param {number} timestamp
+ */
 function appendMsgTime(wrapper, timestamp) {
   if (timestamp) {
     let timeSpan = document.createElement("span");
@@ -598,44 +877,105 @@ function appendMsgTime(wrapper, timestamp) {
 }
 
 // 打开消息操作菜单（公共参数集：是否管理员/有无 WS 统一由这里判定）
+/**
+ * 打开消息操作菜单（公共参数集：是否管理员/有无 WS 统一由这里判定）
+ * @param {HTMLElement} wrapper
+ * @param {{ name:string, text:string, timestamp:number, msgId?:number|string, tag?:string, tagColor?:string, tagBorder?:string, isSelf:boolean }} opts
+ */
 function openMsgActions(wrapper, { name, text, timestamp, msgId, tag, tagColor, tagBorder, isSelf }) {
   buildActionMenu(wrapper, {
-    name, text, timestamp, msgId, tag, tagColor, tagBorder,
+    name,
+    text,
+    timestamp,
+    msgId,
+    tag,
+    tagColor,
+    tagBorder,
     isSelf,
     isAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
     hasWs: !!state.currentWebSocket,
-    roomname: state.roomname
+    roomname: state.roomname,
   });
 }
 
 // v1.53 批4 消息流批量：连续渲染多条消息先攒进 DocumentFragment，一次上屏 + 一次滚动（取代逐条 appendChild+scrollBy）
 // beginBatch/endBatch 之间 finishMsg/日期分隔线/系统消息全部改入 fragment；上屏 + 滚动由调用方统一完成
 let _batchTarget = null;
-export function beginBatch() { _batchTarget = document.createDocumentFragment(); return _batchTarget; }
-export function endBatch() { const f = _batchTarget; _batchTarget = null; return f; }
+/** 开始批量渲染：返回 DocumentFragment 供消息流攒批（v1.53 批4） */
+export function beginBatch() {
+  _batchTarget = document.createDocumentFragment();
+  return _batchTarget;
+}
+/** 结束批量渲染：返回攒好的 fragment（无批处理时返回 null） */
+export function endBatch() {
+  const f = _batchTarget;
+  _batchTarget = null;
+  return f;
+}
 
 // 公共收尾：裁剪 + 上屏 + 滚动到底（批量模式下仅入 fragment，裁剪/滚动由批量调用方统一做）
+/** 公共收尾：裁剪 + 上屏 + 滚动到底（批量模式下仅入 fragment，由调用方统一上屏） */
 function finishMsg(wrapper) {
-  if (_batchTarget) { _batchTarget.appendChild(wrapper); return; }
+  if (_batchTarget) {
+    _batchTarget.appendChild(wrapper);
+    return;
+  }
   trimChatlog();
   state.chatlog.appendChild(wrapper);
   state.chatlog.scrollBy(0, 1e8);
 }
 
-export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, reply, tagBorder, msgId, atAll, avatar, level) {
+/**
+ * 文本消息渲染主入口（WS text 消息 + 系统消息 name==null）
+ * @param {string} name 发送者（null → 系统消息）
+ * @param {string} text 消息内容（markdown 渲染）
+ * @param {string} [tag] 标签
+ * @param {string} [tagColor] 标签主色
+ * @param {string} [msgColor] 消息颜色
+ * @param {number} [timestamp] 毫秒时间戳（系统消息可不传）
+ * @param {object} [reply] 话题引用信息
+ * @param {string} [tagBorder] 标签边框色
+ * @param {number|string} [msgId] 消息 ID
+ * @param {boolean} [atAll] 是否 @全体
+ * @param {string} [avatar] 头像 URL
+ * @param {number} [level] 用户等级
+ */
+export function addChatMessage(
+  name,
+  text,
+  tag,
+  tagColor,
+  msgColor,
+  timestamp,
+  reply,
+  tagBorder,
+  msgId,
+  atAll,
+  avatar,
+  level
+) {
   if (!name) {
-    if (systemMessageHook) { systemMessageHook(text); return; }
+    if (systemMessageHook) {
+      systemMessageHook(text);
+      return;
+    }
     let p = document.createElement("p");
     p.className = "system-msg";
     p.textContent = text;
-    if (_batchTarget) { _batchTarget.appendChild(p); return; }
+    if (_batchTarget) {
+      _batchTarget.appendChild(p);
+      return;
+    }
     trimChatlog();
     state.chatlog.appendChild(p);
     state.chatlog.scrollBy(0, 1e8);
     return;
   }
   let isSelf = name === state.username;
-  if (hacknetIRC) { renderIrcMessage(name, text, isSelf, timestamp); return; }
+  if (hacknetIRC) {
+    renderIrcMessage(name, text, isSelf, timestamp);
+    return;
+  }
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let wrapper = createMsgWrapper(name, isSelf, timestamp, msgId, atAll);
   buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf, avatar, level, reply });
@@ -643,25 +983,31 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
   bubble.className = "bubble";
   if (msgColor && msgColor !== "#000000") bubble.style.color = msgColor;
   bubble.innerHTML = markdownToHtml(text);
-  bubble.querySelectorAll("pre").forEach(pre => {
+  bubble.querySelectorAll("pre").forEach((pre) => {
     let copyBtn = document.createElement("button");
     copyBtn.className = "code-copy-btn";
     copyBtn.textContent = t("复制");
     pre.style.position = "relative";
     pre.appendChild(copyBtn);
   });
-  if (typeof hljs !== "undefined") bubble.querySelectorAll("pre code").forEach(el => hljs.highlightElement(el));
+  // @ts-ignore hljs 为 index.html script 注入的全局（@ts-check 无法识别）
+  if (typeof hljs !== "undefined") bubble.querySelectorAll("pre code").forEach((el) => hljs.highlightElement(el));
   applyCollapse(bubble, text.length); // v1.56 超长折叠（>1500 字）
   bubble.classList.add("copyable");
   bubble.addEventListener("click", (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(text).then(() => {
-      let toast = document.createElement("span");
-      toast.className = "copy-toast";
-      toast.textContent = t("已复制");
-      bubble.appendChild(toast);
-      setTimeout(() => { if (toast.parentNode) toast.remove(); }, 1200);
-    }).catch(() => {});
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        let toast = document.createElement("span");
+        toast.className = "copy-toast";
+        toast.textContent = t("已复制");
+        bubble.appendChild(toast);
+        setTimeout(() => {
+          if (toast.parentNode) toast.remove();
+        }, 1200);
+      })
+      .catch(() => {});
   });
   checkAtMention(text, name);
   wrapper.appendChild(bubble);
@@ -672,14 +1018,19 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
       let cached = urlPreviewCache.get(previewUrl);
       if (cached) renderPreviewCard(wrapper, cached, previewUrl);
     } else {
-      fetch("/api/preview?url=" + encodeURIComponent(previewUrl)).then(r => r.json()).then(data => {
-      if (data && data.title) {
-        urlPreviewCache.set(previewUrl, data);
-        renderPreviewCard(wrapper, data, previewUrl);
-      } else {
-        urlPreviewCache.set(previewUrl, null);
-      }
-    }).catch(() => { urlPreviewCache.set(previewUrl, null); });
+      fetch("/api/preview?url=" + encodeURIComponent(previewUrl))
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && data.title) {
+            urlPreviewCache.set(previewUrl, data);
+            renderPreviewCard(wrapper, data, previewUrl);
+          } else {
+            urlPreviewCache.set(previewUrl, null);
+          }
+        })
+        .catch(() => {
+          urlPreviewCache.set(previewUrl, null);
+        });
     }
   }
   openMsgActions(wrapper, { name, text, timestamp, msgId, tag, tagColor, tagBorder, isSelf });
@@ -693,13 +1044,28 @@ export function addChatMessage(name, text, tag, tagColor, msgColor, timestamp, r
     wrapper.appendChild(ri);
   }
   finishMsg(wrapper);
+  // @ts-ignore window._readObserver 为运行时挂载
   if (window._readObserver) window._readObserver.observe(wrapper);
   if (!isSelf && name && timestamp && name !== "AI" && name !== "Bot") {
-    let prev = wrapper.previousElementSibling;
-    if (prev && prev.classList && prev.classList.contains("chat-msg") && prev.dataset.msgName === name) wrapper.classList.add("grouped");
+    let prev = /** @type {HTMLElement|null} */ (wrapper.previousElementSibling);
+    if (prev && prev.classList && prev.classList.contains("chat-msg") && prev.dataset.msgName === name)
+      wrapper.classList.add("grouped");
   }
 }
 
+/**
+ * 图片消息渲染（data 为 base64 dataURL；过期/未缓存时 data 为空）
+ * @param {string} name
+ * @param {string} data
+ * @param {string} tag
+ * @param {string} tagColor
+ * @param {number} timestamp
+ * @param {string} [tagBorder]
+ * @param {object} [reply]
+ * @param {number|string} [msgId]
+ * @param {string} [avatar]
+ * @param {number} [level]
+ */
 export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar, level) {
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
@@ -725,6 +1091,20 @@ export function addChatImage(name, data, tag, tagColor, timestamp, tagBorder, re
   finishMsg(wrapper);
 }
 
+/**
+ * 语音消息渲染
+ * @param {string} name
+ * @param {string} data
+ * @param {number|string} duration 时长（秒）
+ * @param {string} tag
+ * @param {string} tagColor
+ * @param {number} timestamp
+ * @param {string} [tagBorder]
+ * @param {object} [reply]
+ * @param {number|string} [msgId]
+ * @param {string} [avatar]
+ * @param {number} [level]
+ */
 export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar, level) {
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
@@ -734,7 +1114,10 @@ export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tag
   let bubble = document.createElement("span");
   bubble.className = "bubble voice-bubble";
   if (!data) {
-    bubble.innerHTML = '<span class="voice-msg"><span class="voice-icon">🎤</span><span class="voice-duration">' + (duration || "") + 's</span> <span style="color:#999;font-size:85%">[语音已过期]</span></span>';
+    bubble.innerHTML =
+      '<span class="voice-msg"><span class="voice-icon">🎤</span><span class="voice-duration">' +
+      (duration || "") +
+      's</span> <span style="color:#999;font-size:85%">[语音已过期]</span></span>';
   } else {
     let voiceWrap = document.createElement("span");
     voiceWrap.className = "voice-msg";
@@ -762,6 +1145,19 @@ export function addChatVoice(name, data, duration, tag, tagColor, timestamp, tag
   finishMsg(wrapper);
 }
 
+/** @typedef {{ repo?: string, repoUrl?: string, avatar?: string, language?: string, description?: string, stars?: number, forks?: number, [key:string]: any }} GhCardData */
+/**
+ * GitHub 仓库卡片渲染（/gh 服务端透传产物）
+ * @param {string} name
+ * @param {GhCardData} data
+ * @param {string} tag
+ * @param {string} tagColor
+ * @param {number} timestamp
+ * @param {string} [tagBorder]
+ * @param {number|string} [msgId]
+ * @param {string} [avatar]
+ * @param {number} [level]
+ */
 export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, msgId, avatar, level) {
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
@@ -773,18 +1169,37 @@ export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, m
   bubble.style.cssText = "display:block;padding:0;overflow:hidden;cursor:pointer;max-width:360px;";
   let inner = document.createElement("span");
   inner.style.cssText = "display:block;";
-  let repo = data && data.repo || "";
+  let repo = (data && data.repo) || "";
   inner.innerHTML =
     '<span style="display:flex;align-items:center;gap:8px;padding:10px 12px;">' +
-      (data && data.avatar ? '<img src="' + escapeHtml(data.avatar) + '" alt="" style="width:32px;height:32px;border-radius:6px;flex:0 0 32px;">' : '<span style="width:32px;height:32px;border-radius:6px;background:#24292e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 32px;">🐙</span>') +
-      '<span style="display:block;overflow:hidden;">' +
-        '<span style="display:block;font-weight:700;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(repo) + '</span>' +
-        (data && data.language ? '<span style="display:block;font-size:11px;color:var(--text-secondary);">' + escapeHtml(data.language) + '</span>' : '') +
-      '</span>' +
-      '<span style="margin-left:auto;flex:0 0 auto;font-size:12px;color:var(--text-secondary);white-space:nowrap;">⭐ ' + (data && data.stars || 0) + (data && data.forks ? ' · 🍴 ' + data.forks : '') + '</span>' +
-    '</span>' +
-    (data && data.description ? '<span style="display:block;padding:0 12px 10px;font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + escapeHtml(data.description) + '</span>' : '') +
-    '<span style="display:block;padding:6px 12px;font-size:11px;color:var(--primary);border-top:1px solid var(--border);">🔗 ' + escapeHtml(data && data.repoUrl || "") + '</span>';
+    (data && data.avatar
+      ? '<img src="' +
+        escapeHtml(data.avatar) +
+        '" alt="" style="width:32px;height:32px;border-radius:6px;flex:0 0 32px;">'
+      : '<span style="width:32px;height:32px;border-radius:6px;background:#24292e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 32px;">🐙</span>') +
+    '<span style="display:block;overflow:hidden;">' +
+    '<span style="display:block;font-weight:700;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+    escapeHtml(repo) +
+    "</span>" +
+    (data && data.language
+      ? '<span style="display:block;font-size:11px;color:var(--text-secondary);">' +
+        escapeHtml(data.language) +
+        "</span>"
+      : "") +
+    "</span>" +
+    '<span style="margin-left:auto;flex:0 0 auto;font-size:12px;color:var(--text-secondary);white-space:nowrap;">⭐ ' +
+    ((data && data.stars) || 0) +
+    (data && data.forks ? " · 🍴 " + data.forks : "") +
+    "</span>" +
+    "</span>" +
+    (data && data.description
+      ? '<span style="display:block;padding:0 12px 10px;font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' +
+        escapeHtml(data.description) +
+        "</span>"
+      : "") +
+    '<span style="display:block;padding:6px 12px;font-size:11px;color:var(--primary);border-top:1px solid var(--border);">🔗 ' +
+    escapeHtml((data && data.repoUrl) || "") +
+    "</span>";
   bubble.appendChild(inner);
   bubble.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -796,7 +1211,35 @@ export function addChatGhCard(name, data, tag, tagColor, timestamp, tagBorder, m
   finishMsg(wrapper);
 }
 
-export function addChatFile(name, data, fileName, fileSize, tag, tagColor, timestamp, tagBorder, reply, msgId, avatar, level) {
+/**
+ * 文件消息渲染（内联预览视频/PDF + 下载链接）
+ * @param {string} name
+ * @param {string} data
+ * @param {string} fileName
+ * @param {number} fileSize 字节数
+ * @param {string} tag
+ * @param {string} tagColor
+ * @param {number} timestamp
+ * @param {string} [tagBorder]
+ * @param {object} [reply]
+ * @param {number|string} [msgId]
+ * @param {string} [avatar]
+ * @param {number} [level]
+ */
+export function addChatFile(
+  name,
+  data,
+  fileName,
+  fileSize,
+  tag,
+  tagColor,
+  timestamp,
+  tagBorder,
+  reply,
+  msgId,
+  avatar,
+  level
+) {
   if (!name) return;
   maybeDateDivider(timestamp); // 日期分组：跨天插入分隔线
   let isSelf = name === state.username;
@@ -806,7 +1249,10 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
   bubble.className = "bubble";
   // 文件未缓存时（历史消息），不显示下载链接
   if (!data) {
-    bubble.innerHTML = '<span class="file-msg"><span class="file-icon">📎</span><span class="file-name">' + escapeHtml(fileName) + '</span> <span style="color:#999;font-size:85%">[文件已过期]</span></span>';
+    bubble.innerHTML =
+      '<span class="file-msg"><span class="file-icon">📎</span><span class="file-name">' +
+      escapeHtml(fileName) +
+      '</span> <span style="color:#999;font-size:85%">[文件已过期]</span></span>';
   } else {
     // 📄 文件内联预览：视频直接内嵌播放、PDF 内嵌预览（过大降级为纯下载链接）
     let isVideo = /^data:video\//i.test(data);
@@ -861,9 +1307,14 @@ export function addChatFile(name, data, fileName, fileSize, tag, tagColor, times
 
 // Close any open action menus when clicking elsewhere
 document.addEventListener("click", () => {
-  document.querySelectorAll(".msg-actions-dropdown.show").forEach(d => d.classList.remove("show"));
+  document.querySelectorAll(".msg-actions-dropdown.show").forEach((d) => d.classList.remove("show"));
 });
 
+/**
+ * 构建消息操作菜单（回复/转发/复制链接/收藏/翻译/知识库/置顶/精华/表情回应/编辑/撤回/删除）
+ * @param {HTMLElement} wrapper
+ * @param {{ name:string, text:string, timestamp:number, msgId?:number|string, tag?:string, tagColor?:string, tagBorder?:string, isSelf:boolean, isAdmin:boolean, hasWs:boolean, roomname:string }} opts
+ */
 function buildActionMenu(wrapper, opts) {
   let { name, text, timestamp, msgId, tag, tagColor, tagBorder, isSelf, isAdmin, hasWs, roomname } = opts;
   if (!timestamp && !msgId && !isSelf) return;
@@ -881,7 +1332,9 @@ function buildActionMenu(wrapper, opts) {
   dropdown.className = "msg-actions-dropdown";
   container.appendChild(dropdown);
 
-  function hide() { dropdown.classList.remove("show"); }
+  function hide() {
+    dropdown.classList.remove("show");
+  }
 
   function addItem(label, onClick, danger) {
     let item = document.createElement("div");
@@ -915,12 +1368,23 @@ function buildActionMenu(wrapper, opts) {
       }
       let targetRoom = prompt("转发到哪个房间？\n（输入房间名，如: 闲聊）");
       if (!targetRoom || !targetRoom.trim()) return;
-      let fwdText = (text || "").length > 200 ? text.slice(0, 200) + "..." : (text || "");
+      let fwdText = (text || "").length > 200 ? text.slice(0, 200) + "..." : text || "";
       let adminKey = "";
-      fetch("/api/admin/send-message/" + encodeURIComponent(targetRoom.trim()) + "?key=" + encodeURIComponent(adminKey) + "&text=" + encodeURIComponent("📨 " + name + t(" 转发: ") + fwdText) + "&sender=" + encodeURIComponent(state.username || t("系统"))).then(r => {
-        if (r.ok) showSuccess(t("已转发消息到 ") + targetRoom.trim());
-        else showError(t("转发失败，房间不存在？"));
-      }).catch(() => showError(t("转发失败")));
+      fetch(
+        "/api/admin/send-message/" +
+          encodeURIComponent(targetRoom.trim()) +
+          "?key=" +
+          encodeURIComponent(adminKey) +
+          "&text=" +
+          encodeURIComponent("📨 " + name + t(" 转发: ") + fwdText) +
+          "&sender=" +
+          encodeURIComponent(state.username || t("系统"))
+      )
+        .then((r) => {
+          if (r.ok) showSuccess(t("已转发消息到 ") + targetRoom.trim());
+          else showError(t("转发失败，房间不存在？"));
+        })
+        .catch(() => showError(t("转发失败")));
     });
   }
 
@@ -928,14 +1392,19 @@ function buildActionMenu(wrapper, opts) {
   if (msgId) {
     addItem(t("🔗 复制链接"), () => {
       let link = window.location.origin + window.location.pathname + "#" + roomname + ":" + msgId;
-      navigator.clipboard.writeText(link).then(() => showSuccess(t("消息链接已复制"))).catch(() => {});
+      navigator.clipboard
+        .writeText(link)
+        .then(() => showSuccess(t("消息链接已复制")))
+        .catch(() => {});
     });
   }
 
   // Favorite
   if (timestamp) {
     let isFav = isFavorited(timestamp);
-    addItem((isFav ? "★" : "☆") + t(" 收藏"), () => toggleFavorite(wrapper, name || state.username, text, timestamp, tag, tagColor, tagBorder));
+    addItem((isFav ? "★" : "☆") + t(" 收藏"), () =>
+      toggleFavorite(wrapper, name || state.username, text, timestamp, tag, tagColor, tagBorder)
+    );
   }
 
   // Mark
@@ -963,7 +1432,10 @@ function buildActionMenu(wrapper, opts) {
       const title = prompt(t("文档标题（留空用消息前 20 字）"), raw.slice(0, 20));
       if (title === null) return;
       const finalTitle = (title || "").trim() || raw.slice(0, 20);
-      if (!finalTitle) { showError(t("标题不能为空")); return; }
+      if (!finalTitle) {
+        showError(t("标题不能为空"));
+        return;
+      }
       state.currentWebSocket.send(JSON.stringify({ type: "doc", action: "create", title: finalTitle, content: raw }));
       showSuccess(t("已存入知识库"));
     });
@@ -972,7 +1444,9 @@ function buildActionMenu(wrapper, opts) {
   // Pin (admin) — v1.35 按频道置顶（后端以 session.channel 为准，带上 channel 防多开错频）
   if (timestamp && isAdmin && hasWs) {
     addItem(t("📌 置顶"), () => {
-      state.currentWebSocket.send(JSON.stringify({type: "pin", text, timestamp, name: name || state.username, channel: state.currentChannel}));
+      state.currentWebSocket.send(
+        JSON.stringify({ type: "pin", text, timestamp, name: name || state.username, channel: state.currentChannel })
+      );
       showSuccess(t("消息已置顶"));
     });
   }
@@ -980,7 +1454,7 @@ function buildActionMenu(wrapper, opts) {
   // Highlight (admin)
   if (timestamp && isAdmin && hasWs) {
     addItem(t("⭐ 精华"), () => {
-      state.currentWebSocket.send(JSON.stringify({type: "highlight", msgTimestamp: timestamp, text}));
+      state.currentWebSocket.send(JSON.stringify({ type: "highlight", msgTimestamp: timestamp, text }));
     });
   }
 
@@ -988,18 +1462,22 @@ function buildActionMenu(wrapper, opts) {
   if (timestamp && hasWs) {
     let row = document.createElement("div");
     row.className = "msg-actions-item";
-    row.style.cssText = "display:flex;gap:2px;padding:4px 8px;cursor:default;border-top:1px solid var(--border);margin-top:2px;padding-top:6px;";
-    ["👍","❤️","😂","😮","🎉","🔥","👀","💯"].forEach(emoji => {
+    row.style.cssText =
+      "display:flex;gap:2px;padding:4px 8px;cursor:default;border-top:1px solid var(--border);margin-top:2px;padding-top:6px;";
+    ["👍", "❤️", "😂", "😮", "🎉", "🔥", "👀", "💯"].forEach((emoji) => {
       let e = document.createElement("span");
       e.textContent = emoji;
       e.title = t("添加 ") + emoji + t(" 回应");
-      e.style.cssText = "cursor:pointer;font-size:18px;padding:1px 3px;border-radius:4px;line-height:1;transition:background 0.1s;";
-      e.addEventListener("mouseenter", () => e.style.background = "var(--bg)");
-      e.addEventListener("mouseleave", () => e.style.background = "");
+      e.style.cssText =
+        "cursor:pointer;font-size:18px;padding:1px 3px;border-radius:4px;line-height:1;transition:background 0.1s;";
+      e.addEventListener("mouseenter", () => (e.style.background = "var(--bg)"));
+      e.addEventListener("mouseleave", () => (e.style.background = ""));
       e.addEventListener("click", (ev) => {
         ev.stopPropagation();
         if (state.currentWebSocket) {
-          state.currentWebSocket.send(JSON.stringify({type: "reaction", msgTimestamp: timestamp, emoji, action: "add"}));
+          state.currentWebSocket.send(
+            JSON.stringify({ type: "reaction", msgTimestamp: timestamp, emoji, action: "add" })
+          );
         }
         hide();
       });
@@ -1017,24 +1495,30 @@ function buildActionMenu(wrapper, opts) {
       let originalText = text || "";
       let input = document.createElement("textarea");
       input.value = originalText;
-      input.style.cssText = "width:100%;box-sizing:border-box;padding:4px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;resize:vertical;min-height:36px;";
+      input.style.cssText =
+        "width:100%;box-sizing:border-box;padding:4px;border:1px solid #ccc;border-radius:4px;font-family:inherit;font-size:inherit;resize:vertical;min-height:36px;";
       bubble.innerHTML = "";
       bubble.appendChild(input);
       let saveBtn = document.createElement("button");
       saveBtn.textContent = t("保存");
-      saveBtn.style.cssText = "margin-top:4px;padding:2px 10px;background:var(--primary);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;";
+      saveBtn.style.cssText =
+        "margin-top:4px;padding:2px 10px;background:var(--primary);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;";
       bubble.appendChild(saveBtn);
       let cancelBtn = document.createElement("button");
       cancelBtn.textContent = t("取消");
-      cancelBtn.style.cssText = "margin-top:4px;margin-left:4px;padding:2px 10px;background:#888;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;";
+      cancelBtn.style.cssText =
+        "margin-top:4px;margin-left:4px;padding:2px 10px;background:#888;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;";
       bubble.appendChild(cancelBtn);
       input.focus();
       saveBtn.onclick = () => {
         let newText = input.value.trim();
         if (!newText) return;
-        if (state.currentWebSocket) state.currentWebSocket.send(JSON.stringify({type: "edit", id: msgId, message: newText, timestamp}));
+        if (state.currentWebSocket)
+          state.currentWebSocket.send(JSON.stringify({ type: "edit", id: msgId, message: newText, timestamp }));
       };
-      cancelBtn.onclick = () => { bubble.innerHTML = oldHtml; };
+      cancelBtn.onclick = () => {
+        bubble.innerHTML = oldHtml;
+      };
     });
   }
 
@@ -1053,12 +1537,13 @@ function buildActionMenu(wrapper, opts) {
   }
 }
 
+/** 刷新 roster 积分徽章（/api/points/all） */
 export async function updatePointsDisplay() {
   try {
     let r = await fetch("/api/points/all");
     let data = await r.json();
     if (!data || typeof data !== "object") return;
-    for (let child of state.roster.children) {
+    for (let child of /** @type {Iterable<HTMLElement>} */ (state.roster.children)) {
       let name = child.dataset.name || child.innerText || "";
       name = name.replace(/[\s]*$/, "").split(" ")[0];
       let pts = data[name];
@@ -1074,30 +1559,54 @@ export async function updatePointsDisplay() {
   } catch (e) {}
 }
 
+/**
+ * 应用房间背景（localStorage 缓存 / 颜色 / 图片 URL）
+ * @param {string} room 房间名
+ */
 export function applyRoomBackground(room) {
   let bg = localStorage.getItem("chat_bg_" + room);
-  let cl = document.querySelector("#chatlog");
+  let cl = /** @type {HTMLElement|null} */ (document.querySelector("#chatlog"));
   if (!cl) return;
-  if (!bg || bg === "default") { cl.style.background = ""; cl.style.backgroundImage = ""; cl.style.backgroundSize = ""; cl.style.backgroundPosition = ""; return; }
+  if (!bg || bg === "default") {
+    cl.style.background = "";
+    cl.style.backgroundImage = "";
+    cl.style.backgroundSize = "";
+    cl.style.backgroundPosition = "";
+    return;
+  }
   if (bg.startsWith("#") || bg.startsWith("rgb") || /^[a-zA-Z]+$/.test(bg)) {
-    cl.style.background = bg; cl.style.backgroundImage = "none";
+    cl.style.background = bg;
+    cl.style.backgroundImage = "none";
   } else {
-    cl.style.backgroundImage = "url(" + bg + ")"; cl.style.backgroundSize = "cover"; cl.style.backgroundPosition = "center"; cl.style.backgroundRepeat = "no-repeat"; cl.style.background = "";
+    cl.style.backgroundImage = "url(" + bg + ")";
+    cl.style.backgroundSize = "cover";
+    cl.style.backgroundPosition = "center";
+    cl.style.backgroundRepeat = "no-repeat";
+    cl.style.background = "";
   }
 }
 
+/** 更新 roster 在线人数显示 */
 export function updateRosterCount() {
-  let countEl = document.querySelector("#roster-count");
+  let countEl = /** @type {HTMLElement|null} */ (document.querySelector("#roster-count"));
   if (!countEl) return;
   let count = 0;
   for (let i = 0; i < state.roster.children.length; i++) {
-    let child = state.roster.children[i];
+    let child = /** @type {HTMLElement} */ (state.roster.children[i]);
     if (child.dataset && child.dataset.name) count++;
   }
-  countEl.textContent = count;
+  countEl.textContent = String(count);
 }
 
 // 消息翻译
+/**
+ * 消息翻译（调用 /api/translate，结果插入气泡后）
+ * @param {HTMLElement} wrapper
+ * @param {string} text
+ * @param {number} timestamp
+ * @param {string} name
+ * @returns {Promise<void>}
+ */
 export async function showTranslation(wrapper, text, timestamp, name) {
   if (wrapper.dataset.translating) return;
   wrapper.dataset.translating = "1";
@@ -1112,19 +1621,30 @@ export async function showTranslation(wrapper, text, timestamp, name) {
   }
   let el = document.createElement("div");
   el.className = "translation-result";
-  el.style.cssText = "font-size:12px;color:var(--text-secondary);margin-top:4px;padding-top:4px;border-top:1px dashed var(--border);";
+  el.style.cssText =
+    "font-size:12px;color:var(--text-secondary);margin-top:4px;padding-top:4px;border-top:1px dashed var(--border);";
   el.textContent = t("翻译中...");
   bubble.parentNode.insertBefore(el, bubble.nextSibling);
   try {
     let r = await fetch("/api/translate", {
       method: "POST",
-      body: JSON.stringify({text, target: t("中文"), name: state.username, token: localStorage.getItem("chat_token") || ""}),
-      headers: {"Content-Type": "application/json"}
+      body: JSON.stringify({
+        text,
+        target: t("中文"),
+        name: state.username,
+        token: localStorage.getItem("chat_token") || "",
+      }),
+      headers: { "Content-Type": "application/json" },
     });
     let data = await r.json();
     if (data.translated) {
       let langLabel = data.target || t("中文");
-      el.innerHTML = '<span style="font-size:10px;opacity:0.6;">🌐 ' + langLabel + '</span> <span>' + escapeHtml(data.translated) + '</span>';
+      el.innerHTML =
+        '<span style="font-size:10px;opacity:0.6;">🌐 ' +
+        langLabel +
+        "</span> <span>" +
+        escapeHtml(data.translated) +
+        "</span>";
     } else {
       el.textContent = t("翻译失败: ") + (data.error || t("未知错误"));
     }

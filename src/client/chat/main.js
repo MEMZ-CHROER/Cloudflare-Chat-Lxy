@@ -1,52 +1,88 @@
+// @ts-check
 // 入口模块 — 只导入首屏必需模块，重模块延迟加载
-import { state, t } from './state.js';
-import { escapeHtml } from './renderers.js';
-import { startNameChooser } from './auth.js';
-import { startRoomList } from './rooms.js';
-import { cancelReply, hideLightbox, galleryPrev, galleryNext, exportChatLog, updateTitleUnread } from './ui.js';
-import { hideUserMenu, handleMenuAction, showUserMenu, hideProfile } from './menu.js';
-import { initNav } from './nav.js';
-import { sendDM, closeDM } from './dm.js';
-import { toggleSearch, doSearch, searchPrev, searchNext } from './search.js';
-import { toggleFavoritesPanel } from './favorites.js';
-import { openSettings, closeSettings, initSettings, isSafeMediaUrl } from './settings.js';
-import { openMusic, closeMusic, initMusic } from './music.js';
-import { showSuccess, showInfo, showError } from './state.js';
+import { state, t } from "./state.js";
+import { escapeHtml } from "./renderers.js";
+import { startNameChooser } from "./auth.js";
+import { startRoomList } from "./rooms.js";
+import { cancelReply, hideLightbox, galleryPrev, galleryNext, exportChatLog, updateTitleUnread } from "./ui.js";
+import { hideUserMenu, handleMenuAction, showUserMenu, hideProfile } from "./menu.js";
+import { initNav } from "./nav.js";
+import { sendDM, closeDM } from "./dm.js";
+import { toggleSearch, doSearch, searchPrev, searchNext } from "./search.js";
+import { toggleFavoritesPanel } from "./favorites.js";
+import { openSettings, closeSettings, initSettings, isSafeMediaUrl } from "./settings.js";
+import { openMusic, closeMusic, initMusic } from "./music.js";
+import { showSuccess, showInfo, showError } from "./state.js";
 
 // Window 兼容 — 重模块用延迟加载存根
+/**
+ * 延迟加载存根：import 目标模块后调用 m[fnName](...args)，错误 toast 提示
+ * @param {string} name 模块文件名（不含 .js）
+ * @param {string} fnName 模块导出的函数名
+ * @returns {(...args: any[]) => void} 延迟执行函数
+ */
 function lazyMod(name, fnName) {
-  return function(...args) {
-    import('./' + name + '.js').then(m => {
-      if (m[fnName]) try { m[fnName](...args); } catch(e) { showError(t("模块错误: ") + e.message); }
-    }).catch(e => showError(t("加载模块失败: ") + e.message));
+  return function (...args) {
+    import("./" + name + ".js")
+      .then((m) => {
+        if (m[fnName])
+          try {
+            m[fnName](...args);
+          } catch (e) {
+            showError(t("模块错误: ") + e.message);
+          }
+      })
+      .catch((e) => showError(t("加载模块失败: ") + e.message));
   };
 }
+/** @type {Record<string, [string, string]>} 延迟加载映射：window 全局名 → [模块文件名, 导出函数名] */
 const lazyMods = {
-  openShop: ['shop', 'openShop'], closeShop: ['shop', 'closeShop'],
-  switchShopTab: ['shop', 'switchShopTab'], buyItem: ['shop', 'buyItem'],
-  equipItem: ['shop', 'equipItem'], unequipItem: ['shop', 'unequipItem'],
-  openLottery: ['lottery', 'openLottery'], closeLottery: ['lottery', 'closeLottery'],
-  doDraw: ['lottery', 'doDraw'],
-  openTasks: ['tasks', 'openTasks'], closeTasks: ['tasks', 'closeTasks'],
-  claimTask: ['tasks', 'claimTask'], completeTask: ['tasks', 'completeTask'],
-  openGames: ['games', 'openGames'], closeGames: ['games', 'closeGames'],
-  switchGame: ['games', 'switchGame'],
-  openSeason: ['season', 'openSeason'], closeSeason: ['season', 'closeSeason'],
-  openMarket: ['market', 'openMarket'], closeMarket: ['market', 'closeMarket'],
-  switchMarketTab: ['market', 'switchMarketTab'],
-  openRelations: ['relation', 'openRelations'], closeRelations: ['relation', 'closeRelations'],
-  switchRelationsTab: ['relation', 'switchRelationsTab'],
+  openShop: ["shop", "openShop"],
+  closeShop: ["shop", "closeShop"],
+  switchShopTab: ["shop", "switchShopTab"],
+  buyItem: ["shop", "buyItem"],
+  equipItem: ["shop", "equipItem"],
+  unequipItem: ["shop", "unequipItem"],
+  openLottery: ["lottery", "openLottery"],
+  closeLottery: ["lottery", "closeLottery"],
+  doDraw: ["lottery", "doDraw"],
+  openTasks: ["tasks", "openTasks"],
+  closeTasks: ["tasks", "closeTasks"],
+  claimTask: ["tasks", "claimTask"],
+  completeTask: ["tasks", "completeTask"],
+  openGames: ["games", "openGames"],
+  closeGames: ["games", "closeGames"],
+  switchGame: ["games", "switchGame"],
+  openSeason: ["season", "openSeason"],
+  closeSeason: ["season", "closeSeason"],
+  openMarket: ["market", "openMarket"],
+  closeMarket: ["market", "closeMarket"],
+  switchMarketTab: ["market", "switchMarketTab"],
+  openRelations: ["relation", "openRelations"],
+  closeRelations: ["relation", "closeRelations"],
+  switchRelationsTab: ["relation", "switchRelationsTab"],
 };
+// @ts-ignore 动态 key 挂载全局（lazyMods 键运行时挂到 window）
 for (let [k, v] of Object.entries(lazyMods)) window[k] = lazyMod(v[0], v[1]);
 
+// 以下 window.* 均为运行时挂载全局（旧 chat.html 内联 on* / 命令行调用依赖），tsc 不知 Window 扩展属性
+// @ts-ignore window 扩展属性
 window.toggleSearch = toggleSearch;
+// @ts-ignore window 扩展属性
 window.closeDM = closeDM;
+// @ts-ignore window 扩展属性
 window.sendDM = sendDM;
+// @ts-ignore window 扩展属性
 window.hideProfile = hideProfile;
+// @ts-ignore window 扩展属性
 window.exportChatLog = exportChatLog;
+// @ts-ignore window 扩展属性
 window.openSettings = openSettings;
+// @ts-ignore window 扩展属性
 window.closeSettings = closeSettings;
+// @ts-ignore window 扩展属性
 window.openMusic = openMusic;
+// @ts-ignore window 扩展属性
 window.closeMusic = closeMusic;
 
 // 🧪 v1.53 批3B Vue 导航壳（浮钮/more-menu/bottom-bar/用户菜单）；legacy 开关下内部跳过
@@ -60,46 +96,59 @@ initMusic();
 
 // 用户菜单
 document.getElementById("user-menu").addEventListener("click", (e) => {
-  let item = e.target.closest(".user-menu-item");
-  if (item) handleMenuAction(item.dataset.action);
+  let item = /** @type {Element} */ (e.target).closest(".user-menu-item");
+  if (item) handleMenuAction(/** @type {HTMLElement} */ (item).dataset.action);
 });
 document.body.addEventListener("click", (e) => {
-  if (!e.target.closest("#user-menu")) hideUserMenu();
+  if (!/** @type {Element} */ (e.target).closest("#user-menu")) hideUserMenu();
 });
 
 // 回复取消
 document.body.addEventListener("click", (e) => {
-  if (e.target.closest(".reply-cancel")) cancelReply();
+  if (/** @type {Element} */ (e.target).closest(".reply-cancel")) cancelReply();
 });
 
 // @提及点击
 document.body.addEventListener("click", (e) => {
-  let mention = e.target.closest(".mention");
-  if (mention) { e.preventDefault(); let name = mention.dataset.mention; if (name) showUserMenu(name, e.clientX, e.clientY); }
+  let mention = /** @type {Element} */ (e.target).closest(".mention");
+  if (mention) {
+    e.preventDefault();
+    let name = /** @type {HTMLElement} */ (mention).dataset.mention;
+    if (name) showUserMenu(name, e.clientX, e.clientY);
+  }
 });
 
 // v1.56 知识库引用 [[docId:标题]] 点击 → 打开知识库并深链到该文档
 document.body.addEventListener("click", (e) => {
-  let ref = e.target.closest(".doc-ref");
+  let ref = /** @type {Element} */ (e.target).closest(".doc-ref");
   if (ref) {
     e.preventDefault();
-    let docId = ref.dataset.docid;
-    import('./state.js').then(({ state }) => {
-      import('./modal-manager.js').then(m => m.openModal('kb', { room: state.roomname, openDocId: docId }));
-    }).catch(() => {});
+    let docId = /** @type {HTMLElement} */ (ref).dataset.docid;
+    import("./state.js")
+      .then(({ state }) => {
+        import("./modal-manager.js").then((m) => m.openModal("kb", { room: state.roomname, openDocId: docId }));
+      })
+      .catch(() => {});
   }
 });
 
 // 代码复制
 document.body.addEventListener("click", (e) => {
-  let btn = e.target.closest(".code-copy-btn");
+  let btn = /** @type {Element} */ (e.target).closest(".code-copy-btn");
   if (!btn) return;
   let code = btn.parentNode.querySelector("code");
   if (code) {
-    navigator.clipboard.writeText(code.textContent).then(() => {
-      btn.textContent = t("已复制"); btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = t("复制"); btn.classList.remove("copied"); }, 2000);
-    }).catch(() => {});
+    navigator.clipboard
+      .writeText(code.textContent)
+      .then(() => {
+        btn.textContent = t("已复制");
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = t("复制");
+          btn.classList.remove("copied");
+        }, 2000);
+      })
+      .catch(() => {});
   }
 });
 
@@ -111,34 +160,63 @@ document.getElementById("fav-close")?.addEventListener("click", toggleFavoritesP
 // 定时消息管理 - moved to more-menu
 
 // 跨频道未读数也更新浏览器标题（channels.bumpChannelUnread 依赖）
+// @ts-ignore window 扩展属性
 window.updateTitleUnread = updateTitleUnread;
 
-window._showScheduledList = function(list) {
-  if (!list || list.length === 0) { showInfo(t("当前没有定时消息")); return; }
+/** 定时消息列表面板（服务端透传 schedule-list 渲染） @param {any[]} list 定时消息数组 @returns {void} */
+// @ts-ignore window 扩展属性
+window._showScheduledList = function (list) {
+  if (!list || list.length === 0) {
+    showInfo(t("当前没有定时消息"));
+    return;
+  }
   let existing = document.getElementById("sched-list-panel");
-  if (existing) { existing.remove(); return; }
+  if (existing) {
+    existing.remove();
+    return;
+  }
   let overlay = document.createElement("div");
   overlay.id = "sched-list-panel";
-  overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;z-index:150;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;";
-  overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+  overlay.style.cssText =
+    "position:fixed;top:0;left:0;right:0;bottom:0;z-index:150;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;";
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
   let panel = document.createElement("div");
-  panel.style.cssText = "background:var(--surface);border-radius:12px;padding:16px;min-width:320px;max-width:420px;max-height:70vh;box-shadow:0 8px 32px rgba(0,0,0,0.2);color:var(--text);font-size:13px;display:flex;flex-direction:column;overflow:hidden;";
-  panel.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><strong style="font-size:15px;">⏰ 定时消息 (' + list.length + ')</strong><span style="cursor:pointer;font-size:20px;line-height:1;color:var(--text-secondary);" id="sl-close">&times;</span></div>';
+  panel.style.cssText =
+    "background:var(--surface);border-radius:12px;padding:16px;min-width:320px;max-width:420px;max-height:70vh;box-shadow:0 8px 32px rgba(0,0,0,0.2);color:var(--text);font-size:13px;display:flex;flex-direction:column;overflow:hidden;";
+  panel.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><strong style="font-size:15px;">⏰ 定时消息 (' +
+    list.length +
+    ')</strong><span style="cursor:pointer;font-size:20px;line-height:1;color:var(--text-secondary);" id="sl-close">&times;</span></div>';
   let listDiv = document.createElement("div");
   listDiv.style.cssText = "flex:1;overflow-y:auto;";
-  list.forEach(s => {
+  list.forEach((s) => {
     let row = document.createElement("div");
-    row.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:4px;margin-bottom:3px;background:var(--bg);";
+    row.style.cssText =
+      "display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:4px;margin-bottom:3px;background:var(--bg);";
     let timeStr = new Date(s.time).toLocaleString();
     let msgShort = s.message || "";
-    row.innerHTML = '<div style="flex:1;overflow:hidden;"><div style="font-size:12px;font-weight:600;">' + escapeHtml(s.name) + '</div><div style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(msgShort) + '</div><div style="font-size:10px;color:#888;">' + timeStr + '</div></div>' +
-      '<span style="cursor:pointer;color:#e74c3c;font-size:16px;flex-shrink:0;" data-sched-id="' + escapeHtml(s.id) + '">&times;</span>';
+    row.innerHTML =
+      '<div style="flex:1;overflow:hidden;"><div style="font-size:12px;font-weight:600;">' +
+      escapeHtml(s.name) +
+      '</div><div style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+      escapeHtml(msgShort) +
+      '</div><div style="font-size:10px;color:#888;">' +
+      timeStr +
+      "</div></div>" +
+      '<span style="cursor:pointer;color:#e74c3c;font-size:16px;flex-shrink:0;" data-sched-id="' +
+      escapeHtml(s.id) +
+      '">&times;</span>';
     row.querySelector("[data-sched-id]").addEventListener("click", (e) => {
       e.stopPropagation();
       if (state.currentWebSocket) {
-        state.currentWebSocket.send(JSON.stringify({type: "schedule-cancel", id: s.id}));
+        state.currentWebSocket.send(JSON.stringify({ type: "schedule-cancel", id: s.id }));
         row.remove();
-        if (listDiv.children.length === 0) { overlay.remove(); showSuccess(t("所有定时消息已取消")); }
+        if (listDiv.children.length === 0) {
+          overlay.remove();
+          showSuccess(t("所有定时消息已取消"));
+        }
       }
     });
     listDiv.appendChild(row);
@@ -156,16 +234,26 @@ document.getElementById("search-prev").addEventListener("click", searchPrev);
 document.getElementById("search-next").addEventListener("click", searchNext);
 document.getElementById("search-close").addEventListener("click", toggleSearch);
 document.getElementById("search-input").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); if (e.shiftKey) searchPrev(); else searchNext(); }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (e.shiftKey) searchPrev();
+    else searchNext();
+  }
   if (e.key === "Escape") toggleSearch();
 });
 
 // Lightbox
 document.getElementById("lightbox").addEventListener("click", (e) => {
-  if (e.target === e.currentTarget || e.target.classList.contains("lb-close")) hideLightbox();
+  if (e.target === e.currentTarget || /** @type {Element} */ (e.target).classList.contains("lb-close")) hideLightbox();
 });
-document.getElementById("gallery-prev").addEventListener("click", (e) => { e.stopPropagation(); galleryPrev(); });
-document.getElementById("gallery-next").addEventListener("click", (e) => { e.stopPropagation(); galleryNext(); });
+document.getElementById("gallery-prev").addEventListener("click", (e) => {
+  e.stopPropagation();
+  galleryPrev();
+});
+document.getElementById("gallery-next").addEventListener("click", (e) => {
+  e.stopPropagation();
+  galleryNext();
+});
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") hideLightbox();
   if (e.key === "ArrowLeft") galleryPrev();
@@ -184,7 +272,7 @@ let savedDark = localStorage.getItem("darkMode");
 if (savedDark === "1") {
   document.body.classList.add("dark");
   document.getElementById("dark-toggle").textContent = "☀️";
-} else if (savedDark === null && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+} else if (savedDark === null && window.matchMedia("(prefers-color-scheme: dark)").matches) {
   document.body.classList.add("dark");
   document.getElementById("dark-toggle").textContent = "☀️";
   localStorage.setItem("darkMode", "1");
@@ -211,7 +299,7 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
   // 恢复视频壁纸（URL 白名单校验）
   const savedVideo = localStorage.getItem("customVideo");
   if (savedVideo && isSafeMediaUrl(savedVideo)) {
-    const video = document.getElementById("video-wallpaper");
+    const video = /** @type {HTMLVideoElement | null} */ (document.getElementById("video-wallpaper"));
     if (video) {
       video.src = savedVideo;
       video.style.display = "";
@@ -223,17 +311,18 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
   const sources = [
     "https://api.elaina.cat/random/pc",
     "https://picsum.photos/1920/1080",
-    "https://bing.ioli.s.cn/v1/rand?w=1920&h=1080"
+    "https://bing.ioli.s.cn/v1/rand?w=1920&h=1080",
   ];
   const setBg = (url) => document.documentElement.style.setProperty("--site-bg-image", `url("${url}")`);
-  const tryLoad = (url) => new Promise(res => {
-    const img = new Image();
-    img.onload = () => res(true);
-    img.onerror = () => res(false);
-    img.src = url;
-    // 4 秒超时视为失败
-    setTimeout(() => res(false), 4000);
-  });
+  const tryLoad = (url) =>
+    new Promise((res) => {
+      const img = new Image();
+      img.onload = () => res(true);
+      img.onerror = () => res(false);
+      img.src = url;
+      // 4 秒超时视为失败
+      setTimeout(() => res(false), 4000);
+    });
   (async () => {
     // 缓存 2 小时内的随机图，避免每次刷新都换
     const cached = localStorage.getItem("ff-bg-url");
@@ -257,16 +346,40 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
 
 // 可见性变化 - 未读计数重置
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) { state.unreadCount = 0; document.title = state.originalDocTitle; }
+  if (!document.hidden) {
+    state.unreadCount = 0;
+    document.title = state.originalDocTitle;
+  }
 });
 
 // 私信回车发送
-document.addEventListener("keydown", function(e) {
-  if (e.target && e.target.id === "dm-input" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDM(); }
+document.addEventListener("keydown", function (e) {
+  if (e.target && /** @type {Element} */ (e.target).id === "dm-input" && e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendDM();
+  }
 });
 
-// 全局 Escape
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeShop(); closeMarket(); window.closeRelations && window.closeRelations(); closeTasks(); closeGames(); closeSettings(); closeMusic(); closeSeason(); } });
+// 全局 Escape（closeShop/closeMarket/closeTasks/closeGames/closeSeason 为 lazyMods 挂载的 window 全局，
+// 运行时经全局作用域回退解析到 window.*；tsc 无绑定，逐行 @ts-ignore 抑制）
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    // @ts-ignore 运行时 window 全局（lazyMods 懒加载挂载）
+    closeShop();
+    // @ts-ignore 运行时 window 全局（lazyMods 懒加载挂载）
+    closeMarket();
+    // @ts-ignore window 扩展属性
+    window.closeRelations && window.closeRelations();
+    // @ts-ignore 运行时 window 全局（lazyMods 懒加载挂载）
+    closeTasks();
+    // @ts-ignore 运行时 window 全局（lazyMods 懒加载挂载）
+    closeGames();
+    closeSettings();
+    closeMusic();
+    // @ts-ignore 运行时 window 全局（lazyMods 懒加载挂载）
+    closeSeason();
+  }
+});
 
 // 启动登录界面
 initSettings();

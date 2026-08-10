@@ -1,3 +1,4 @@
+// @ts-check
 import { handleRooms } from "./registry/rooms.mjs";
 import { handleBans } from "./registry/bans.mjs";
 import { handleBlacklist } from "./registry/blacklist.mjs";
@@ -18,15 +19,43 @@ import { handleLog } from "./registry/log.mjs";
 import { handleRedPacket } from "./registry/redpacket.mjs";
 import { handleMute } from "./registry/mute.mjs";
 import {
-  loadAll, saveRooms, saveBanned, saveBannedIps, saveTags, saveKnownUsers,
-  saveUserIps, saveGlobalBlacklist, saveAdminKey, savePoints, saveRegisteredUsers,
-  saveShopItems, saveBotCommands, saveUserInventory, saveTasks, saveTaskClaims,
-  saveTaskCompletions, saveLotteryPools, saveLotteryRecords, saveEmoji,
-  saveRedeemCodes, saveKickProtected, saveMutes,
-  saveGameDailyWin, saveRedPackets, saveCheckinByIp, saveTaskRewardPaid,
+  loadAll,
+  saveRooms,
+  saveBanned,
+  saveBannedIps,
+  saveTags,
+  saveKnownUsers,
+  saveUserIps,
+  saveGlobalBlacklist,
+  saveAdminKey,
+  savePoints,
+  saveRegisteredUsers,
+  saveShopItems,
+  saveBotCommands,
+  saveUserInventory,
+  saveTasks,
+  saveTaskClaims,
+  saveTaskCompletions,
+  saveLotteryPools,
+  saveLotteryRecords,
+  saveEmoji,
+  saveRedeemCodes,
+  saveKickProtected,
+  saveMutes,
+  saveGameDailyWin,
+  saveRedPackets,
+  saveCheckinByIp,
+  saveTaskRewardPaid,
   saveHacknetGames,
-  saveSeasonState, saveSeasonProgress, saveHonorCoins, saveOauthStates,
-  saveMarketOrders, saveMarketConfig, saveUserRelations, saveLp, saveOpsStats
+  saveSeasonState,
+  saveSeasonProgress,
+  saveHonorCoins,
+  saveOauthStates,
+  saveMarketOrders,
+  saveMarketConfig,
+  saveUserRelations,
+  saveLp,
+  saveOpsStats,
 } from "./registry/persistence.mjs";
 import { handleHacknet, processHnTimer } from "./registry/hacknet.mjs";
 import { handleSeason, processSeasonTimer } from "./registry/season.mjs";
@@ -41,94 +70,157 @@ import { handleLp } from "./registry/lp.mjs";
 const SEASON_POINT_TYPES = ["checkin", "task", "game", "lottery", "redpacket", "reward"];
 
 // 安全 BigInt 解析（同 shop.mjs / points.mjs 局部 toBigInt，避免引入模块耦合）
+/**
+ * 安全 BigInt 解析（支持科学计数法，非法输入回退 0n）
+ * @param {any} val 输入值（数字/字符串/BigInt）
+ * @returns {bigint}
+ */
 function _toBigInt(val) {
   if (val == null) return 0n;
   try {
     let s = String(val).trim().toLowerCase();
-    if (s.includes('e')) {
-      let [base, exp] = s.split('e');
+    if (s.includes("e")) {
+      let [base, exp] = s.split("e");
       let e = parseInt(exp, 10);
       if (e < 0) return 0n;
       if (e > 100000) return 0n;
-      let dot = base.indexOf('.');
-      if (dot === -1) s = base + '0'.repeat(e);
+      let dot = base.indexOf(".");
+      if (dot === -1) s = base + "0".repeat(e);
       else {
-        let digits = base.replace('.', '');
+        let digits = base.replace(".", "");
         let fracLen = base.length - 1 - dot;
         let zeros = e - fracLen;
-        s = digits + (zeros > 0 ? '0'.repeat(zeros) : '');
+        s = digits + (zeros > 0 ? "0".repeat(zeros) : "");
       }
     }
     return BigInt(s);
-  } catch { return 0n; }
+  } catch {
+    return 0n;
+  }
 }
 
 // RoomRegistry Durable Object — 全局单例，跟踪所有房间、用户、商城、任务、抽奖等
+/**
+ * RoomRegistry Durable Object：全局单例，跟踪房间/用户/商城/任务/抽奖/赛季等
+ */
 export class RoomRegistry {
+  /**
+   * @param {any} state Durable Object 状态（含 storage）
+   * @param {import("./types.js").Env} env Worker 环境绑定
+   */
   constructor(state, env) {
     this.state = state;
     this.storage = state.storage;
     this.env = env;
+    /** @type {Map<string, any>} 房间名 → {count, peak, peakTs} */
     this.rooms = new Map();
+    /** @type {Set<string>} 封禁用户名 */
     this.banned = new Set();
+    /** @type {Set<string>} 封禁 IP */
     this.bannedIps = new Set();
+    /** @type {Map<string, any>} 用户标签 */
     this.tags = new Map();
+    /** @type {Set<string>} 已知用户 */
     this.knownUsers = new Set();
+    /** @type {Map<string, any>} 用户名 → IP 集合 */
     this.userIps = new Map();
+    /** @type {Set<string>} 全局拉黑 */
     this.globalBlacklist = new Set();
+    /** @type {string|null} 管理密钥 */
     this.adminKey = env.ADMIN_KEY || null;
+    /** @type {Map<string, string>} 用户名 → 积分（BigInt 字符串精度） */
     this.userPoints = new Map();
+    /** @type {Map<string, import("./types.js").User>} 注册用户表 */
     this.registeredUsers = new Map();
+    /** @type {Map<string, any>} 商城道具 */
     this.shopItems = new Map();
+    /** @type {Map<string, any>} 用户背包 */
     this.userInventory = new Map();
+    /** @type {Map<string, any>} 任务表 */
     this.tasks = new Map();
+    /** @type {Map<string, any>} 任务完成记录 */
     this.taskCompletions = new Map();
+    /** @type {Map<string, any>} 任务领取记录 */
     this.taskClaims = new Map();
-    this.taskRewardPaid = new Map();   // name -> Set<taskId> 已完成且已发奖励（L19 防崩溃重试双发）
+    /** @type {Map<string, Set<string>>} name -> Set<taskId> 已完成且已发奖励（L19 防崩溃重试双发） */
+    this.taskRewardPaid = new Map();
+    /** @type {Map<string, any>} 抽奖奖池 */
     this.lotteryPools = new Map();
+    /** @type {Map<string, any>} 抽奖记录 */
     this.lotteryRecords = new Map();
+    /** @type {Map<string, any>} 机器人命令 */
     this.botCommands = new Map();
+    /** @type {Map<string, any>} 表情 */
     this.emoji = new Map();
+    /** @type {Map<string, any>} 兑换码 */
     this.redeemCodes = new Map();
+    /** @type {Set<string>} 踢人保护名单 */
     this.kickProtected = new Set();
+    /** @type {Map<string, any>} 禁言记录 */
     this.mutes = new Map();
+    /** @type {Map<string, any>} 红包记录 */
     this.redPackets = new Map();
-    this.checkinByIp = new Map();   // ip -> {date, count} 每 IP 每日签到计数（L13a 持久化防重启清零）
+    /** @type {Map<string, any>} ip -> {date, count} 每 IP 每日签到计数（L13a 持久化防重启清零） */
+    this.checkinByIp = new Map();
     // 游戏防刷状态（内存字段，不持久化）
-    this.gameBets = new Map();       // name -> {wager, ts} 未结算下注
-    this.gameLastWin = new Map();    // name -> ts 上次结算时间
-    this.gameDailyWin = new Map();   // name -> {date, total} 每日净赢
+    /** @type {Map<string, any>} name -> {wager, ts} 未结算下注 */
+    this.gameBets = new Map();
+    /** @type {Map<string, any>} name -> ts 上次结算时间 */
+    this.gameLastWin = new Map();
+    /** @type {Map<string, any>} name -> {date, total} 每日净赢 */
+    this.gameDailyWin = new Map();
     // 🎮 v1.43 Hacknet 对战小游戏（全局单例持有）
-    this.hacknetGames = new Map();   // gameId -> game（持久化 storage key "hacknetGames"）
-    this.hnTimers = [];              // [{at, type, gameId, payload}] 事件表（alarm 统一调度，从 game 状态可重建）
-    this.hnTickets = new Map();      // room -> [{ticket, expiry}] 单次入场 ticket（内存，惰性清理）
-    this.hnSessions = new Map();     // sid -> {name, expiry} 游戏会话（status 轮询轻量鉴权，省 user-check-auth）
+    /** @type {Map<string, any>} gameId -> game（持久化 storage key "hacknetGames"） */
+    this.hacknetGames = new Map();
+    /** @type {Array<{at:number, type:string, gameId?:string, payload?:any}>} 事件表（alarm 统一调度，从 game 状态可重建） */
+    this.hnTimers = [];
+    /** @type {Map<string, Array<{ticket:string, expiry:number}>>} room -> 单次入场 ticket（内存，惰性清理） */
+    this.hnTickets = new Map();
+    /** @type {Map<string, {name?:string, expiry:number}>} sid -> 游戏会话（status 轮询轻量鉴权，省 user-check-auth） */
+    this.hnSessions = new Map();
     // 🏆 v1.45 赛季 + 荣誉闭环（持久化 storage key：seasonState / seasonProgress / honorCoins）
-    this.seasonState = null;         // 赛季状态单对象（upcoming|active|ended，结算后 settled=true）
-    this.seasonProgress = null;      // {baselines:[[name,{msg,checkin,game,achieve}]], points:[[name,"积分"]]}
-    this.honorCoins = new Map();     // name -> 荣誉币字符串（BigInt 精度，同 userPoints）
+    /** @type {null | {status?:string, settled?:boolean, endAt?:number, [key:string]: any}} 赛季状态单对象（upcoming|active|ended，结算后 settled=true） */
+    this.seasonState = null;
+    /** @type {null | {baselines?: Array<[string, any]>, points?: Array<[string, string]>}} {baselines:[[name,{msg,checkin,game,achieve}]], points:[[name,"积分"]]} */
+    this.seasonProgress = null;
+    /** @type {Map<string, string>} name -> 荣誉币字符串（BigInt 精度，同 userPoints） */
+    this.honorCoins = new Map();
     // 🔐 v1.46 OAuth state 生命周期（持久化 storage key "oauthStates"）：Map<state,{provider,redirectUri,preAuthName,createdAt}>
+    /** @type {Map<string, any>} OAuth state */
     this.oauthStates = new Map();
     // 💱 v1.47 交易市场（持久化 storage key：marketOrders / marketConfig）
-    this.marketOrders = [];   // 交易市场挂单（storage key "marketOrders"）
+    /** @type {Array<any>} 交易市场挂单 */
+    this.marketOrders = [];
     this.marketConfig = { feePercent: 5, enabled: true, maxOpenOrders: 20, maxPrice: "10000000" };
-    this.userRelations = new Map();   // 👥 v1.48 关系链：关注/好友/拉黑（storage key "userRelations"）
+    /** @type {Map<string, any>} 👥 v1.48 关系链：关注/好友/拉黑（storage key "userRelations"） */
+    this.userRelations = new Map();
     // 🧪 v1.49 LuckPerms 权限系统（storage key "lpData"）：{users, groups} 均 Map
-    this.lp = {users: new Map(), groups: new Map()};
+    /** @type {{users: Map<string, any>, groups: Map<string, any>}} LuckPerms 数据 */
+    this.lp = { users: new Map(), groups: new Map() };
     // 📈 v1.54 运营数据（storage key "opsStats"）：今日/历史在线峰值 + 积分流水日桶聚合
     // ledgerByDay: { "<YYYY-MM-DD>": { type: {count, total}, ... } }，保留最近 30 天
-    this.opsStats = { todayPeak: 0, todayPeakTs: 0, todayPeakDate: null, globalPeak: 0, globalPeakTs: 0, ledgerByDay: {} };
+    this.opsStats = {
+      todayPeak: 0,
+      todayPeakTs: 0,
+      todayPeakDate: null,
+      globalPeak: 0,
+      globalPeakTs: 0,
+      ledgerByDay: {},
+    };
     // 🧪 v1.49 诊断：实例标识 + load 完成标记（区分冷启动/多实例，定位 LP 读不到问题）
-    this._instId = (crypto && crypto.randomUUID) ? crypto.randomUUID().slice(0, 8) : String(Math.random()).slice(2, 8);
+    this._instId = crypto && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : String(Math.random()).slice(2, 8);
     this._loaded = false;
-    this._loadPromise = Promise.race([
-      this.load(),
-      new Promise(resolve => setTimeout(resolve, 10000))
-    ]).catch(err => {
-      console.error("RoomRegistry load failed:", err);
-    });
+    this._loadPromise = Promise.race([this.load(), new Promise((resolve) => setTimeout(resolve, 10000))]).catch(
+      (err) => {
+        console.error("RoomRegistry load failed:", err);
+      }
+    );
   }
 
+  /**
+   * 从 storage 全量加载注册表数据（loadAll 一次读全，恢复各 Map/Set/状态）
+   * @returns {Promise<void>}
+   */
   async load() {
     let data = await loadAll(this.storage);
     if (data.rooms) this.rooms = data.rooms;
@@ -172,98 +264,233 @@ export class RoomRegistry {
     if (data.oauthStates) this.oauthStates = new Map(data.oauthStates);
     // 💱 v1.47 交易市场恢复
     if (data.marketOrders) this.marketOrders = data.marketOrders;
-    if (data.marketConfig) this.marketConfig = Object.assign({feePercent:5,enabled:true,maxOpenOrders:20,maxPrice:"10000000"}, data.marketConfig);
+    if (data.marketConfig)
+      this.marketConfig = Object.assign(
+        { feePercent: 5, enabled: true, maxOpenOrders: 20, maxPrice: "10000000" },
+        data.marketConfig
+      );
     // 👥 v1.48 关系链恢复（Map<name,{following,friends,pendingOut,pendingIn,blocked} 均 Set>）
     if (data.userRelations) this.userRelations = data.userRelations;
     // 🧪 v1.49 LuckPerms 权限系统恢复
     if (data.lp) this.lp = data.lp;
     // 📈 v1.54 运营数据恢复（峰值 + 积分流水日桶）
-    if (data.opsStats) this.opsStats = Object.assign({ todayPeak: 0, todayPeakTs: 0, todayPeakDate: null, globalPeak: 0, globalPeakTs: 0, ledgerByDay: {} }, data.opsStats);
+    if (data.opsStats)
+      this.opsStats = Object.assign(
+        { todayPeak: 0, todayPeakTs: 0, todayPeakDate: null, globalPeak: 0, globalPeakTs: 0, ledgerByDay: {} },
+        data.opsStats
+      );
 
     // 🕶️ 内置消耗品：匿名券（consumable → 购买不写入背包，可重复购买，计数在 user.anonCoupons）
     if (!this.shopItems.has("anon_coupon")) {
-      this.shopItems.set("anon_coupon", {name: "匿名券", description: "匿名发言一次，消息显示为「匿名」🕶️ 紫色标签（真实身份仅管理员可查）", price: 50, consumable: true, enabled: true});
+      this.shopItems.set("anon_coupon", {
+        name: "匿名券",
+        description: "匿名发言一次，消息显示为「匿名」🕶️ 紫色标签（真实身份仅管理员可查）",
+        price: 50,
+        consumable: true,
+        enabled: true,
+      });
     }
 
     // 🏆 v1.45：冷启动重建赛季结算定时器（active 且未结算且 endAt 未到 → 排 alarm）
-    if (this.seasonState && this.seasonState.status === "active" && !this.seasonState.settled && this.seasonState.endAt > Date.now()) {
-      this.hnAddTimer({at: this.seasonState.endAt, type: "season_settle", payload: {}});
+    if (
+      this.seasonState &&
+      this.seasonState.status === "active" &&
+      !this.seasonState.settled &&
+      this.seasonState.endAt > Date.now()
+    ) {
+      this.hnAddTimer({ at: this.seasonState.endAt, type: "season_settle", payload: {} });
     }
 
     this._loaded = true;
   }
 
-  async save() { await saveRooms(this.storage, this.rooms); }
-  async saveBanned() { await saveBanned(this.storage, this.banned); }
-  async saveBannedIps() { await saveBannedIps(this.storage, this.bannedIps); }
-  async saveTags() { await saveTags(this.storage, this.tags); }
-  async saveKnownUsers() { await saveKnownUsers(this.storage, this.knownUsers); }
-  async saveUserIps() { await saveUserIps(this.storage, this.userIps); }
-  async saveGlobalBlacklist() { await saveGlobalBlacklist(this.storage, this.globalBlacklist); }
-  async saveAdminKey() { await saveAdminKey(this.storage, this.adminKey); }
-  async savePoints() { await savePoints(this.storage, this.userPoints); }
-  async saveRegisteredUsers() { await saveRegisteredUsers(this.storage, this.registeredUsers); }
-  async saveShopItems() { await saveShopItems(this.storage, this.shopItems); }
-  async saveBotCommands() { await saveBotCommands(this.storage, this.botCommands); }
-  async saveUserInventory() { await saveUserInventory(this.storage, this.userInventory); }
-  async saveTasks() { await saveTasks(this.storage, this.tasks); }
-  async saveTaskClaims() { await saveTaskClaims(this.storage, this.taskClaims); }
-  async saveTaskCompletions() { await saveTaskCompletions(this.storage, this.taskCompletions); }
-  async saveTaskRewardPaid() { await saveTaskRewardPaid(this.storage, this.taskRewardPaid); }
-  async saveLotteryPools() { await saveLotteryPools(this.storage, this.lotteryPools); }
-  async saveLotteryRecords() { await saveLotteryRecords(this.storage, this.lotteryRecords); }
-  async saveEmoji() { await saveEmoji(this.storage, this.emoji); }
-  async saveKickProtected() { await saveKickProtected(this.storage, this.kickProtected); }
-  async saveMutes() { await saveMutes(this.storage, this.mutes); }
-  async saveGameDailyWin() { await saveGameDailyWin(this.storage, this.gameDailyWin); }
-  async saveRedPackets() { await saveRedPackets(this.storage, this.redPackets); }
-  async saveCheckinByIp() { await saveCheckinByIp(this.storage, this.checkinByIp); }
+  /** 持久化房间列表到 storage @returns {Promise<void>} */
+  async save() {
+    await saveRooms(this.storage, this.rooms);
+  }
+  /** 持久化封禁用户到 storage @returns {Promise<void>} */
+  async saveBanned() {
+    await saveBanned(this.storage, this.banned);
+  }
+  /** 持久化封禁 IP 到 storage @returns {Promise<void>} */
+  async saveBannedIps() {
+    await saveBannedIps(this.storage, this.bannedIps);
+  }
+  /** 持久化标签到 storage @returns {Promise<void>} */
+  async saveTags() {
+    await saveTags(this.storage, this.tags);
+  }
+  /** 持久化已知用户到 storage @returns {Promise<void>} */
+  async saveKnownUsers() {
+    await saveKnownUsers(this.storage, this.knownUsers);
+  }
+  /** 持久化用户 IP 映射到 storage @returns {Promise<void>} */
+  async saveUserIps() {
+    await saveUserIps(this.storage, this.userIps);
+  }
+  /** 持久化全局拉黑到 storage @returns {Promise<void>} */
+  async saveGlobalBlacklist() {
+    await saveGlobalBlacklist(this.storage, this.globalBlacklist);
+  }
+  /** 持久化管理密钥到 storage @returns {Promise<void>} */
+  async saveAdminKey() {
+    await saveAdminKey(this.storage, this.adminKey);
+  }
+  /** 持久化积分表到 storage @returns {Promise<void>} */
+  async savePoints() {
+    await savePoints(this.storage, this.userPoints);
+  }
+  /** 持久化注册用户表到 storage @returns {Promise<void>} */
+  async saveRegisteredUsers() {
+    await saveRegisteredUsers(this.storage, this.registeredUsers);
+  }
+  /** 持久化商城道具到 storage @returns {Promise<void>} */
+  async saveShopItems() {
+    await saveShopItems(this.storage, this.shopItems);
+  }
+  /** 持久化机器人命令到 storage @returns {Promise<void>} */
+  async saveBotCommands() {
+    await saveBotCommands(this.storage, this.botCommands);
+  }
+  /** 持久化用户背包到 storage @returns {Promise<void>} */
+  async saveUserInventory() {
+    await saveUserInventory(this.storage, this.userInventory);
+  }
+  /** 持久化任务表到 storage @returns {Promise<void>} */
+  async saveTasks() {
+    await saveTasks(this.storage, this.tasks);
+  }
+  /** 持久化任务领取记录到 storage @returns {Promise<void>} */
+  async saveTaskClaims() {
+    await saveTaskClaims(this.storage, this.taskClaims);
+  }
+  /** 持久化任务完成记录到 storage @returns {Promise<void>} */
+  async saveTaskCompletions() {
+    await saveTaskCompletions(this.storage, this.taskCompletions);
+  }
+  /** 持久化任务奖励已发标记到 storage @returns {Promise<void>} */
+  async saveTaskRewardPaid() {
+    await saveTaskRewardPaid(this.storage, this.taskRewardPaid);
+  }
+  /** 持久化抽奖奖池到 storage @returns {Promise<void>} */
+  async saveLotteryPools() {
+    await saveLotteryPools(this.storage, this.lotteryPools);
+  }
+  /** 持久化抽奖记录到 storage @returns {Promise<void>} */
+  async saveLotteryRecords() {
+    await saveLotteryRecords(this.storage, this.lotteryRecords);
+  }
+  /** 持久化表情到 storage @returns {Promise<void>} */
+  async saveEmoji() {
+    await saveEmoji(this.storage, this.emoji);
+  }
+  /** 持久化踢人保护名单到 storage @returns {Promise<void>} */
+  async saveKickProtected() {
+    await saveKickProtected(this.storage, this.kickProtected);
+  }
+  /** 持久化禁言记录到 storage @returns {Promise<void>} */
+  async saveMutes() {
+    await saveMutes(this.storage, this.mutes);
+  }
+  /** 持久化每日净赢到 storage @returns {Promise<void>} */
+  async saveGameDailyWin() {
+    await saveGameDailyWin(this.storage, this.gameDailyWin);
+  }
+  /** 持久化红包记录到 storage @returns {Promise<void>} */
+  async saveRedPackets() {
+    await saveRedPackets(this.storage, this.redPackets);
+  }
+  /** 持久化每 IP 每日签到计数到 storage @returns {Promise<void>} */
+  async saveCheckinByIp() {
+    await saveCheckinByIp(this.storage, this.checkinByIp);
+  }
 
   // 🎮 v1.43 Hacknet 对战：持久化 + alarm 调度 + 入场 ticket
-  async saveHacknetGames() { await saveHacknetGames(this.storage, this.hacknetGames); }
+  /** 持久化 Hacknet 对战局到 storage @returns {Promise<void>} */
+  async saveHacknetGames() {
+    await saveHacknetGames(this.storage, this.hacknetGames);
+  }
 
   // 🏆 v1.45 赛季 + 荣誉：持久化
-  async saveSeasonState() { await saveSeasonState(this.storage, this.seasonState); }
-  async saveSeasonProgress() { await saveSeasonProgress(this.storage, this.seasonProgress); }
-  async saveHonorCoins() { await saveHonorCoins(this.storage, this.honorCoins); }
+  /** 持久化赛季状态到 storage @returns {Promise<void>} */
+  async saveSeasonState() {
+    await saveSeasonState(this.storage, this.seasonState);
+  }
+  /** 持久化赛季进度到 storage @returns {Promise<void>} */
+  async saveSeasonProgress() {
+    await saveSeasonProgress(this.storage, this.seasonProgress);
+  }
+  /** 持久化荣誉币到 storage @returns {Promise<void>} */
+  async saveHonorCoins() {
+    await saveHonorCoins(this.storage, this.honorCoins);
+  }
 
   // 🔐 v1.46 OAuth state 持久化
-  async saveOauthStates() { await saveOauthStates(this.storage, this.oauthStates); }
+  /** 持久化 OAuth state 到 storage @returns {Promise<void>} */
+  async saveOauthStates() {
+    await saveOauthStates(this.storage, this.oauthStates);
+  }
 
   // 💱 v1.47 交易市场持久化
-  async saveMarketOrders() { await saveMarketOrders(this.storage, this.marketOrders); }
-  async saveMarketConfig() { await saveMarketConfig(this.storage, this.marketConfig); }
+  /** 持久化市场挂单到 storage @returns {Promise<void>} */
+  async saveMarketOrders() {
+    await saveMarketOrders(this.storage, this.marketOrders);
+  }
+  /** 持久化市场配置到 storage @returns {Promise<void>} */
+  async saveMarketConfig() {
+    await saveMarketConfig(this.storage, this.marketConfig);
+  }
 
   // 👥 v1.48 关系链持久化
-  async saveUserRelations() { await saveUserRelations(this.storage, this.userRelations); }
+  /** 持久化关系链到 storage @returns {Promise<void>} */
+  async saveUserRelations() {
+    await saveUserRelations(this.storage, this.userRelations);
+  }
 
   // 🧪 v1.49 LuckPerms 权限系统持久化
-  async saveLp() { await saveLp(this.storage, this.lp); }
+  /** 持久化 LuckPerms 权限数据到 storage @returns {Promise<void>} */
+  async saveLp() {
+    await saveLp(this.storage, this.lp);
+  }
 
   // 📈 v1.54 运营数据持久化（峰值 + 积分流水日桶）
-  async saveOpsStats() { await saveOpsStats(this.storage, this.opsStats); }
+  /** 持久化运营数据到 storage @returns {Promise<void>} */
+  async saveOpsStats() {
+    await saveOpsStats(this.storage, this.opsStats);
+  }
 
   // 事件入表并重排 alarm（DO 同一时刻仅一个 pending alarm）
+  /**
+   * 事件入表并重排 alarm
+   * @param {{at:number, type:string, gameId?:string, payload?:any}} timer 定时事件
+   * @returns {void}
+   */
   hnAddTimer(timer) {
     this.hnTimers.push(timer);
     this.hnReschedule();
   }
 
   // 重排 alarm 到最早事件（先删旧再设新；无事件则取消）
+  /** 重排 alarm 到最早事件（先删旧再设新；无事件则取消） @returns {void} */
   hnReschedule() {
     try {
       if (!this.hnTimers.length) {
-        try { this.storage.deleteAlarm(); } catch (e) {}
+        try {
+          this.storage.deleteAlarm();
+        } catch (e) {}
         return;
       }
       this.hnTimers.sort((a, b) => a.at - b.at);
       const earliest = this.hnTimers[0].at;
-      try { this.storage.deleteAlarm(); } catch (e) {}
+      try {
+        this.storage.deleteAlarm();
+      } catch (e) {}
       this.storage.setAlarm(earliest).catch(() => {});
     } catch (e) {}
   }
 
   // 冷启动/恢复：从 game 状态重建事件表（trace 超时 / 密码恢复 / AI tick）
+  /** 冷启动/恢复：从 game 状态重建事件表（trace 超时 / 密码恢复 / AI tick） @returns {void} */
   hnRebuildTimers() {
     this.hnTimers = [];
     for (let [gameId, game] of this.hacknetGames) {
@@ -274,20 +501,25 @@ export class RoomRegistry {
         let p = game.player && game.player[name];
         if (!p) continue;
         if (p.trace && p.trace.active && p.trace.deadline) {
-          this.hnTimers.push({at: p.trace.deadline, type: "hn_trace", gameId, payload: {side}});
+          this.hnTimers.push({ at: p.trace.deadline, type: "hn_trace", gameId, payload: { side } });
         }
         if (Array.isArray(p.exposed)) {
           for (let ex of p.exposed) {
-            this.hnTimers.push({at: ex.until, type: "hn_restore_pwd", gameId, payload: {side, room: ex.room}});
+            this.hnTimers.push({ at: ex.until, type: "hn_restore_pwd", gameId, payload: { side, room: ex.room } });
           }
         }
       }
       if (game.ai) {
         if (game.ai.nextTickAt) {
-          this.hnTimers.push({at: game.ai.nextTickAt, type: "hn_ai_tick", gameId, payload: {}});
+          this.hnTimers.push({ at: game.ai.nextTickAt, type: "hn_ai_tick", gameId, payload: {} });
         }
         if (game.ai.trace && game.ai.trace.active && game.ai.trace.deadline) {
-          this.hnTimers.push({at: game.ai.trace.deadline, type: "hn_trace", gameId, payload: {side: "b", ai: true}});
+          this.hnTimers.push({
+            at: game.ai.trace.deadline,
+            type: "hn_trace",
+            gameId,
+            payload: { side: "b", ai: true },
+          });
         }
       }
     }
@@ -295,12 +527,18 @@ export class RoomRegistry {
   }
 
   // 单次入场 ticket 校验（safeEqual 常量时间比较 + 消费即删 + 过期惰性清理）
+  /**
+   * 单次入场 ticket 校验（safeEqual 常量时间比较 + 消费即删 + 过期惰性清理）
+   * @param {string} room 房间名
+   * @param {string|number} password 待校验的入场口令
+   * @returns {Promise<boolean>} 是否通过
+   */
   async hnTicketOk(room, password) {
     try {
       const list = this.hnTickets.get(room);
       if (!list || !list.length) return false;
       const now = Date.now();
-      const valid = list.filter(t => t.expiry > now);
+      const valid = list.filter((t) => t.expiry > now);
       if (valid.length !== list.length) {
         if (valid.length) this.hnTickets.set(room, valid);
         else this.hnTickets.delete(room);
@@ -314,16 +552,22 @@ export class RoomRegistry {
         }
       }
       return false;
-    } catch (e) { return false; }
+    } catch (e) {
+      return false;
+    }
   }
 
   // DO alarm：处理到期事件（trace 惩罚 / 密码恢复 / AI tick），末尾重排下一事件
+  /**
+   * DO alarm：处理到期事件（trace 惩罚 / 密码恢复 / AI tick），末尾重排下一事件
+   * @returns {Promise<void>}
+   */
   async alarm() {
     if (this._loadPromise) await this._loadPromise;
     const now = Date.now();
-    const due = this.hnTimers.filter(t => t.at <= now);
+    const due = this.hnTimers.filter((t) => t.at <= now);
     if (!due.length) return;
-    this.hnTimers = this.hnTimers.filter(t => t.at > now);
+    this.hnTimers = this.hnTimers.filter((t) => t.at > now);
     for (const evt of due) {
       try {
         if (evt.type === "season_settle") {
@@ -339,14 +583,27 @@ export class RoomRegistry {
   }
 
   // 💰 积分流水账本：记录每笔积分变动（上限 100 条/用户），供用户查看收支明细
+  /**
+   * 积分流水账本：记录每笔积分变动（上限 100 条/用户），并累计赛季进度 + 运营日桶
+   * @param {string} name 用户名
+   * @param {string|number} delta 积分变动（可正可负）
+   * @param {string} type 变动类型（checkin/task/game/lottery/redpacket/reward/transfer/admin 等）
+   * @param {string} [desc] 变动描述（截取前 80 字）
+   * @returns {Promise<void>}
+   */
   async addLedger(name, delta, type, desc) {
     try {
       if (!name) return;
       // 🏆 v1.45 赛季 points 目标：正向白名单入账时累加进 seasonProgress.points（BigInt 字符串和）。
       // 排除 transfer（自刷）/ admin（铸币）。非热路径（仅在积分流水写入时触发，不进消息/签到热路径）。
-      if (SEASON_POINT_TYPES.includes(type) && _toBigInt(delta) > 0n &&
-          this.seasonState && this.seasonState.status === "active" && !this.seasonState.settled) {
-        if (!this.seasonProgress) this.seasonProgress = {baselines: [], points: []};
+      if (
+        SEASON_POINT_TYPES.includes(type) &&
+        _toBigInt(delta) > 0n &&
+        this.seasonState &&
+        this.seasonState.status === "active" &&
+        !this.seasonState.settled
+      ) {
+        if (!this.seasonProgress) this.seasonProgress = { baselines: [], points: [] };
         let pm = new Map(this.seasonProgress.points || []);
         pm.set(name, String(_toBigInt(pm.get(name)) + _toBigInt(delta)));
         this.seasonProgress.points = [...pm];
@@ -357,25 +614,42 @@ export class RoomRegistry {
       let key = "ledger:" + name;
       let raw = await this.storage.get(key);
       let arr = [];
-      if (raw) { let p = JSON.parse(raw); if (Array.isArray(p)) arr = p; }
-      arr.push({ts: Date.now(), delta: String(delta), type: type || "other", desc: (desc || "").slice(0, 80)});
+      if (raw) {
+        let p = JSON.parse(raw);
+        if (Array.isArray(p)) arr = p;
+      }
+      arr.push({ ts: Date.now(), delta: String(delta), type: type || "other", desc: (desc || "").slice(0, 80) });
       if (arr.length > 100) arr = arr.slice(-100);
       await this.storage.put(key, JSON.stringify(arr));
     } catch (e) {}
   }
 
   // 读取积分流水
+  /**
+   * 读取积分流水（storage key "ledger:"+name）
+   * @param {string} name 用户名
+   * @param {number} [limit] 返回条数上限（默认 50）
+   * @returns {Promise<Array<any>>} 流水数组（倒序取最近 limit 条）
+   */
   async getLedger(name, limit) {
     try {
       let raw = await this.storage.get("ledger:" + name);
       if (!raw) return [];
       let arr = JSON.parse(raw);
       return Array.isArray(arr) ? arr.slice(-(limit || 50)) : [];
-    } catch (e) { return []; }
+    } catch (e) {
+      return [];
+    }
   }
 
   // 📈 v1.54 运营数据：积分吞吐日桶聚合。返回是否变化（调用方据此决定是否持久化）。
   // 按 date+type 分组累加 {count, total}，仅保留最近 30 天桶。
+  /**
+   * 积分吞吐日桶聚合（按 date+type 分组，仅保留最近 30 天桶）
+   * @param {string} type 变动类型
+   * @param {string|number} delta 积分变动
+   * @returns {boolean} 是否产生变化（调用方据此决定是否持久化）
+   */
   _trackLedger(type, delta) {
     try {
       if (!this.opsStats) return false;
@@ -393,36 +667,64 @@ export class RoomRegistry {
         for (let d of days.slice(0, days.length - 30)) delete this.opsStats.ledgerByDay[d];
       }
       return true;
-    } catch (e) { return false; }
+    } catch (e) {
+      return false;
+    }
   }
 
   // 🏆 v1.45 荣誉币流水账本（复制 addLedger，独立 key "honorLedger:"+name，上限 100 条）
+  /**
+   * 荣誉币流水账本（独立 key "honorLedger:"+name，上限 100 条）
+   * @param {string} name 用户名
+   * @param {string|number} delta 荣誉币变动
+   * @param {string} type 变动类型
+   * @param {string} [desc] 变动描述（截取前 80 字）
+   * @returns {Promise<void>}
+   */
   async addHonorLedger(name, delta, type, desc) {
     try {
       if (!name) return;
       let key = "honorLedger:" + name;
       let raw = await this.storage.get(key);
       let arr = [];
-      if (raw) { let p = JSON.parse(raw); if (Array.isArray(p)) arr = p; }
-      arr.push({ts: Date.now(), delta: String(delta), type: type || "other", desc: (desc || "").slice(0, 80)});
+      if (raw) {
+        let p = JSON.parse(raw);
+        if (Array.isArray(p)) arr = p;
+      }
+      arr.push({ ts: Date.now(), delta: String(delta), type: type || "other", desc: (desc || "").slice(0, 80) });
       if (arr.length > 100) arr = arr.slice(-100);
       await this.storage.put(key, JSON.stringify(arr));
     } catch (e) {}
   }
 
   // 读取荣誉币流水
+  /**
+   * 读取荣誉币流水（storage key "honorLedger:"+name）
+   * @param {string} name 用户名
+   * @param {number} [limit] 返回条数上限（默认 50）
+   * @returns {Promise<Array<any>>} 流水数组
+   */
   async getHonorLedger(name, limit) {
     try {
       let raw = await this.storage.get("honorLedger:" + name);
       if (!raw) return [];
       let arr = JSON.parse(raw);
       return Array.isArray(arr) ? arr.slice(-(limit || 50)) : [];
-    } catch (e) { return []; }
+    } catch (e) {
+      return [];
+    }
   }
 
   // ⭐ 经验系统：发放经验（可顺带 +1 对应统计项），并检查成就解锁。
   // statsKey ∈ {msg, checkin, game, shop}，对应 user.stats.{msgCount, checkinCount, gameWins, shopCount}。
   // 返回 {exp, level, leveledUp, newLevel, achievements(新解锁数组)}；用户不存在返回 null。
+  /**
+   * 发放经验（可顺带 +1 对应统计项），并检查成就解锁
+   * @param {string} name 用户名
+   * @param {number} amount 经验增量（负数按 0 处理）
+   * @param {string} statsKey 统计键（msg/checkin/game/shop）
+   * @returns {Promise<{exp:number, level:number, leveledUp:boolean, newLevel:number, achievements:any[]}|null>} 发放结果；用户不存在返回 null
+   */
   async grantExp(name, amount, statsKey) {
     let user = this.registeredUsers.get(name);
     if (!user) return null;
@@ -440,11 +742,22 @@ export class RoomRegistry {
     await this.saveRegisteredUsers();
     let afterLevel = levelForExp(user.exp).level;
     let achievements = await checkAchievements(this, name, user);
-    return { exp: user.exp, level: afterLevel, leveledUp: afterLevel > beforeLevel, newLevel: afterLevel, achievements };
+    return {
+      exp: user.exp,
+      level: afterLevel,
+      leveledUp: afterLevel > beforeLevel,
+      newLevel: afterLevel,
+      achievements,
+    };
   }
 
   // M15：管理鉴权（与 registry/points.mjs 的 adminAuthorized 同源逻辑）
   // 🔒 安全修复（F8）：改用常量时间比较 safeEqual，降低密钥时序测信道风险
+  /**
+   * 管理鉴权（常量时间比较 safeEqual，兼容 adminKey / ADMIN_SECRET_KEY / ADMIN_KEY）
+   * @param {string} auth 待校验的认证串
+   * @returns {boolean} 是否授权
+   */
   adminAuthorized(auth) {
     if (!auth) return false;
     if (this.adminKey && safeEqual(auth, this.adminKey)) return true;
@@ -455,6 +768,11 @@ export class RoomRegistry {
     return false;
   }
 
+  /**
+   * DO 入口：registry 全局路由（管理鉴权 + 各子模块 handler 分发）
+   * @param {Request} request 请求
+   * @returns {Promise<Response>}
+   */
   async fetch(request) {
     if (this._loadPromise) await this._loadPromise;
 
@@ -466,27 +784,63 @@ export class RoomRegistry {
     // /room-destroy 不加守卫（chatroom /destroy 命令内部调用，且已有 DESTROY_KEY + admin API 双重校验）
     let auth = url.searchParams.get("auth") || "";
     const adminExactPaths = new Set([
-      "/tag/set", "/tag/remove",
-      "/ban", "/unban", "/ip-ban", "/ip-unban", "/kick-protect", "/kick-unprotect",
-      "/global-blacklist/add", "/global-blacklist/remove",
-      "/admin-key/set", "/admin-key/reset",
-      "/user-delete", "/set-password",
-      "/admin/shop/items", "/admin/shop/item/add", "/admin/shop/item/toggle", "/admin/shop/item/delete",
-      "/admin/tasks/list", "/admin/task/add", "/admin/task/toggle", "/admin/task/delete",
-      "/redeem/generate", "/redeem/add", "/redeem/delete", "/redeem/list",
-      "/log/add", "/log/list", "/log/clear",
+      "/tag/set",
+      "/tag/remove",
+      "/ban",
+      "/unban",
+      "/ip-ban",
+      "/ip-unban",
+      "/kick-protect",
+      "/kick-unprotect",
+      "/global-blacklist/add",
+      "/global-blacklist/remove",
+      "/admin-key/set",
+      "/admin-key/reset",
+      "/user-delete",
+      "/set-password",
+      "/admin/shop/items",
+      "/admin/shop/item/add",
+      "/admin/shop/item/toggle",
+      "/admin/shop/item/delete",
+      "/admin/tasks/list",
+      "/admin/task/add",
+      "/admin/task/toggle",
+      "/admin/task/delete",
+      "/redeem/generate",
+      "/redeem/add",
+      "/redeem/delete",
+      "/redeem/list",
+      "/log/add",
+      "/log/list",
+      "/log/clear",
       "/admin/user-inventory",
-      "/admin/mute", "/admin/unmute", "/admin/mute-list",
-      "/emoji/add", "/emoji/remove",
+      "/admin/mute",
+      "/admin/unmute",
+      "/admin/mute-list",
+      "/emoji/add",
+      "/emoji/remove",
       "/room/webhook",
-      "/anon/grant", "/anon/log",
-      "/exp/set", "/exp/add", "/exp/batch",
-      "/admin/season/config", "/admin/season/create", "/admin/season/start", "/admin/season/end",
-      "/admin/honor-shop/items", "/admin/honor-shop/item/add", "/admin/honor-shop/item/toggle", "/admin/honor-shop/item/delete",
+      "/anon/grant",
+      "/anon/log",
+      "/exp/set",
+      "/exp/add",
+      "/exp/batch",
+      "/admin/season/config",
+      "/admin/season/create",
+      "/admin/season/start",
+      "/admin/season/end",
+      "/admin/honor-shop/items",
+      "/admin/honor-shop/item/add",
+      "/admin/honor-shop/item/toggle",
+      "/admin/honor-shop/item/delete",
       "/admin/honor/add",
-      "/admin/market/config", "/admin/market/orders", "/admin/market/delist"
+      "/admin/market/config",
+      "/admin/market/orders",
+      "/admin/market/delist",
     ]);
-    let needsAdmin = adminExactPaths.has(path) || path.startsWith("/lottery/admin/") ||
+    let needsAdmin =
+      adminExactPaths.has(path) ||
+      path.startsWith("/lottery/admin/") ||
       (path === "/bot-commands" && ["add", "update", "delete"].includes(url.searchParams.get("action")));
     if (needsAdmin && !this.adminAuthorized(auth)) {
       return new Response("无权操作", { status: 403 });
@@ -498,74 +852,96 @@ export class RoomRegistry {
       let online = 0;
       for (let [name, info] of this.rooms) {
         rooms.push({ name, count: info.count || 0, peak: info.peak || 0, peakTs: info.peakTs || 0 });
-        online += (info.count || 0);
+        online += info.count || 0;
       }
       rooms.sort((a, b) => b.count - a.count);
       let totalPoints = 0n;
-      for (let [, p] of this.userPoints) { try { totalPoints += _toBigInt(p); } catch {} }
-      return new Response(JSON.stringify({
-        rooms,
-        online,
-        todayPeak: this.opsStats.todayPeak || 0,
-        todayPeakTs: this.opsStats.todayPeakTs || 0,
-        todayPeakDate: this.opsStats.todayPeakDate || null,
-        globalPeak: this.opsStats.globalPeak || 0,
-        globalPeakTs: this.opsStats.globalPeakTs || 0,
-        registeredUsers: this.registeredUsers.size,
-        totalPoints: String(totalPoints),
-        ledgerByDay: this.opsStats.ledgerByDay || {},
-      }), { headers: { "Content-Type": "application/json" } });
+      for (let [, p] of this.userPoints) {
+        try {
+          totalPoints += _toBigInt(p);
+        } catch {}
+      }
+      return new Response(
+        JSON.stringify({
+          rooms,
+          online,
+          todayPeak: this.opsStats.todayPeak || 0,
+          todayPeakTs: this.opsStats.todayPeakTs || 0,
+          todayPeakDate: this.opsStats.todayPeakDate || null,
+          globalPeak: this.opsStats.globalPeak || 0,
+          globalPeakTs: this.opsStats.globalPeakTs || 0,
+          registeredUsers: this.registeredUsers.size,
+          totalPoints: String(totalPoints),
+          ledgerByDay: this.opsStats.ledgerByDay || {},
+        }),
+        { headers: { "Content-Type": "application/json" } }
+      );
     }
 
     let handler = null;
 
-    if (path === "/register" || path === "/update" || path === "/list" || path === "/password-status" || path === "/verify-password" || path === "/set-password" || path === "/room-destroy" || path === "/room/webhook" || path === "/room/webhook-verify")
+    if (
+      path === "/register" ||
+      path === "/update" ||
+      path === "/list" ||
+      path === "/password-status" ||
+      path === "/verify-password" ||
+      path === "/set-password" ||
+      path === "/room-destroy" ||
+      path === "/room/webhook" ||
+      path === "/room/webhook-verify"
+    )
       handler = handleRooms;
-    else if (path.startsWith("/ban") || path.startsWith("/unban") || path.startsWith("/banned-list") || path.startsWith("/is-banned") || path.startsWith("/ip-") || path.startsWith("/kick-"))
+    else if (
+      path.startsWith("/ban") ||
+      path.startsWith("/unban") ||
+      path.startsWith("/banned-list") ||
+      path.startsWith("/is-banned") ||
+      path.startsWith("/ip-") ||
+      path.startsWith("/kick-")
+    )
       handler = handleBans;
-    else if (path.startsWith("/global-blacklist") || path === "/is-globally-blacklisted")
-      handler = handleBlacklist;
+    else if (path.startsWith("/global-blacklist") || path === "/is-globally-blacklisted") handler = handleBlacklist;
     else if (path.startsWith("/admin-key") || path === "/combined-auth" || path === "/admin/user-inventory")
       handler = handleAdmin;
-    else if (path.startsWith("/tag/"))
-      handler = handleTags;
-    else if (path.startsWith("/user-") || path === "/user/achievements" || path.startsWith("/xp/") || path === "/known-users" || path === "/user-init" || path === "/user-bio" || path === "/user-avatar" || path === "/user-profile")
+    else if (path.startsWith("/tag/")) handler = handleTags;
+    else if (
+      path.startsWith("/user-") ||
+      path === "/user/achievements" ||
+      path.startsWith("/xp/") ||
+      path === "/known-users" ||
+      path === "/user-init" ||
+      path === "/user-bio" ||
+      path === "/user-avatar" ||
+      path === "/user-profile"
+    )
       handler = handleUsers;
-    else if (path.startsWith("/rel/"))
-      handler = handleRelations;
-    else if (path.startsWith("/lp/"))
-      handler = handleLp;
-    else if (path.startsWith("/hn/"))
-      handler = handleHacknet;
-    else if (path.startsWith("/season/") || path.startsWith("/admin/season/"))
-      handler = handleSeason;
+    else if (path.startsWith("/rel/")) handler = handleRelations;
+    else if (path.startsWith("/lp/")) handler = handleLp;
+    else if (path.startsWith("/hn/")) handler = handleHacknet;
+    else if (path.startsWith("/season/") || path.startsWith("/admin/season/")) handler = handleSeason;
     else if (path.startsWith("/honor/") || path.startsWith("/admin/honor/") || path.startsWith("/admin/honor-shop/"))
       handler = handleHonor;
-    else if (path.startsWith("/oauth/"))
-      handler = handleOauth;
-    else if (path.startsWith("/points/") || path.startsWith("/game/"))
-      handler = handlePoints;
-    else if (path.startsWith("/exp/"))
-      handler = handleExp;
+    else if (path.startsWith("/oauth/")) handler = handleOauth;
+    else if (path.startsWith("/points/") || path.startsWith("/game/")) handler = handlePoints;
+    else if (path.startsWith("/exp/")) handler = handleExp;
     else if (path.startsWith("/shop/") || path.startsWith("/admin/shop/") || path.startsWith("/anon/"))
       handler = handleShop;
-    else if (path.startsWith("/market/") || path.startsWith("/admin/market/"))
-      handler = handleMarket;
+    else if (path.startsWith("/market/") || path.startsWith("/admin/market/")) handler = handleMarket;
     else if (path.startsWith("/task") || path.startsWith("/tasks") || path.startsWith("/admin/task"))
       handler = handleTasks;
-    else if (path.startsWith("/lottery"))
-      handler = handleLottery;
-    else if (path === "/bot-commands")
-      handler = handleBot;
-    else if (path.startsWith("/emoji"))
-      handler = handleEmoji;
-    else if (path.startsWith("/redeem"))
-      handler = handleRedeem;
-    else if (path.startsWith("/log/"))
-      handler = handleLog;
-    else if (path.startsWith("/redpacket"))
-      handler = handleRedPacket;
-    else if (path.startsWith("/admin/mute") || path.startsWith("/admin/unmute") || path === "/mute-status" || path === "/admin/mute-list")
+    else if (path.startsWith("/lottery")) handler = handleLottery;
+    else if (path === "/bot-commands") handler = handleBot;
+    else if (path.startsWith("/emoji")) handler = handleEmoji;
+    else if (path.startsWith("/redeem")) handler = handleRedeem;
+    else if (path.startsWith("/log/")) handler = handleLog;
+    else if (path.startsWith("/redpacket")) handler = handleRedPacket;
+    else if (
+      path.startsWith("/admin/mute") ||
+      path.startsWith("/admin/unmute") ||
+      path === "/mute-status" ||
+      path === "/admin/mute-list"
+    )
       handler = handleMute;
 
     if (handler) {

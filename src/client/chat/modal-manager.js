@@ -1,21 +1,34 @@
+// @ts-check
 // v1.53 聊天室 Vue3 弹窗管理器（overlay Modal 管理器）
 // 原生消息流保持原生，弹窗/表单/列表交给 Vue3 声明式渲染 —— "每个模块用专属于他的最好的框架"
 // 样式全部使用聊天室自身 CSS 变量（--surface/--frosted/--radius + body.dark/body.theme-*），自动跟随明暗与主题。
 // 双轨开关：localStorage.chatLegacyModals=1 时弹窗模块自行回退旧 overlay（本管理器不参与）。
-import * as Vue from '/static/chat/vendor/vue.js';
+// @ts-ignore 运行时静态路径（/static/chat/vendor/vue.js）无 tsc 声明 → Vue 按 any 使用
+import * as Vue from "/static/chat/vendor/vue.js";
+
+/**
+ * 弹窗栈条目（openModal 创建的单个弹窗状态）
+ * @typedef {{ name: string, props: Record<string, any>, opts: Record<string, any>,
+ *   Component: any, loading: boolean, isHost: boolean, _cleanup?: any }} ModalEntry
+ */
 
 // 自定义加载器注册表（jsdom 测试用它注入合成模块，生产可省略——按约定路径 ./modals/<name>.js 懒加载）
+/** @type {Record<string, () => Promise<any>>} */
 const registry = {};
 
 // 原生宿主注册表（批3 游戏等 canvas/帧循环宿主）：registerModalHost(name, mount, unmount)
 // mount(el) 把原生渲染进弹窗卡片容器并返回清理函数；unmount() 可选（整体卸载钩子）
+/** @type {Record<string, { mount: (el: HTMLElement) => any, unmount?: () => void }>} */
 const hosts = {};
 
 // 弹窗栈：reactive 数组，支持多弹窗叠加、置顶
+/** @type {ModalEntry[]} */
 export const stack = Vue.reactive([]);
 
 // 注入弹窗管理器通用样式（body 级，用聊天室 CSS 变量，非 admin 硬编码色）
-injectCss('cm-style', `
+injectCss(
+  "cm-style",
+  `
 #chat-modals { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
 .cm-layer { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
 .cm-layer-drawer { justify-content: flex-end; }
@@ -32,40 +45,76 @@ injectCss('cm-style', `
 @keyframes cm-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cm-pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
 @keyframes cm-slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
-`);
+`
+);
 
 // 供弹窗模块注入自身样式（避免样式塞进 style.css 与旧 overlay 纠缠）
+/**
+ * 注入弹窗模块自身样式（按 id 去重，body 级 <style>）
+ * @param {string} id 样式 id（重复注入自动跳过）
+ * @param {string} css CSS 文本
+ * @returns {void}
+ */
 export function injectCss(id, css) {
   if (!document || !document.head) return;
   if (document.getElementById(id)) return;
-  const style = document.createElement('style');
+  const style = document.createElement("style");
   style.id = id;
   style.textContent = css;
   document.head.appendChild(style);
 }
 
 // 注册自定义加载器（覆盖默认路径约定；jsdom 测试注入合成模块）
+/**
+ * 注册自定义加载器（覆盖默认 ./modals/<name>.js 约定路径；jsdom 测试注入合成模块）
+ * @param {string} name 弹窗名
+ * @param {() => Promise<any>} loader 返回弹窗组件模块的异步加载器
+ * @returns {void}
+ */
 export function registerModal(name, loader) {
   registry[name] = loader;
 }
 
 // 注册原生宿主（批3 游戏等）：mount(el) 渲染进弹窗卡片容器，返回清理函数；unmount() 可选
+/**
+ * 注册原生宿主（批3 游戏等 canvas/帧循环）：mount(el) 把原生渲染进弹窗卡片容器并返回清理函数；unmount() 可选
+ * @param {string} name 宿主名
+ * @param {(el: HTMLElement) => any} mount 渲染函数（返回清理函数）
+ * @param {() => void} [unmount] 整体卸载钩子（可选）
+ * @returns {void}
+ */
 export function registerModalHost(name, mount, unmount) {
   hosts[name] = { mount, unmount };
 }
 
+/** 载入弹窗组件（宿主优先；否则 registry 或约定路径懒加载） @param {ModalEntry} entry @returns {void} */
 function load(entry) {
-  if (hosts[entry.name]) { entry.isHost = true; return; }
-  const loader = registry[entry.name] || (() => import('./modals/' + entry.name + '.js'));
+  if (hosts[entry.name]) {
+    entry.isHost = true;
+    return;
+  }
+  const loader = registry[entry.name] || (() => import("./modals/" + entry.name + ".js"));
   entry.loading = true;
-  loader().then((mod) => {
-    entry.Component = (mod && mod.default) || mod || { template: '<div class="cm-loading">空组件</div>' };
-  }).catch(() => {
-    entry.Component = { template: '<div class="cm-loading">模块加载失败</div>' };
-  }).finally(() => { entry.loading = false; });
+  loader()
+    .then((mod) => {
+      entry.Component = (mod && mod.default) || mod || { template: '<div class="cm-loading">空组件</div>' };
+    })
+    .catch(() => {
+      entry.Component = { template: '<div class="cm-loading">模块加载失败</div>' };
+    })
+    .finally(() => {
+      entry.loading = false;
+    });
 }
 
 // 打开弹窗：重复打开则更新 props 并置顶（不重建）
+/**
+ * 打开弹窗：重复打开则更新 props/opts 并置顶（不重建）
+ * @param {string} name 弹窗名（对应 ./modals/<name>.js 或已注册 loader）
+ * @param {Record<string, any>} [props] 传给组件的 props
+ * @param {Record<string, any>} [opts] 选项（如 { mode: 'drawer' } 抽屉模式）
+ * @returns {void}
+ */
 export function openModal(name, props = {}, opts = {}) {
   const idx = stack.findIndex((m) => m.name === name);
   if (idx !== -1) {
@@ -75,53 +124,75 @@ export function openModal(name, props = {}, opts = {}) {
     stack.push(top);
     return;
   }
-  const entry = Vue.reactive({ name, props: props || {}, opts: opts || {}, Component: null, loading: false, isHost: false });
+  const entry = Vue.reactive({
+    name,
+    props: props || {},
+    opts: opts || {},
+    Component: null,
+    loading: false,
+    isHost: false,
+  });
   stack.push(entry);
   load(entry);
 }
 
+/** 关闭指定弹窗 @param {string} name @returns {void} */
 export function closeModal(name) {
   const idx = stack.findIndex((m) => m.name === name);
   if (idx !== -1) stack.splice(idx, 1);
 }
 
+/** 关闭最上层弹窗 @returns {void} */
 export function closeTop() {
   if (stack.length) closeModal(stack[stack.length - 1].name);
 }
 
+/** 关闭全部弹窗 @returns {void} */
 export function closeAll() {
   stack.splice(0);
 }
 
 // Escape 关闭最上层弹窗（幂等：与全局 Escape 调 closeXxx 不冲突）
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && stack.length) closeTop();
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && stack.length) closeTop();
 });
 
 // 原生宿主挂载桥：mounted 时把 mount(el) 渲染进容器，卸载时执行返回的清理函数
 const HostMount = {
-  name: 'HostMount',
+  name: "HostMount",
   props: { entry: { type: Object, required: true } },
   setup(props) {
     const elRef = Vue.ref(null);
     Vue.onMounted(() => {
       const h = hosts[props.entry.name];
       if (!h || !elRef.value) return;
-      try { props.entry._cleanup = h.mount(elRef.value); } catch (e) { console.warn('host mount failed:', props.entry.name, e); }
+      try {
+        props.entry._cleanup = h.mount(elRef.value);
+      } catch (e) {
+        console.warn("host mount failed:", props.entry.name, e);
+      }
     });
     Vue.onBeforeUnmount(() => {
       const h = hosts[props.entry.name];
-      if (h && h.unmount) { try { h.unmount(); } catch (e) {} }
-      if (props.entry._cleanup) { try { props.entry._cleanup(); } catch (e) {} }
+      if (h && h.unmount) {
+        try {
+          h.unmount();
+        } catch (e) {}
+      }
+      if (props.entry._cleanup) {
+        try {
+          props.entry._cleanup();
+        } catch (e) {}
+      }
       props.entry._cleanup = null;
     });
     return { elRef };
   },
-  template: '<div class="cm-host" ref="elRef"></div>'
+  template: '<div class="cm-host" ref="elRef"></div>',
 };
 
 const Root = {
-  name: 'ModalManager',
+  name: "ModalManager",
   components: { HostMount },
   setup() {
     return { stack, closeModal };
@@ -141,9 +212,9 @@ const Root = {
         <div v-else class="cm-loading">加载中…</div>
       </div>
     </div>
-  </Teleport>`
+  </Teleport>`,
 };
 
 // 挂载到 #chat-modals（chat.html body 级，懒加载：首次打开弹窗时才载入本模块）
-const mountEl = document.getElementById('chat-modals');
+const mountEl = document.getElementById("chat-modals");
 if (mountEl) Vue.createApp(Root).mount(mountEl);

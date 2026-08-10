@@ -1,4 +1,62 @@
+// @ts-check
+// v1.57 代码质量 A 层：前端全局 state + i18n 词典 + toast
+// 类型契约见 src/types.js（Channel 等）
+/** @typedef {import("../../types.js").Channel} Channel */
+
+/**
+ * 聊天室前端全局状态对象（各字段含义见逐行注释）
+ * @typedef {{
+ *   currentWebSocket: WebSocket|null,
+ *   currentRelayId: string|null,
+ *   selectedColor: string,
+ *   nameForm: Element|null,
+ *   roomNameInput: Element|null,
+ *   goPublicButton: Element|null,
+ *   goPrivateButton: Element|null,
+ *   chatroom: Element|null,
+ *   chatlog: Element|null,
+ *   chatInput: Element|null,
+ *   roster: Element|null,
+ *   isAtBottom: boolean,
+ *   username: string|undefined,
+ *   roomname: string|undefined,
+ *   roomListInterval: number|null,
+ *   blockedUsers: Set<string>,
+ *   hostname: string,
+ *   lastSeenTimestamp: number,
+ *   wroteWelcomeMessages: boolean,
+ *   originalDocTitle: string,
+ *   unreadCount: number,
+ *   menuTargetUser: any|null,
+ *   dmCache: Record<string, any>,
+ *   dmTarget: any|null,
+ *   dmUnread: number,
+ *   dmUnreadTimer: any|null,
+ *   replyTarget: any|null,
+ *   replyText: string|null,
+ *   replyId: any|null,
+ *   soundMuted: boolean,
+ *   typingTimers: Record<string, any>,
+ *   lastTypingSent: number,
+ *   searchResults: any[],
+ *   searchIndex: number,
+ *   origTitle: string,
+ *   titleInterval: any|null,
+ *   customEmoji: Record<string,string>|null,
+ *   bioCache: Record<string,string>,
+ *   bioCachePending: Record<string,Promise<string>>,
+ *   currentChannel: string,
+ *   channels: Channel[],
+ *   channelCache: Record<string, any[]>,
+ *   channelUnread: Record<string, number>,
+ *   anonMode: boolean,
+ *   levelStyles: Record<string, {color:string, icon:string, text:string}>,
+ *   pinnedMessages: Record<string, any[]>,
+ * }} ChatState
+ */
+
 // 共享状态
+/** @type {ChatState} */
 export const state = {
   currentWebSocket: null,
   currentRelayId: null,
@@ -57,9 +115,12 @@ export const state = {
 
   // 频道体系
   currentChannel: "general",
-  channels: [{name: "general", type: "text"}, {name: "announcement", type: "announcement"}],
-  channelCache: {},   // channel -> 非当前频道消息数组（切换时渲染）
-  channelUnread: {},  // channel -> 未读计数
+  channels: [
+    { name: "general", type: "text" },
+    { name: "announcement", type: "announcement" },
+  ],
+  channelCache: {}, // channel -> 非当前频道消息数组（切换时渲染）
+  channelUnread: {}, // channel -> 未读计数
 
   // 🕶️ 匿名马甲
   anonMode: false,
@@ -71,14 +132,22 @@ export const state = {
   pinnedMessages: {},
 };
 
+/** 从 localStorage 载入拉黑名单（key "chat_blocked"） @returns {void} */
 export function loadBlockedUsers() {
-  try { state.blockedUsers = new Set(JSON.parse(localStorage.getItem("chat_blocked") || "[]")); } catch (e) { state.blockedUsers = new Set(); }
+  try {
+    state.blockedUsers = new Set(JSON.parse(localStorage.getItem("chat_blocked") || "[]"));
+  } catch (e) {
+    state.blockedUsers = new Set();
+  }
 }
+/** 将拉黑名单写回 localStorage @returns {void} */
 export function saveBlockedUsers() {
   localStorage.setItem("chat_blocked", JSON.stringify([...state.blockedUsers]));
 }
 loadBlockedUsers();
-window.addEventListener("storage", (e) => { if (e.key === "chat_blocked") loadBlockedUsers(); });
+window.addEventListener("storage", (e) => {
+  if (e.key === "chat_blocked") loadBlockedUsers();
+});
 
 // Toast 通知系统 — 内联以避免独立模块的 CDN 缓存问题
 let _toastContainer = null;
@@ -96,165 +165,348 @@ function _ensureToastContainer() {
 function _removeToast(toast) {
   if (toast.classList.contains("removing")) return;
   toast.classList.add("removing");
-  setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 200);
+  setTimeout(() => {
+    if (toast.parentNode) toast.parentNode.removeChild(toast);
+  }, 200);
 }
+/**
+ * Toast 通知（容器内联在 state.js，避免独立模块 CDN 缓存/暴露问题）
+ * @param {string} text 文案（自动过 i18n t()）
+ * @param {"success"|"error"|"warning"|"info"} [type] 通知类型（默认 "info"）
+ * @param {number} [duration] 显示毫秒数（默认 3000，0 则常驻直到手动关闭）
+ * @returns {HTMLDivElement} 创建的 toast 元素
+ */
 export function showToast(text, type, duration) {
-  type = type || "info"; duration = duration || 3000;
+  type = type || "info";
+  duration = duration || 3000;
   _ensureToastContainer();
   let toast = document.createElement("div");
   toast.className = "toast toast-" + type;
   let icons = { success: "✅", error: "❌", warning: "⚠️", info: "ℹ️" };
-  let iconSpan = document.createElement("span"); iconSpan.className = "toast-icon"; iconSpan.textContent = icons[type] || icons.info;
+  let iconSpan = document.createElement("span");
+  iconSpan.className = "toast-icon";
+  iconSpan.textContent = icons[type] || icons.info;
   toast.appendChild(iconSpan);
-  let textSpan = document.createElement("span"); textSpan.className = "toast-text"; textSpan.textContent = t(text);
+  let textSpan = document.createElement("span");
+  textSpan.className = "toast-text";
+  textSpan.textContent = t(text);
   toast.appendChild(textSpan);
-  let close = document.createElement("span"); close.className = "toast-close"; close.textContent = "×";
-  close.addEventListener("click", () => _removeToast(toast)); toast.appendChild(close);
+  let close = document.createElement("span");
+  close.className = "toast-close";
+  close.textContent = "×";
+  close.addEventListener("click", () => _removeToast(toast));
+  toast.appendChild(close);
   _toastContainer.appendChild(toast);
   if (duration > 0) setTimeout(() => _removeToast(toast), duration);
   return toast;
 }
-export function showSuccess(text, duration) { return showToast(text, "success", duration); }
-export function showError(text, duration) { return showToast(text, "error", duration || 4000); }
-export function showWarning(text, duration) { return showToast(text, "warning", duration || 4000); }
-export function showInfo(text, duration) { return showToast(text, "info", duration); }
+/** @param {string} text 文案 @param {number} [duration] 毫秒数 @returns {HTMLDivElement} */
+export function showSuccess(text, duration) {
+  return showToast(text, "success", duration);
+}
+/** @param {string} text 文案 @param {number} [duration] 毫秒数（默认 4000） @returns {HTMLDivElement} */
+export function showError(text, duration) {
+  return showToast(text, "error", duration || 4000);
+}
+/** @param {string} text 文案 @param {number} [duration] 毫秒数（默认 4000） @returns {HTMLDivElement} */
+export function showWarning(text, duration) {
+  return showToast(text, "warning", duration || 4000);
+}
+/** @param {string} text 文案 @param {number} [duration] 毫秒数 @returns {HTMLDivElement} */
+export function showInfo(text, duration) {
+  return showToast(text, "info", duration);
+}
 
 // —— 多语言 i18n（内联到 state.js，避免独立模块 CDN 缓存/暴露问题）——
 export const LANG_KEY = "lang";
 const i18nDict = {
   zh: {
-    login: "登录", register: "注册", skipLogin: "跳过，直接进入聊天", send: "发送", settings: "设置",
-    checkingAuth: "正在验证登录状态...", loginIng: "登录中...", loginOk: "登录成功", loginFailed: "登录失败",
-    registerIng: "注册中...", registerMinLen: "密码至少6个字符",
-    networkError: "网络错误", pleaseFill: "请填写用户名和密码", username: "用户名", password: "密码",
-    language: "语言", close: "关闭", save: "保存", cancel: "取消", confirm: "确认",
-    theme: "🎨 主题", themeClassic: "经典", themeLiquid: "液态玻璃", themeFlat: "扁平化", themeNeon: "深空霓虹", themeHacknet: "Hacknet", themeCustom: "自定义",
-    customTheme: "✏️ 自定义主题", ctPrimary: "主色", ctText: "文字色", ctTextSecondary: "次级文字色", ctBg: "背景色", ctBorder: "边框色", ctRadius: "圆角", ctMsgSelf: "自己气泡色", ctMsgOther: "他人气泡色", ctReset: "重置自定义", themeHint: "主题与明暗模式独立，可自由组合。",
-    apply: "应用", enterRoom: "进入聊天室", roomPlaceholder: "输入房间名，回车进入",
-    bgOpacity: "背景透明度", bgBlur: "磨砂程度", uiColor: "界面色调",
-    customWallpaper: "自定义壁纸", videoWallpaper: "视频壁纸",
-    restoreRandom: "恢复随机", cancelWallpaper: "取消壁纸", restoreDefault: "恢复默认",
-    wallpaperHint: "设置自定义图片壁纸，点击\"恢复随机\"返回随机背景。",
+    login: "登录",
+    register: "注册",
+    skipLogin: "跳过，直接进入聊天",
+    send: "发送",
+    settings: "设置",
+    checkingAuth: "正在验证登录状态...",
+    loginIng: "登录中...",
+    loginOk: "登录成功",
+    loginFailed: "登录失败",
+    registerIng: "注册中...",
+    registerMinLen: "密码至少6个字符",
+    networkError: "网络错误",
+    pleaseFill: "请填写用户名和密码",
+    username: "用户名",
+    password: "密码",
+    language: "语言",
+    close: "关闭",
+    save: "保存",
+    cancel: "取消",
+    confirm: "确认",
+    theme: "🎨 主题",
+    themeClassic: "经典",
+    themeLiquid: "液态玻璃",
+    themeFlat: "扁平化",
+    themeNeon: "深空霓虹",
+    themeHacknet: "Hacknet",
+    themeCustom: "自定义",
+    customTheme: "✏️ 自定义主题",
+    ctPrimary: "主色",
+    ctText: "文字色",
+    ctTextSecondary: "次级文字色",
+    ctBg: "背景色",
+    ctBorder: "边框色",
+    ctRadius: "圆角",
+    ctMsgSelf: "自己气泡色",
+    ctMsgOther: "他人气泡色",
+    ctReset: "重置自定义",
+    themeHint: "主题与明暗模式独立，可自由组合。",
+    apply: "应用",
+    enterRoom: "进入聊天室",
+    roomPlaceholder: "输入房间名，回车进入",
+    bgOpacity: "背景透明度",
+    bgBlur: "磨砂程度",
+    uiColor: "界面色调",
+    customWallpaper: "自定义壁纸",
+    videoWallpaper: "视频壁纸",
+    restoreRandom: "恢复随机",
+    cancelWallpaper: "取消壁纸",
+    restoreDefault: "恢复默认",
+    wallpaperHint: '设置自定义图片壁纸，点击"恢复随机"返回随机背景。',
     videoHint: "设置视频动态壁纸，视频将循环静音播放。",
-    wallpaperUrl: "图片 URL", videoUrl: "视频 URL", uploadImage: "上传本地图片", uploadVideo: "上传本地视频",
-    chatInputPlaceholder: "输入消息...", searchPlaceholder: "搜索消息...", userMenuTitle: "用户",
-    at: "@ 提及", dm: "私信", kick: "踢出", mute: "🔇 禁言", ban: "封禁", banip: "封禁IP", batchKick: "批量踢出",
-    image: "图片", file: "文件", voice: "语音", ai: "AI 助手（/ai）", moreTools: "更多工具", search: "搜索", more: "更多",
+    wallpaperUrl: "图片 URL",
+    videoUrl: "视频 URL",
+    uploadImage: "上传本地图片",
+    uploadVideo: "上传本地视频",
+    chatInputPlaceholder: "输入消息...",
+    searchPlaceholder: "搜索消息...",
+    userMenuTitle: "用户",
+    at: "@ 提及",
+    dm: "私信",
+    kick: "踢出",
+    mute: "🔇 禁言",
+    ban: "封禁",
+    banip: "封禁IP",
+    batchKick: "批量踢出",
+    image: "图片",
+    file: "文件",
+    voice: "语音",
+    ai: "AI 助手（/ai）",
+    moreTools: "更多工具",
+    search: "搜索",
+    more: "更多",
     reconnectBanner: "连接已断开，正在尝试重新连接...",
-    joinChat: "加入聊天", chooseRoom: "选择一个房间开始聊天", roomNamePlaceholder: "输入房间名称",
-    enter: "进入", or: "或者", createPrivate: "创建私人房间",
-    shop: "商城", lottery: "抽奖", tasks: "任务", games: "游戏", market: "交易市场", existingRooms: "已有房间",
-    registered: "已注册", logout: "退出登录", guest: "游客", loginRegister: "登录/注册",
+    joinChat: "加入聊天",
+    chooseRoom: "选择一个房间开始聊天",
+    roomNamePlaceholder: "输入房间名称",
+    enter: "进入",
+    or: "或者",
+    createPrivate: "创建私人房间",
+    shop: "商城",
+    lottery: "抽奖",
+    tasks: "任务",
+    games: "游戏",
+    market: "交易市场",
+    existingRooms: "已有房间",
+    registered: "已注册",
+    logout: "退出登录",
+    guest: "游客",
+    loginRegister: "登录/注册",
     // 👥 v1.48 关系链
-    relFollow: "关注", relUnfollow: "取消关注", relFollowTarget: "关注TA", relUnfollowTarget: "取消关注",
-    relAddFriend: "加好友", relDeleteFriend: "删除好友", relBlock: "拉黑", relUnblock: "解除拉黑",
-    relMyFollowing: "我的关注", relMyFollowers: "我的粉丝", relMyFriends: "我的好友", relMyBlocked: "我已拉黑",
-    relFriendRequests: "好友申请", relAccept: "接受", relReject: "拒绝",
-    relBlockedByCannotDm: "对方已拉黑你，无法私信", relPleaseLogin: "请先登录",
-    relSendRequest: "发送好友申请", relRequestSent: "已发送申请", relAlreadyFriends: "你们已是好友",
-    relOpFailed: "操作失败", relEmpty: "暂无数据", relManage: "关系管理", relClose: "关闭", relLoading: "加载中...",
+    relFollow: "关注",
+    relUnfollow: "取消关注",
+    relFollowTarget: "关注TA",
+    relUnfollowTarget: "取消关注",
+    relAddFriend: "加好友",
+    relDeleteFriend: "删除好友",
+    relBlock: "拉黑",
+    relUnblock: "解除拉黑",
+    relMyFollowing: "我的关注",
+    relMyFollowers: "我的粉丝",
+    relMyFriends: "我的好友",
+    relMyBlocked: "我已拉黑",
+    relFriendRequests: "好友申请",
+    relAccept: "接受",
+    relReject: "拒绝",
+    relBlockedByCannotDm: "对方已拉黑你，无法私信",
+    relPleaseLogin: "请先登录",
+    relSendRequest: "发送好友申请",
+    relRequestSent: "已发送申请",
+    relAlreadyFriends: "你们已是好友",
+    relOpFailed: "操作失败",
+    relEmpty: "暂无数据",
+    relManage: "关系管理",
+    relClose: "关闭",
+    relLoading: "加载中...",
   },
   en: {
-    login: "Login", register: "Register", skipLogin: "Skip, enter as guest", send: "Send", settings: "Settings",
-    checkingAuth: "Verifying login...", loginIng: "Logging in...", loginOk: "Login successful", loginFailed: "Login failed",
-    registerIng: "Registering...", registerMinLen: "Password must be at least 6 characters",
-    networkError: "Network error", pleaseFill: "Please enter username and password", username: "Username", password: "Password",
-    language: "Language", close: "Close", save: "Save", cancel: "Cancel", confirm: "Confirm",
-    theme: "🎨 Theme", themeClassic: "Classic", themeLiquid: "Liquid Glass", themeFlat: "Flat", themeNeon: "Neon Space", themeHacknet: "Hacknet", themeCustom: "Custom",
-    customTheme: "✏️ Custom Theme", ctPrimary: "Primary", ctText: "Text", ctTextSecondary: "Secondary text", ctBg: "Background", ctBorder: "Border", ctRadius: "Corner radius", ctMsgSelf: "My bubble", ctMsgOther: "Other bubble", ctReset: "Reset custom", themeHint: "Theme is independent of light/dark mode; combine freely.",
-    apply: "Apply", enterRoom: "Enter chat room", roomPlaceholder: "Type a room name, press Enter",
-    bgOpacity: "Background opacity", bgBlur: "Frosted blur", uiColor: "UI tint",
-    customWallpaper: "Custom wallpaper", videoWallpaper: "Video wallpaper",
-    restoreRandom: "Restore random", cancelWallpaper: "Cancel wallpaper", restoreDefault: "Restore default",
-    wallpaperHint: "Set a custom image wallpaper. Click \"Restore random\" to go back.",
+    login: "Login",
+    register: "Register",
+    skipLogin: "Skip, enter as guest",
+    send: "Send",
+    settings: "Settings",
+    checkingAuth: "Verifying login...",
+    loginIng: "Logging in...",
+    loginOk: "Login successful",
+    loginFailed: "Login failed",
+    registerIng: "Registering...",
+    registerMinLen: "Password must be at least 6 characters",
+    networkError: "Network error",
+    pleaseFill: "Please enter username and password",
+    username: "Username",
+    password: "Password",
+    language: "Language",
+    close: "Close",
+    save: "Save",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    theme: "🎨 Theme",
+    themeClassic: "Classic",
+    themeLiquid: "Liquid Glass",
+    themeFlat: "Flat",
+    themeNeon: "Neon Space",
+    themeHacknet: "Hacknet",
+    themeCustom: "Custom",
+    customTheme: "✏️ Custom Theme",
+    ctPrimary: "Primary",
+    ctText: "Text",
+    ctTextSecondary: "Secondary text",
+    ctBg: "Background",
+    ctBorder: "Border",
+    ctRadius: "Corner radius",
+    ctMsgSelf: "My bubble",
+    ctMsgOther: "Other bubble",
+    ctReset: "Reset custom",
+    themeHint: "Theme is independent of light/dark mode; combine freely.",
+    apply: "Apply",
+    enterRoom: "Enter chat room",
+    roomPlaceholder: "Type a room name, press Enter",
+    bgOpacity: "Background opacity",
+    bgBlur: "Frosted blur",
+    uiColor: "UI tint",
+    customWallpaper: "Custom wallpaper",
+    videoWallpaper: "Video wallpaper",
+    restoreRandom: "Restore random",
+    cancelWallpaper: "Cancel wallpaper",
+    restoreDefault: "Restore default",
+    wallpaperHint: 'Set a custom image wallpaper. Click "Restore random" to go back.',
     videoHint: "Set a looping muted video wallpaper.",
-    wallpaperUrl: "Image URL", videoUrl: "Video URL", uploadImage: "Upload local image", uploadVideo: "Upload local video",
-    chatInputPlaceholder: "Type a message...", searchPlaceholder: "Search messages...", userMenuTitle: "User",
-    at: "@ Mention", dm: "DM", kick: "Kick", ban: "Ban", banip: "Ban IP", batchKick: "Batch kick",
-    image: "Image", file: "File", voice: "Voice", ai: "AI Assistant (/ai)", moreTools: "More tools", search: "Search", more: "More",
+    wallpaperUrl: "Image URL",
+    videoUrl: "Video URL",
+    uploadImage: "Upload local image",
+    uploadVideo: "Upload local video",
+    chatInputPlaceholder: "Type a message...",
+    searchPlaceholder: "Search messages...",
+    userMenuTitle: "User",
+    at: "@ Mention",
+    dm: "DM",
+    kick: "Kick",
+    ban: "Ban",
+    banip: "Ban IP",
+    batchKick: "Batch kick",
+    image: "Image",
+    file: "File",
+    voice: "Voice",
+    ai: "AI Assistant (/ai)",
+    moreTools: "More tools",
+    search: "Search",
+    more: "More",
     reconnectBanner: "Disconnected, reconnecting...",
-    joinChat: "Join chat", chooseRoom: "Pick a room to start chatting", roomNamePlaceholder: "Enter room name",
-    enter: "Enter", or: "or", createPrivate: "Create private room",
-    shop: "Shop", lottery: "Lottery", tasks: "Tasks", games: "Games", market: "Market", existingRooms: "Existing rooms",
-    registered: "Registered", logout: "Logout", guest: "Guest", loginRegister: "Login/Register",
+    joinChat: "Join chat",
+    chooseRoom: "Pick a room to start chatting",
+    roomNamePlaceholder: "Enter room name",
+    enter: "Enter",
+    or: "or",
+    createPrivate: "Create private room",
+    shop: "Shop",
+    lottery: "Lottery",
+    tasks: "Tasks",
+    games: "Games",
+    market: "Market",
+    existingRooms: "Existing rooms",
+    registered: "Registered",
+    logout: "Logout",
+    guest: "Guest",
+    loginRegister: "Login/Register",
     // —— 自动翻译层：中文原文 → 英文（showToast 等输出自动查表，未命中回退原文）——
-    "不能给自己发私信": "Cannot DM yourself",
-    "不能给自己转账": "Cannot transfer to yourself",
-    "不能踢出自己": "Cannot kick yourself",
-    "不能禁言自己": "Cannot mute yourself",
-    "选择禁言时长：\n1 - 1分钟\n2 - 10分钟\n3 - 1小时\n4 - 永久\n\n输入数字": "Choose mute duration:\n1 - 1 minute\n2 - 10 minutes\n3 - 1 hour\n4 - permanent\n\nEnter a number",
+    不能给自己发私信: "Cannot DM yourself",
+    不能给自己转账: "Cannot transfer to yourself",
+    不能踢出自己: "Cannot kick yourself",
+    不能禁言自己: "Cannot mute yourself",
+    "选择禁言时长：\n1 - 1分钟\n2 - 10分钟\n3 - 1小时\n4 - 永久\n\n输入数字":
+      "Choose mute duration:\n1 - 1 minute\n2 - 10 minutes\n3 - 1 hour\n4 - permanent\n\nEnter a number",
     "禁言原因（可选，留空跳过）": "Mute reason (optional, leave empty to skip)",
-    "无效时长": "Invalid duration",
+    无效时长: "Invalid duration",
     "已禁言 ": "Muted ",
     "（永久）": " (permanent)",
     "禁言失败: ": "Mute failed: ",
     "禁言失败: 网络错误": "Mute failed: network error",
-    "保存失败：存储空间不足（本地图片太大），请使用图片 URL": "Save failed: storage full (image too large), use an image URL",
-    "保存失败：存储空间不足（本地视频太大），请使用视频 URL": "Save failed: storage full (video too large), use a video URL",
+    "保存失败：存储空间不足（本地图片太大），请使用图片 URL":
+      "Save failed: storage full (image too large), use an image URL",
+    "保存失败：存储空间不足（本地视频太大），请使用视频 URL":
+      "Save failed: storage full (video too large), use a video URL",
     "修改标签失败: ": "Failed to change tag: ",
     "加载模块失败: ": "Failed to load module: ",
-    "单次最多10万积分": "Max 100k points per red packet",
-    "固定金额下每份至少1积分": "Each share needs at least 1 point (fixed mode)",
+    单次最多10万积分: "Max 100k points per red packet",
+    固定金额下每份至少1积分: "Each share needs at least 1 point (fixed mode)",
     "壁纸 URL 不合法，仅支持 https/http 或 data:image": "Invalid wallpaper URL, only https/http or data:image",
-    "壁纸已应用": "Wallpaper applied",
+    壁纸已应用: "Wallpaper applied",
     "字体颜色已设置为 ": "Font color set to ",
-    "导出失败": "Export failed",
+    导出失败: "Export failed",
     "导出失败: ": "Export failed: ",
     "已取消屏蔽 ": "Unblocked ",
-    "已取消或数量无效": "Cancelled or invalid count",
-    "已取消视频壁纸": "Video wallpaper cancelled",
+    已取消或数量无效: "Cancelled or invalid count",
+    已取消视频壁纸: "Video wallpaper cancelled",
     "已将「": "Moved ",
     "已屏蔽 ": "Blocked ",
-    "已恢复默认色调": "Restored default tint",
+    已恢复默认色调: "Restored default tint",
     "已清除「": "Cleared ",
-    "已清除房间背景": "Room background cleared",
+    已清除房间背景: "Room background cleared",
     "已设置房间背景: ": "Room background set: ",
     "已转发消息到 ": "Forwarded message to ",
-    "当前没有定时消息": "No scheduled messages",
-    "所有定时消息已取消": "All scheduled messages cancelled",
-    "投票已创建": "Poll created",
-    "投票至少需要2个选项": "Poll needs at least 2 options",
+    当前没有定时消息: "No scheduled messages",
+    所有定时消息已取消: "All scheduled messages cancelled",
+    投票已创建: "Poll created",
+    投票至少需要2个选项: "Poll needs at least 2 options",
     "撤回失败: ": "Recall failed: ",
     "播放失败，尝试下一首": "Playback failed, trying next",
-    "文件读取失败": "File read failed",
+    文件读取失败: "File read failed",
     "文件过大，上限 15MB": "File too large, max 15MB",
     "文字太长，最多15个字符": "Text too long, max 15 chars",
-    "无效的颜色值": "Invalid color",
+    无效的颜色值: "Invalid color",
     "时间范围：1分钟 - 7天": "Range: 1 minute - 7 days",
-    "最多100份": "Max 100 shares",
+    最多100份: "Max 100 shares",
     "未找到 ": "Not found: ",
     "未找到引用的原始消息（可能已被清除）": "Original message not found (may have been cleared)",
     "未知命令: ": "Unknown command: ",
-    "未连接到聊天室": "Not connected to chat room",
-    "本地图片壁纸已应用": "Local image wallpaper applied",
-    "本地聊天记录已清除": "Local chat log cleared",
-    "本地视频壁纸已应用": "Local video wallpaper applied",
+    未连接到聊天室: "Not connected to chat room",
+    本地图片壁纸已应用: "Local image wallpaper applied",
+    本地聊天记录已清除: "Local chat log cleared",
+    本地视频壁纸已应用: "Local video wallpaper applied",
     "模块错误: ": "Module error: ",
     "正在导出聊天记录...": "Exporting chat log...",
     "消息已定时，将在 ": "Scheduled, will send in ",
-    "消息已撤回": "Message recalled",
-    "消息已置顶": "Message pinned",
-    "消息链接已复制": "Message link copied",
+    消息已撤回: "Message recalled",
+    消息已置顶: "Message pinned",
+    消息链接已复制: "Message link copied",
     "积分数量必须大于 0": "Points must be greater than 0",
-    "聊天记录已导出": "Chat log exported",
+    聊天记录已导出: "Chat log exported",
     "自动播放被浏览器拦截，请点击播放按钮": "Autoplay blocked by browser, click play",
     "视频 URL 不合法，仅支持 https/http 或 data:video": "Invalid video URL, only https/http or data:video",
-    "视频壁纸已应用": "Video wallpaper applied",
-    "请先登录后再转账": "Please login before transferring",
-    "请先登录才能抽奖": "Please login to use lottery",
-    "请先登录管理后台才能修改标签": "Please login to admin panel to change tag",
-    "请先登录管理后台才能封禁IP": "Please login to admin panel to ban IP",
-    "请先登录管理后台才能封禁用户": "Please login to admin panel to ban user",
-    "请先登录管理后台才能批量踢出": "Please login to admin panel to batch kick",
-    "请先登录管理后台才能踢出用户": "Please login to admin panel to kick users",
+    视频壁纸已应用: "Video wallpaper applied",
+    请先登录后再转账: "Please login before transferring",
+    请先登录才能抽奖: "Please login to use lottery",
+    请先登录管理后台才能修改标签: "Please login to admin panel to change tag",
+    请先登录管理后台才能封禁IP: "Please login to admin panel to ban IP",
+    请先登录管理后台才能封禁用户: "Please login to admin panel to ban user",
+    请先登录管理后台才能批量踢出: "Please login to admin panel to batch kick",
+    请先登录管理后台才能踢出用户: "Please login to admin panel to kick users",
     "请先登录管理后台（访问 /admin）": "Please login to admin panel (/admin)",
     "请先登录管理后台（访问 /admin）才能修改标签": "Please login to admin panel (/admin) to change tag",
-    "请先设置用户名": "Please set a username first",
-    "请先选择私信对象": "Please pick a DM target first",
+    请先设置用户名: "Please set a username first",
+    请先选择私信对象: "Please pick a DM target first",
     "请输入图片 URL": "Please enter an image URL",
-    "请输入搜索内容": "Please enter search text",
+    请输入搜索内容: "Please enter search text",
     "请输入视频 URL": "Please enter a video URL",
-    "转发失败": "Forward failed",
+    转发失败: "Forward failed",
     "转发失败，房间不存在？": "Forward failed, room not found?",
     "转发需要管理权限，请先登录后台": "Forward needs admin permission, please login",
     // —— 全量片段翻译（自动包裹 t() 的拼接片段）——
@@ -295,7 +547,8 @@ const i18nDict = {
     " 进入了聊天室": " entered the room",
     "* [接龙结束] 共 ": "* [relay ended] total ",
     "* 你已被踢出房间，即将刷新页面...": "* You were kicked from the room, page will refresh...",
-    "* 可用命令: /pay <用户> <数量> 转积分 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助": "* Commands: /pay <user> <amount> send points | /w <user> <msg> DM | /color <color> font color | /kick <user> kick | /ban <user> ban (incl. IP) | /unban <user> unban | /tag <user> <tag> [color] [border] set tag | /untag <user> remove tag | /redpacket <total> <count> [fixed] red packet | /clear clear (admin) | /clean local clear | /zifu <text> ASCII art | send @everyone to ping all | /help help",
+    "* 可用命令: /pay <用户> <数量> 转积分 | /w <用户> <消息> 私聊 | /color <颜色> 字体颜色 | /kick <用户> 踢出 | /ban <用户> 封禁(含IP) | /unban <用户> 解封 | /tag <用户> <标签> [颜色] [边框] 设置标签(支持[color]多色) | /untag <用户> 移除标签 | /redpacket <总积分> <份数> [fixed] 发红包 | /clear 清空(需管理) | /clean 本地清屏 | /zifu <文字> 生成字符画 | 发送 @所有人 可@全体成员 | /help 帮助":
+      "* Commands: /pay <user> <amount> send points | /w <user> <msg> DM | /color <color> font color | /kick <user> kick | /ban <user> ban (incl. IP) | /unban <user> unban | /tag <user> <tag> [color] [border] set tag | /untag <user> remove tag | /redpacket <total> <count> [fixed] red packet | /clear clear (admin) | /clean local clear | /zifu <text> ASCII art | send @everyone to ping all | /help help",
     "* 可用抽奖池:": "* Available pools:",
     "* 字符画生成失败: ": "* ASCII art failed: ",
     "* 定时消息已取消": "* Scheduled message cancelled",
@@ -304,7 +557,8 @@ const i18nDict = {
     "* 当前没有进行中的接龙": "* No active relay",
     "* 当前进行中的接龙:": "* Active relay:",
     "* 抽奖失败: ": "* Lottery failed: ",
-    "* 提示: 聊天室参与者是互联网上的匿名用户，名称未经认证，任何人都可以使用相同名称，请仔细甄别信息；请勿随意相信陌生人的链接或与陌生人交易": "* Note: chat participants are anonymous internet users; names are not verified and anyone can use the same name. Please stay cautious and do not trust strangers' links or trade with them.",
+    "* 提示: 聊天室参与者是互联网上的匿名用户，名称未经认证，任何人都可以使用相同名称，请仔细甄别信息；请勿随意相信陌生人的链接或与陌生人交易":
+      "* Note: chat participants are anonymous internet users; names are not verified and anyone can use the same name. Please stay cautious and do not trust strangers' links or trade with them.",
     "* 操作失败: ": "* Operation failed: ",
     "* 欢迎来到 #": "* Welcome to #",
     "* 签到失败: ": "* Check-in failed: ",
@@ -336,53 +590,53 @@ const i18nDict = {
     "」的备注设为: ": "」's note set to: ",
     "」的新标签（留空取消）:": "」's new tag (leave empty to cancel):",
     "」的积分数量：": "」's points amount: ",
-    "中文": "Chinese",
-    "保存": "Save",
-    "取消": "Cancel",
-    "否": "No",
-    "好的": "OK",
-    "收到": "Got it",
-    "谢谢": "Thanks",
-    "错误": "Error",
-    "未知": "Unknown",
-    "清除": "Clear",
-    "添加": "Add",
-    "复制": "Copy",
-    "已复制": "Copied",
+    中文: "Chinese",
+    保存: "Save",
+    取消: "Cancel",
+    否: "No",
+    好的: "OK",
+    收到: "Got it",
+    谢谢: "Thanks",
+    错误: "Error",
+    未知: "Unknown",
+    清除: "Clear",
+    添加: "Add",
+    复制: "Copy",
+    已复制: "Copied",
     "删除「": "Delete ",
-    "副管理员": "Co-admin",
-    "管理员": "Admin",
-    "系统": "System",
-    "游客": "Guest",
-    "自定义": "Custom",
+    副管理员: "Co-admin",
+    管理员: "Admin",
+    系统: "System",
+    游客: "Guest",
+    自定义: "Custom",
     "加载中...": "Loading...",
     "加载失败: ": "Load failed: ",
-    "无结果": "No results",
-    "未知错误": "Unknown error",
-    "更多操作": "More actions",
-    "编辑资料": "Edit profile",
-    "置顶房间": "Pin room",
+    无结果: "No results",
+    未知错误: "Unknown error",
+    更多操作: "More actions",
+    编辑资料: "Edit profile",
+    置顶房间: "Pin room",
     "添加关键词...": "Add keyword...",
     "新短语...": "New phrase...",
     "正在上传...": "Uploading...",
     "正在处理图片...": "Processing image...",
     "正在读取文件... ": "Reading file... ",
-    "注册失败": "Registration failed",
-    "签到失败": "Check-in failed",
-    "抽奖失败": "Lottery failed",
-    "请求失败": "Request failed",
+    注册失败: "Registration failed",
+    签到失败: "Check-in failed",
+    抽奖失败: "Lottery failed",
+    请求失败: "Request failed",
     "私信: ": "DM: ",
-    "点击修改标签": "Click to change tag",
-    "点击操作": "Click to operate",
-    "点击跳转到原文": "Click to jump to original",
+    点击修改标签: "Click to change tag",
+    点击操作: "Click to operate",
+    点击跳转到原文: "Click to jump to original",
     "欢迎 ": "Welcome ",
     "翻译中...": "Translating...",
     "翻译失败: ": "Translation failed: ",
     "添加 ": "Add ",
-    "投票": "Poll",
-    "拼手气": "Lucky draw",
-    "已抢": "Claimed",
-    "已抢完": "All claimed",
+    投票: "Poll",
+    拼手气: "Lucky draw",
+    已抢: "Claimed",
+    已抢完: "All claimed",
     "确定清空 ": "Clear ",
     "确定要封禁「": "Ban ",
     "确定要永久封禁「": "Permanently ban ",
@@ -394,18 +648,20 @@ const i18nDict = {
     "用法: /kick <用户名>": "Usage: /kick <username>",
     "用法: /pay <用户名> <积分数量>": "Usage: /pay <username> <points>",
     "用法: /redpacket <总积分> <份数> [fixed]": "Usage: /redpacket <total> <count> [fixed]",
-    "用法: /tag <用户名> <标签> [颜色] [边框颜色]\\n  支持多色: /tag 1 [red]五[green]彩[blue]斑斓": "Usage: /tag <username> <tag> [color] [border color]\\n  multi-color: /tag 1 [red]a[green]b[blue]c",
+    "用法: /tag <用户名> <标签> [颜色] [边框颜色]\\n  支持多色: /tag 1 [red]五[green]彩[blue]斑斓":
+      "Usage: /tag <username> <tag> [color] [border color]\\n  multi-color: /tag 1 [red]a[green]b[blue]c",
     "用法: /unban <用户名>": "Usage: /unban <username>",
     "用法: /untag <用户名>": "Usage: /untag <username>",
     "用法: /w <用户名> <消息>": "Usage: /w <username> <message>",
     "用法: /zifu <文字>": "Usage: /zifu <text>",
     "所有音乐 API 均不可用": "All music APIs unavailable",
     "无效的房间名称。": "Invalid room name.",
-    "无效颜色，可用: red/orange/gold/green/cyan/blue/purple/pink/black/white/gray 或 #hex": "Invalid color. Available: red/orange/gold/green/cyan/blue/purple/pink/black/white/gray or #hex",
+    "无效颜色，可用: red/orange/gold/green/cyan/blue/purple/pink/black/white/gray 或 #hex":
+      "Invalid color. Available: red/orange/gold/green/cyan/blue/purple/pink/black/white/gray or #hex",
     "暂无关键词，添加后聊天中出现时将通知你": "No keywords yet; you'll be notified when they appear in chat",
     "条 (发起: ": " messages (started by: ",
-    "金标大佬": "Gold VIP",
-    "金边红大佬": "Gold-red VIP",
+    金标大佬: "Gold VIP",
+    金边红大佬: "Gold-red VIP",
     "🌐 翻译": "🌐 Translate",
     "💬 回复": "💬 Reply",
     "💬 私信": "💬 DM",
@@ -415,7 +671,8 @@ const i18nDict = {
     "🔍 搜索房间...": "🔍 Search rooms...",
     "🔗 复制链接": "🔗 Copy link",
     "🖼 图片": "🖼 Image",
-    "（支持颜色名: red/orange/gold/green/cyan/blue/purple/pink/black/white 或 #hex 值）": " (Supported colors: red/orange/gold/green/cyan/blue/purple/pink/black/white or #hex)",
+    "（支持颜色名: red/orange/gold/green/cyan/blue/purple/pink/black/white 或 #hex 值）":
+      " (Supported colors: red/orange/gold/green/cyan/blue/purple/pink/black/white or #hex)",
     "（留空结束）：": " (leave empty to end):",
     "，输入 /help 查看可用命令": ", type /help for commands",
     // —— game 模块 ——
@@ -430,7 +687,6 @@ const i18nDict = {
     " 步，获得 ": " steps, got ",
     " 瓶": " bottles",
     " 瓶，获得 ": " bottles, got ",
-    " 积分": " points",
     " 积分！": " points!",
     " 轮正确！+200": " rounds correct! +200",
     "'>⏰ 时间到！抓住 ": "'>⏰ Time's up! Catch ",
@@ -457,7 +713,7 @@ const i18nDict = {
     "下一张比它大还是小？": "Next card higher or lower?",
     "亿+": "100M+",
     "击倒 ": "Knocked down ",
-    "剪刀": "Scissors",
+    剪刀: "Scissors",
     "很遗憾，没有中奖 😢": "Sorry, no prize 😢",
     "拖动滑块匹配目标颜色！": "Drag the slider to match the target color!",
     "旋转中...": "Spinning...",
@@ -474,7 +730,7 @@ const i18nDict = {
     "点击飞碟射击！": "Click to shoot the saucer!",
     "点击！": "Click!",
     "点数: ": "Points: ",
-    "猜大小": "Guess high/low",
+    猜大小: "Guess high/low",
     "猜骰子点数大小，最高 2 倍赔付": "Guess dice high/low, up to 2x payout",
     "目标颜色 ": "Target color ",
     "相差 ": "Difference ",
@@ -501,60 +757,84 @@ const i18nDict = {
     "，电脑出 ": ", computer played ",
     "，获得 ": ", got ",
     // —— market 模块 ——
-    "市场已关闭": "Market closed",
-    "手续费": "Fee",
-    "共": "Total",
-    "单": "orders",
-    "暂无挂单": "No active orders",
-    "卖家": "Seller",
-    "自己的挂单": "Own listing",
-    "购买": "Buy",
-    "已成交": "Sold",
-    "已撤销": "Cancelled",
-    "挂单中": "Listed",
-    "撤销": "Cancel listing",
-    "背包空空如也": "Your bag is empty",
-    "已装备": "Equipped",
-    "荣誉商品": "Honor item",
-    "挂单": "Sell",
+    市场已关闭: "Market closed",
+    手续费: "Fee",
+    共: "Total",
+    单: "orders",
+    暂无挂单: "No active orders",
+    卖家: "Seller",
+    自己的挂单: "Own listing",
+    购买: "Buy",
+    已成交: "Sold",
+    已撤销: "Cancelled",
+    挂单中: "Listed",
+    撤销: "Cancel listing",
+    背包空空如也: "Your bag is empty",
+    已装备: "Equipped",
+    荣誉商品: "Honor item",
+    挂单: "Sell",
     "挂单成功！": "Listed successfully!",
     "购买成功！": "Purchase successful!",
-    "价格": "Price",
-    "请先登录后使用市场": "Please login to use the market",
-    "积分不足": "Insufficient points",
-    "不能购买自己挂单": "Cannot buy your own listing",
-    "挂单数量已达上限": "Listing limit reached",
-    "请先卸下该装备再挂单": "Unequip the item before listing",
-    "荣誉商店商品不可上架": "Honor shop items cannot be listed",
-    "你已拥有此商品": "You already own this item",
-    "价格必须是正整数": "Price must be a positive integer",
-    "操作失败": "Operation failed",
-    "加载失败": "Load failed",
+    价格: "Price",
+    请先登录后使用市场: "Please login to use the market",
+    积分不足: "Insufficient points",
+    不能购买自己挂单: "Cannot buy your own listing",
+    挂单数量已达上限: "Listing limit reached",
+    请先卸下该装备再挂单: "Unequip the item before listing",
+    荣誉商店商品不可上架: "Honor shop items cannot be listed",
+    你已拥有此商品: "You already own this item",
+    价格必须是正整数: "Price must be a positive integer",
+    操作失败: "Operation failed",
+    加载失败: "Load failed",
     // 👥 v1.48 关系链
-    relFollow: "Follow", relUnfollow: "Unfollow", relFollowTarget: "Follow", relUnfollowTarget: "Unfollow",
-    relAddFriend: "Add friend", relDeleteFriend: "Remove friend", relBlock: "Block", relUnblock: "Unblock",
-    relMyFollowing: "Following", relMyFollowers: "Followers", relMyFriends: "Friends", relMyBlocked: "Blocked",
-    relFriendRequests: "Friend requests", relAccept: "Accept", relReject: "Reject",
-    relBlockedByCannotDm: "You are blocked by this user, cannot DM", relPleaseLogin: "Please login first",
-    relSendRequest: "Send friend request", relRequestSent: "Friend request sent", relAlreadyFriends: "You are already friends",
-    relOpFailed: "Operation failed", relEmpty: "No data", relManage: "Relations", relClose: "Close", relLoading: "Loading...",
-    "请先登录": "Please login first",
-    "请提供用户名": "Please provide a username",
-    "请提供目标用户": "Please provide a target user",
-    "不能对自己操作": "Cannot operate on yourself",
-    "用户不存在": "User not found",
-    "对方已被你拉黑": "You have blocked this user",
+    relFollow: "Follow",
+    relUnfollow: "Unfollow",
+    relFollowTarget: "Follow",
+    relUnfollowTarget: "Unfollow",
+    relAddFriend: "Add friend",
+    relDeleteFriend: "Remove friend",
+    relBlock: "Block",
+    relUnblock: "Unblock",
+    relMyFollowing: "Following",
+    relMyFollowers: "Followers",
+    relMyFriends: "Friends",
+    relMyBlocked: "Blocked",
+    relFriendRequests: "Friend requests",
+    relAccept: "Accept",
+    relReject: "Reject",
+    relBlockedByCannotDm: "You are blocked by this user, cannot DM",
+    relPleaseLogin: "Please login first",
+    relSendRequest: "Send friend request",
+    relRequestSent: "Friend request sent",
+    relAlreadyFriends: "You are already friends",
+    relOpFailed: "Operation failed",
+    relEmpty: "No data",
+    relManage: "Relations",
+    relClose: "Close",
+    relLoading: "Loading...",
+    请先登录: "Please login first",
+    请提供用户名: "Please provide a username",
+    请提供目标用户: "Please provide a target user",
+    不能对自己操作: "Cannot operate on yourself",
+    用户不存在: "User not found",
+    对方已被你拉黑: "You have blocked this user",
     "对方已拉黑你，无法发送申请": "You are blocked by this user, cannot send a request",
-    "你们已经是好友": "You are already friends",
-    "已发送过好友申请": "Friend request already sent",
-    "没有来自该用户的好友申请": "No friend request from this user",
-    "请使用POST": "Please use POST",
-    "关系链服务暂时不可用": "Relation service temporarily unavailable",
-  }
+    你们已经是好友: "You are already friends",
+    已发送过好友申请: "Friend request already sent",
+    没有来自该用户的好友申请: "No friend request from this user",
+    请使用POST: "Please use POST",
+    关系链服务暂时不可用: "Relation service temporarily unavailable",
+  },
 };
+/** 读取当前语言（localStorage "lang"，未设置回退 "zh"） @returns {string} */
 export function getLang() {
   return localStorage.getItem(LANG_KEY) || "zh";
 }
+/**
+ * 设置语言（仅 zh/en），写入 localStorage 并触发 applyI18n + langchange 事件
+ * @param {string} l 语言标识（非 "en" 一律归为 "zh"）
+ * @returns {void}
+ */
 export function setLang(l) {
   l = l === "en" ? "en" : "zh";
   localStorage.setItem(LANG_KEY, l);
@@ -562,38 +842,53 @@ export function setLang(l) {
   document.documentElement.setAttribute("lang", l);
   window.dispatchEvent(new Event("langchange"));
 }
+/**
+ * 翻译：按当前语言查 i18nDict（en 未命中回退 zh 原文）
+ * @param {string} key 文案 key（多为中文原文，key=原文即翻译表）
+ * @returns {string} 翻译结果
+ */
 export function t(key) {
   const lang = getLang();
   const d = i18nDict[lang] || i18nDict.zh;
-  return d[key] !== undefined ? d[key] : (i18nDict.zh[key] !== undefined ? i18nDict.zh[key] : key);
+  return d[key] !== undefined ? d[key] : i18nDict.zh[key] !== undefined ? i18nDict.zh[key] : key;
 }
+/** 全量应用 data-i18n / data-i18n-placeholder / data-i18n-title 属性的翻译 @returns {void} */
 export function applyI18n() {
-  document.querySelectorAll("[data-i18n]").forEach(el => {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
     el.textContent = t(el.getAttribute("data-i18n"));
   });
-  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
     el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
   });
-  document.querySelectorAll("[data-i18n-title]").forEach(el => {
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
     el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
   });
   document.documentElement.setAttribute("lang", getLang());
 }
 
 // —— 个人签名（bio）获取 — 懒加载缓存，每用户只请求一次 ——
+/**
+ * 懒加载获取用户 bio（每用户仅请求一次，缓存于 state.bioCache）
+ * @param {string} name 用户名
+ * @returns {Promise<string>} bio 文本（无则空串）
+ */
 export async function getUserBio(name) {
   if (!name) return "";
   if (state.bioCache[name] !== undefined) return state.bioCache[name];
   if (state.bioCachePending[name]) return state.bioCachePending[name];
   let p = fetch("/api/user/profile?name=" + encodeURIComponent(name))
-    .then(r => r.json())
-    .then(data => {
+    .then((r) => r.json())
+    .then((data) => {
       let bio = data && data.bio ? String(data.bio).trim() : "";
       state.bioCache[name] = bio;
       delete state.bioCachePending[name];
       return bio;
     })
-    .catch(() => { state.bioCache[name] = ""; delete state.bioCachePending[name]; return ""; });
+    .catch(() => {
+      state.bioCache[name] = "";
+      delete state.bioCachePending[name];
+      return "";
+    });
   state.bioCachePending[name] = p;
   return p;
 }
