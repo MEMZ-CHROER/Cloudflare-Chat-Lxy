@@ -62,6 +62,10 @@ assert(!!navInner, 'initNav 挂载渲染 .cm-nav-inner');
 assert(document.querySelectorAll('#chat-nav .floating-btn').length === 7, 'Vue 浮钮 7 个');
 assert(!document.querySelector('#chat-nav #more-menu-panel'), '初始 more-menu 收起（v-if 未挂载）');
 assert(document.querySelectorAll('#chat-nav #mobile-bottom-bar .mbb-btn').length === 4, 'Vue mobile-bottom-bar 4 个按钮');
+const floatIds = ['sound-toggle','dark-toggle','search-toggle','settings-toggle','music-toggle','tag-warehouse-btn','more-menu-btn'];
+let allFloatIds = true;
+for (const id of floatIds) { if (!document.querySelector('#chat-nav #' + id)) allFloatIds = false; }
+assert(allFloatIds, '7 浮钮全部带旧 id（复用旧 CSS：桌面 bottom 定位不重叠 + 移动端仅 dark/sound 显隐）');
 assert(!!window.__navSetUserMenu, '注册 __navSetUserMenu 双轨桥');
 console.log('');
 

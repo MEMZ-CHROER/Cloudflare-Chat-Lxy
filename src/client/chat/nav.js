@@ -93,13 +93,13 @@ const NavBar = {
   template: `
   <div class="cm-nav-inner">
     <!-- 浮钮条 -->
-    <div class="floating-btn" :title="'提示音'" @click="toggleSound">{{ soundMuted ? '🔇' : '🔊' }}</div>
-    <div class="floating-btn" :title="'暗色模式'" @click="toggleDark">{{ isDark ? '☀️' : '🌙' }}</div>
-    <div class="floating-btn" :title="t('搜索消息')" @click="floatActions.search">🔍</div>
-    <div class="floating-btn" :title="t('设置')" @click="floatActions.settings">⚙️</div>
-    <div class="floating-btn" :title="'音乐播放器'" @click="floatActions.music">🎵</div>
-    <div class="floating-btn" :title="'标签仓库'" @click="floatActions.tag">🏷️</div>
-    <div class="floating-btn" :title="t('更多')" @click="moreOpen = !moreOpen">{{ moreOpen ? '✕' : '···' }}</div>
+    <div class="floating-btn" id="sound-toggle" :title="'提示音'" @click="toggleSound">{{ soundMuted ? '🔇' : '🔊' }}</div>
+    <div class="floating-btn" id="dark-toggle" :title="'暗色模式'" @click="toggleDark">{{ isDark ? '☀️' : '🌙' }}</div>
+    <div class="floating-btn" id="search-toggle" :title="t('搜索消息')" @click="floatActions.search">🔍</div>
+    <div class="floating-btn" id="settings-toggle" :title="t('设置')" @click="floatActions.settings">⚙️</div>
+    <div class="floating-btn" id="music-toggle" :title="'音乐播放器'" @click="floatActions.music">🎵</div>
+    <div class="floating-btn" id="tag-warehouse-btn" :title="'标签仓库'" @click="floatActions.tag">🏷️</div>
+    <div class="floating-btn" id="more-menu-btn" :title="t('更多')" @click="moreOpen = !moreOpen">{{ moreOpen ? '✕' : '···' }}</div>
     <!-- more-menu 面板 -->
     <div v-if="moreOpen" id="more-menu-backdrop" @click="moreOpen = false"></div>
     <div v-if="moreOpen" id="more-menu-panel" :class="{ show: moreOpen }">
