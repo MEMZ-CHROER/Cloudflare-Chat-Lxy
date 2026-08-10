@@ -122,6 +122,35 @@ export let gs = {
   balance: 0,
 };
 
+// ========== 宿主容器（批3：游戏渲染进 modal-manager 弹窗卡片而非固定 #game-overlay） ==========
+// _hostEl 非空时渲染定位走宿主容器内元素；null 则回退旧固定 DOM（#game-overlay 双轨保底）。
+let _hostEl = null;
+function _gameEl(id) {
+  if (_hostEl) return _hostEl.querySelector('#' + id);
+  return document.getElementById(id);
+}
+
+// 渲染进宿主容器 el（modal-manager 的 .cm-host），返回清理函数
+export function mountInto(el) {
+  _hostEl = el;
+  el.innerHTML = '<div class="game-header">'
+    + '<span>🎮 游戏中心</span>'
+    + '<span class="game-points" id="game-points-display">0 积分</span>'
+    + '<button class="game-close" type="button" title="关闭">&times;</button></div>'
+    + '<div class="game-content" id="game-content"></div>';
+  el.querySelector('.game-close').addEventListener('click', () => {
+    import('./modal-manager.js').then(m => m.closeModal('games')).catch(() => {});
+  });
+  showGameLoading(t('🎮 加载游戏中心...'));
+  getBalance().then(b => { gs.balance = b; }).catch(() => {}).finally(() => {
+    gs.currentGame = 'menu';
+    ensureGameCSS();
+    renderGamePanel();
+    hideGameLoading();
+  });
+  return () => { cleanupGameTimers(); gs.currentGame = null; _hostEl = null; };
+}
+
 // ========== 注册系统 ==========
 
 export const gameRegistry = {};
@@ -203,7 +232,7 @@ export function switchGame(game) {
 // ========== 渲染 ==========
 
 function renderGamePanel() {
-  let el = document.getElementById("game-content");
+  let el = _gameEl("game-content");
   if (!el) return;
   updateBalance();
   if (gs.currentGame === "menu") { renderGameMenu(el); return; }
@@ -228,7 +257,7 @@ function renderGameMenu(el) {
 }
 
 function renderGameContent(el) {
-  if (!el) el = document.getElementById("game-content");
+  if (!el) el = _gameEl("game-content");
   if (!el) return;
   updateBalance();
   let entry = gameRegistry[gs.currentGame];
@@ -236,6 +265,6 @@ function renderGameContent(el) {
 }
 
 export function updateBalance() {
-  let el = document.getElementById("game-points-display");
+  let el = _gameEl("game-points-display");
   if (el) el.textContent = "💰 " + fmtPts(gs.balance) + t(" 积分");
 }

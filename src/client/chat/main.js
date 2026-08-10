@@ -5,6 +5,7 @@ import { startNameChooser } from './auth.js';
 import { startRoomList } from './rooms.js';
 import { cancelReply, hideLightbox, galleryPrev, galleryNext, exportChatLog, updateTitleUnread } from './ui.js';
 import { hideUserMenu, handleMenuAction, showUserMenu, hideProfile } from './menu.js';
+import { initNav } from './nav.js';
 import { sendDM, closeDM } from './dm.js';
 import { toggleSearch, doSearch, searchPrev, searchNext } from './search.js';
 import { toggleFavoritesPanel } from './favorites.js';
@@ -47,6 +48,9 @@ window.openSettings = openSettings;
 window.closeSettings = closeSettings;
 window.openMusic = openMusic;
 window.closeMusic = closeMusic;
+
+// 🧪 v1.53 批3B Vue 导航壳（浮钮/more-menu/bottom-bar/用户菜单）；legacy 开关下内部跳过
+initNav();
 
 // 设置按钮
 document.getElementById("settings-toggle").addEventListener("click", openSettings);

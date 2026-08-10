@@ -7,6 +7,10 @@ import * as Vue from '/static/chat/vendor/vue.js';
 // 自定义加载器注册表（jsdom 测试用它注入合成模块，生产可省略——按约定路径 ./modals/<name>.js 懒加载）
 const registry = {};
 
+// 原生宿主注册表（批3 游戏等 canvas/帧循环宿主）：registerModalHost(name, mount, unmount)
+// mount(el) 把原生渲染进弹窗卡片容器并返回清理函数；unmount() 可选（整体卸载钩子）
+const hosts = {};
+
 // 弹窗栈：reactive 数组，支持多弹窗叠加、置顶
 export const stack = Vue.reactive([]);
 
@@ -23,6 +27,8 @@ injectCss('cm-style', `
 .cm-close { font-size: 24px; cursor: pointer; color: var(--text-secondary); line-height: 1; background: none; border: none; padding: 0 4px; }
 .cm-close:hover { color: var(--text); }
 .cm-loading { padding: 40px; text-align: center; color: var(--text-secondary); }
+.cm-body-host { display: flex; flex-direction: column; overflow: hidden; }
+.cm-host { display: flex; flex-direction: column; flex: 1; min-height: 320px; }
 @keyframes cm-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cm-pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
 @keyframes cm-slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -43,7 +49,13 @@ export function registerModal(name, loader) {
   registry[name] = loader;
 }
 
+// 注册原生宿主（批3 游戏等）：mount(el) 渲染进弹窗卡片容器，返回清理函数；unmount() 可选
+export function registerModalHost(name, mount, unmount) {
+  hosts[name] = { mount, unmount };
+}
+
 function load(entry) {
+  if (hosts[entry.name]) { entry.isHost = true; return; }
   const loader = registry[entry.name] || (() => import('./modals/' + entry.name + '.js'));
   entry.loading = true;
   loader().then((mod) => {
@@ -63,7 +75,7 @@ export function openModal(name, props = {}, opts = {}) {
     stack.push(top);
     return;
   }
-  const entry = Vue.reactive({ name, props: props || {}, opts: opts || {}, Component: null, loading: false });
+  const entry = Vue.reactive({ name, props: props || {}, opts: opts || {}, Component: null, loading: false, isHost: false });
   stack.push(entry);
   load(entry);
 }
@@ -86,8 +98,31 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && stack.length) closeTop();
 });
 
+// 原生宿主挂载桥：mounted 时把 mount(el) 渲染进容器，卸载时执行返回的清理函数
+const HostMount = {
+  name: 'HostMount',
+  props: { entry: { type: Object, required: true } },
+  setup(props) {
+    const elRef = Vue.ref(null);
+    Vue.onMounted(() => {
+      const h = hosts[props.entry.name];
+      if (!h || !elRef.value) return;
+      try { props.entry._cleanup = h.mount(elRef.value); } catch (e) { console.warn('host mount failed:', props.entry.name, e); }
+    });
+    Vue.onBeforeUnmount(() => {
+      const h = hosts[props.entry.name];
+      if (h && h.unmount) { try { h.unmount(); } catch (e) {} }
+      if (props.entry._cleanup) { try { props.entry._cleanup(); } catch (e) {} }
+      props.entry._cleanup = null;
+    });
+    return { elRef };
+  },
+  template: '<div class="cm-host" ref="elRef"></div>'
+};
+
 const Root = {
   name: 'ModalManager',
+  components: { HostMount },
   setup() {
     return { stack, closeModal };
   },
@@ -99,6 +134,9 @@ const Root = {
       <div class="cm-card" :class="m.opts && m.opts.mode === 'drawer' ? 'cm-card-drawer' : ''">
         <div v-if="m.Component" class="cm-body">
           <component :is="m.Component" v-bind="m.props" @close="closeModal(m.name)" />
+        </div>
+        <div v-else-if="m.isHost" class="cm-body cm-body-host">
+          <HostMount :entry="m" />
         </div>
         <div v-else class="cm-loading">加载中…</div>
       </div>

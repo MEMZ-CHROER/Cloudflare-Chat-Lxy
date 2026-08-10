@@ -6,8 +6,26 @@ import { getNote, setNote } from './note.js';
 import { showToast, showSuccess, showError, showInfo } from './state.js';
 import { getAdminKey } from './ui.js';
 
+// v1.53 批3B 双轨：默认用户菜单由 nav.js 的 Vue UserMenu 组件渲染（window.__navSetUserMenu 写响应式状态），
+// localStorage.chatLegacyModals=1 回退旧 #user-menu DOM（legacyShowUserMenu）。
 export function showUserMenu(name, x, y) {
   state.menuTargetUser = name;
+  if (localStorage.getItem("chatLegacyModals") === "1") { legacyShowUserMenu(name, x, y); return; }
+  if (window.__navSetUserMenu) {
+    let note = getNote(name);
+    window.__navSetUserMenu({
+      visible: true, name, x, y,
+      label: note ? name + " (" + note + ")" : name,
+      blocked: state.blockedUsers.has(name),
+      hasAdmin: document.cookie.indexOf("admin_logged=1") !== -1,
+      relButtons: {},
+    });
+    // 👥 v1.48 关系链：异步加载关系按钮显隐（fire-and-forget，失败静默）
+    try { import('./relation.js').then(m => m.loadRelationMenuButtons && m.loadRelationMenuButtons(name)).catch(() => {}); } catch (_) {}
+  }
+}
+
+function legacyShowUserMenu(name, x, y) {
   let menu = document.getElementById("user-menu");
   let nameLabel = document.getElementById("user-menu-name");
   let note = getNote(name);
@@ -36,7 +54,12 @@ export function showUserMenu(name, x, y) {
 }
 
 export function hideUserMenu() {
-  document.getElementById("user-menu").classList.remove("show");
+  if (localStorage.getItem("chatLegacyModals") === "1") {
+    document.getElementById("user-menu").classList.remove("show");
+    state.menuTargetUser = null;
+    return;
+  }
+  if (window.__navSetUserMenu) window.__navSetUserMenu({ visible: false });
   state.menuTargetUser = null;
 }
 

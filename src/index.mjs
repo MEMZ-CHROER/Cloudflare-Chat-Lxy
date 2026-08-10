@@ -84,6 +84,8 @@ import CHAT_MODAL_HIGHLIGHTS from "./client/chat/modals/highlights.js";
 import CHAT_MODAL_ROOMINFO from "./client/chat/modals/roominfo.js";
 import CHAT_MODAL_FILESPANEL from "./client/chat/modals/filespanel.js";
 import CHAT_MODAL_SEARCH from "./client/chat/modals/search.js";
+// 🧪 v1.53 批3 游戏宿主 + 导航壳（Vue 导航组件 nav.js）
+import CHAT_NAV from "./client/chat/nav.js";
 import CHAT_STYLE from "./client/chat/style.css";
 import CHAT_GAME_STYLE from "./client/chat/game-style.css";
 import ALL_STYLES from "./client/styles/all-styles.css";
@@ -222,6 +224,7 @@ const CHAT_MODULES = {
   "chat/modals/roominfo.js": CHAT_MODAL_ROOMINFO,
   "chat/modals/filespanel.js": CHAT_MODAL_FILESPANEL,
   "chat/modals/search.js": CHAT_MODAL_SEARCH,
+  "chat/nav.js": CHAT_NAV,
 };
 
 const ADMIN_MODULES = {

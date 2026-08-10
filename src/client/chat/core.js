@@ -152,7 +152,7 @@ export function startChat() {
 
   document.body.addEventListener("click", event => {
     // 点击在弹窗/面板内时不抢焦点
-    if (event.target.closest('#music-overlay, #settings-overlay, #shop-overlay, #task-overlay, #game-overlay, #lottery-overlay, #profile-modal, #dm-panel, #favorites-panel, #search-bar, #mention-dropdown, #more-menu-panel, #emoji-panel, .modal, .overlay, #hacknet-terminal, #hacknet-netmap')) return;
+    if (event.target.closest('#music-overlay, #settings-overlay, #shop-overlay, #task-overlay, #game-overlay, #lottery-overlay, #profile-modal, #dm-panel, #favorites-panel, #search-bar, #mention-dropdown, #more-menu-panel, #emoji-panel, .modal, .overlay, #hacknet-terminal, #hacknet-netmap, #chat-nav, #chat-modals')) return;
     if (window.getSelection().toString() == "") state.chatInput.focus();
   });
 
