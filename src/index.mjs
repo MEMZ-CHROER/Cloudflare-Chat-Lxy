@@ -84,6 +84,7 @@ import CHAT_MODAL_HIGHLIGHTS from "./client/chat/modals/highlights.js";
 import CHAT_MODAL_ROOMINFO from "./client/chat/modals/roominfo.js";
 import CHAT_MODAL_FILESPANEL from "./client/chat/modals/filespanel.js";
 import CHAT_MODAL_SEARCH from "./client/chat/modals/search.js";
+import CHAT_MODAL_SESSIONS from "./client/chat/modals/sessions.js";
 // 🧪 v1.53 批3 游戏宿主 + 导航壳（Vue 导航组件 nav.js）
 import CHAT_NAV from "./client/chat/nav.js";
 import CHAT_STYLE from "./client/chat/style.css";
@@ -225,6 +226,7 @@ const CHAT_MODULES = {
   "chat/modals/roominfo.js": CHAT_MODAL_ROOMINFO,
   "chat/modals/filespanel.js": CHAT_MODAL_FILESPANEL,
   "chat/modals/search.js": CHAT_MODAL_SEARCH,
+  "chat/modals/sessions.js": CHAT_MODAL_SESSIONS,
   "chat/nav.js": CHAT_NAV,
 };
 
@@ -551,6 +553,7 @@ async function handleApi(apiPath, request, env) {
     case "login":
     case "logout":
     case "check-auth":
+    case "user-sessions":
       return handleAuth(apiPath, request, env);
 
     case "recall":

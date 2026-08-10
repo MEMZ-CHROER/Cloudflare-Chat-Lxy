@@ -115,8 +115,27 @@ export default {
       } catch (e) { toast('操作失败', 'err'); }
     }
 
+    // 🔑 v1.55 账号纵深：管理员重置密码（super-only，后端白名单外 403 兜底）
+    async function resetPassword(row) {
+      const pwd = prompt('为 ' + row.user + ' 设置新密码（至少6个字符）：');
+      if (pwd === null) return;
+      if (pwd.length < 6) { toast('密码至少6个字符', 'warn'); return; }
+      if (!confirm('确认将 ' + row.user + ' 的密码重置？该用户所有设备将被强制下线。')) return;
+      try {
+        // ?name= 仅用于审计日志 target，真实参数走 body
+        const r = await fetch('/api/admin/reset-password?name=' + encodeURIComponent(row.user), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: row.user, newPassword: pwd })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) toast('✅ ' + row.user + ' 密码已重置，所有设备已下线');
+        else toast(data.error || '重置失败 (HTTP ' + r.status + ')', 'err');
+      } catch (e) { toast('操作失败: ' + e.message, 'err'); }
+    }
+
     Vue.onMounted(load);
-    return { rows, loading, err, colorKeys, TAG_COLORS, showUser, setTag, removeTag, setPoints, grantAnon, globalKick, banUser, blacklistUser };
+    return { rows, loading, err, colorKeys, TAG_COLORS, showUser, setTag, removeTag, setPoints, grantAnon, globalKick, banUser, blacklistUser, resetPassword };
   },
   template: `
   <div class="av-page">
@@ -156,6 +175,7 @@ export default {
           <button class="av-btn danger sm" @click="globalKick(row)">全局踢出</button>
           <button class="av-btn danger sm" @click="banUser(row)">封禁</button>
           <button class="av-btn danger sm" @click="blacklistUser(row)">拉黑</button>
+          <button v-if="store.level === 'super'" class="av-btn sm" title="管理员重置密码（super）" @click="resetPassword(row)">🔑重置密码</button>
         </span>
       </div>
     </div>

@@ -165,6 +165,13 @@ export default {
     }
     // ---- 语言 ----
     function chooseLang(l) { setLang(l); }
+    // ---- 多设备会话（v1.55 账号纵深）----
+    function openSessions() {
+      const name = localStorage.getItem('chat_user') || '';
+      const token = localStorage.getItem('chat_token') || '';
+      if (!name || !token) { showError('请先登录账号后再管理会话'); return; }
+      import('../modal-manager.js').then(m => m.openModal('sessions', { name, token })).catch(() => showError('会话管理打开失败'));
+    }
     // ---- 自定义壁纸 ----
     function applyWpUrl() {
       const url = wpUrl.value.trim();
@@ -219,7 +226,7 @@ export default {
       THEMES, labels, currentTheme, custom, tint, blur, uiColor, uiHasColor,
       wpUrl, vdUrl, hasWp, hasVd, lang,
       onTint, onBlur, onUiColor, onUiColorReset, selectTheme,
-      onCustom, onCustomRadius, onCustomReset, chooseLang,
+      onCustom, onCustomRadius, onCustomReset, chooseLang, openSessions,
       applyWpUrl, onWpFile, restoreWp, applyVdUrl, onVdFile, cancelVd,
     };
   },
@@ -316,6 +323,14 @@ export default {
         <button type="button" class="cm-btn-secondary" @click="$refs.vdFile && $refs.vdFile.click()">{{ labels.uploadVideo }}</button>
         <input ref="vdFile" type="file" accept="video/*" style="display:none" @change="onVdFile">
         <p class="cm-hint">{{ labels.videoHint }}</p>
+      </div>
+      <!-- 多设备会话（v1.55 账号纵深）-->
+      <div class="cm-item">
+        <div class="cm-item-label">
+          <span>🔑 多设备会话</span>
+          <button type="button" class="cm-btn-secondary" @click="openSessions">管理</button>
+        </div>
+        <p class="cm-hint">查看并退出其他设备的登录会话，防止账号被盗用。</p>
       </div>
     </div>
   </div>`

@@ -2,7 +2,7 @@
 // 端点：store-state / consume-state / login-or-register / unbind / bindings
 // 依赖 reg.oauthStates（Map<state,{provider,redirectUri,preAuthName,createdAt}>，持久化 key "oauthStates"）
 // 与 registerByIp 限频（同 users.mjs /user-register 逻辑，每 IP 每日 3 个）
-import { tokenValid, safeEqual, sha256 } from "../utils.mjs";
+import { tokenValid, safeEqual, sha256, ensureSessions, pushSession } from "../utils.mjs";
 
 // 32B hex token（同 users.mjs /user-login）
 function genToken() {
@@ -69,19 +69,21 @@ export async function handleOauth(reg, request, url) {
         if (idx >= 0) user.oauth[idx] = {provider, providerId, avatar};
         else user.oauth.push({provider, providerId, avatar});
         user.oauthOnly = false;
-        user.token = genToken();
-        user.tokenExpiry = now + 30 * 24 * 3600 * 1000;
+        // 🗝️ v1.55 多设备会话：追加新会话（OAuth 登录同样支持多设备）
+        pushSession(user, genToken(), body.device || "", body.ip || "");
         await reg.saveRegisteredUsers();
-        return new Response(JSON.stringify({ok: true, name: preAuthName, token: user.token, created: false, bound: true}));
+        let bindToken = user.sessions[user.sessions.length - 1].token;
+        return new Response(JSON.stringify({ok: true, name: preAuthName, token: bindToken, created: false, bound: true}));
       }
 
       // 已有绑定：线性扫描 oauth 匹配 → 登录（重新签发 token）
       for (let [name, user] of reg.registeredUsers) {
         if (Array.isArray(user.oauth) && user.oauth.some(o => o.provider === provider && String(o.providerId) === String(providerId))) {
-          user.token = genToken();
-          user.tokenExpiry = now + 30 * 24 * 3600 * 1000;
+          // 🗝️ v1.55 多设备会话：追加新会话
+          pushSession(user, genToken(), body.device || "", body.ip || "");
           await reg.saveRegisteredUsers();
-          return new Response(JSON.stringify({ok: true, name, token: user.token, created: false}));
+          let bindToken = user.sessions[user.sessions.length - 1].token;
+          return new Response(JSON.stringify({ok: true, name, token: bindToken, created: false}));
         }
       }
 
@@ -132,12 +134,10 @@ export async function handleOauth(reg, request, url) {
       let salt = genHex(16);
       let randomPwd = genHex(32);
       let passwordHash = await sha256(salt + randomPwd);
-      reg.registeredUsers.set(name, {
+      let newUser = {
         passwordHash, salt,
         oauth: [{provider, providerId, avatar}],
         oauthOnly: true,
-        token: genToken(),
-        tokenExpiry: now + 30 * 24 * 3600 * 1000,
         avatar: avatar || "",
         bio: "",
         anonCoupons: 0,
@@ -145,9 +145,12 @@ export async function handleOauth(reg, request, url) {
         achievements: [],
         stats: {msgCount: 0, checkinCount: 0, gameWins: 0, shopCount: 0},
         registeredAt: now
-      });
+      };
+      reg.registeredUsers.set(name, newUser);
+      // 🗝️ v1.55 多设备会话：建号即签发首个会话
+      pushSession(newUser, genToken(), body.device || "", body.ip || "");
       await reg.saveRegisteredUsers();
-      let token = reg.registeredUsers.get(name).token;
+      let token = newUser.sessions[newUser.sessions.length - 1].token;
       return new Response(JSON.stringify({ok: true, name, token, created: true}));
     }
 

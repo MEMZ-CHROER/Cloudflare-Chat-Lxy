@@ -17,8 +17,52 @@ export function safeEqual(a, b) {
 }
 
 // 🔒 安全修复（LD8/LD11）：校验用户 token 是否有效（常量时间比较 + 过期检查）
+// 🗝️ v1.55 多设备会话：token 校验统一走 findSession（支持多 sessions 数组 + 旧单 token 兼容回退）
 export function tokenValid(user, token) {
-  return !!(user && user.token && (!user.tokenExpiry || user.tokenExpiry > Date.now()) && safeEqual(user.token, token));
+  return !!findSession(user, token);
+}
+
+// 🗝️ v1.55 多设备会话：在用户会话中查找匹配 token 的有效会话。
+// 优先新多设备 sessions 数组（v1.55+），回退旧单 token 字段（v1.55 之前数据，向后兼容）。
+// 返回匹配的 session 对象（含旧字段包装），无效返回 null。不做 storage 写入（避免写放大）。
+export function findSession(user, token) {
+  if (!user || !token) return null;
+  if (Array.isArray(user.sessions) && user.sessions.length) {
+    const now = Date.now();
+    for (const s of user.sessions) {
+      if (s && s.token && safeEqual(s.token, token)) {
+        if (s.expiry && s.expiry <= now) return null; // 该会话已过期
+        return s;
+      }
+    }
+    return null;
+  }
+  // 旧单 token 兼容（v1.55 之前数据）
+  if (user.token && (!user.tokenExpiry || user.tokenExpiry > Date.now()) && safeEqual(user.token, token)) {
+    return { token: user.token, expiry: user.tokenExpiry || 0, createdAt: user.tokenCreatedAt || 0, lastActive: user.tokenLastActive || 0, device: user.tokenDevice || "" };
+  }
+  return null;
+}
+
+// 🗝️ v1.55 多设备会话：确保 sessions 数组存在，迁移旧单 token（v1.55 前数据）→ sessions[0]（共享辅助，registry 子模块共用）
+export function ensureSessions(user) {
+  if (!Array.isArray(user.sessions)) {
+    user.sessions = [];
+    if (user.token) {
+      user.sessions.push({ token: user.token, expiry: user.tokenExpiry || 0, createdAt: user.tokenCreatedAt || Date.now(), lastActive: Date.now(), device: user.tokenDevice || "", ip: user.tokenIp || "" });
+      user.token = null; user.tokenExpiry = null;
+    }
+  }
+  return user.sessions;
+}
+
+// 🗝️ v1.55 多设备会话：追加新会话（30 天过期，最多 10 个，超限淘汰最旧）（共享辅助，registry 子模块共用）
+export function pushSession(user, token, device, ip) {
+  const s = ensureSessions(user);
+  const now = Date.now();
+  s.push({ token, expiry: now + 30 * 24 * 3600 * 1000, createdAt: now, lastActive: now, device: device || "", ip: ip || "" });
+  if (s.length > 10) s.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).splice(0, s.length - 10);
+  return s;
 }
 
 // `handleErrors()` 是一个实用函数，用于包装 HTTP 请求处理器并在出错时向客户端返回错误信息

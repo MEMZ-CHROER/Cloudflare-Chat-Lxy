@@ -235,6 +235,30 @@ export async function handleAdminUsers(path, request, env, url) {
       }
     }
 
+    case "reset-password": {
+      // 🔑 v1.55 账号纵深：管理员重置密码（super-only，admin.mjs 白名单外已 403）
+      // 找回密码不做自助，走管理员通道；转发 registry /user-password-admin（重置哈希 + 吊销全部会话）
+      if (request.method !== "POST") return new Response("请使用POST", { status: 405 });
+      try {
+        let body = await request.json();
+        let registryId = env.registry.idFromName("global");
+        let registryStub = env.registry.get(registryId);
+        let r = await registryStub.fetch(new URL("https://dummy-url/user-password-admin"), {
+          method: "POST",
+          body: JSON.stringify({
+            name: body.name || "",
+            newPassword: body.newPassword || "",
+            auth: url.searchParams.get("auth") || ""
+          }),
+          headers: {"Content-Type": "application/json"}
+        });
+        return new Response(await r.text(), { status: r.status, headers: {"Content-Type": "application/json"} });
+      } catch (error) {
+        // 🔒 L1 脱敏：不向客户端回传内部错误详情
+        return new Response(JSON.stringify({error: "重置密码失败: 服务器内部错误"}), { status: 500, headers: {"Content-Type": "application/json"} });
+      }
+    }
+
     case "delete-user": {
       const userName = url.searchParams.get("name");
       if (!userName) return new Response("请提供用户名", { status: 400 });

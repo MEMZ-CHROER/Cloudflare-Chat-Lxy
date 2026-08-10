@@ -1,5 +1,5 @@
 // 用户注册/登录/认证 + user-seen/ips
-import { sha256, getVipLevel, getVipFeatures, tokenValid, levelForExp } from "../utils.mjs";
+import { sha256, getVipLevel, getVipFeatures, tokenValid, findSession, ensureSessions, pushSession, levelForExp } from "../utils.mjs";
 import { ACHIEVEMENTS } from "./achievements.mjs";
 
 // 🔒 安全修复（LD11）：常量时间字符串比较，防 token 时序侧信道
@@ -129,9 +129,9 @@ export async function handleUsers(reg, request, url) {
       let tokenBytes = new Uint8Array(32);
       crypto.getRandomValues(tokenBytes);
       let token = Array.from(tokenBytes, b => b.toString(16).padStart(2, '0')).join('');
-      // 🔒 安全修复（LD8）：token 带 30 天过期时间
-      user.token = token;
-      user.tokenExpiry = now + 30 * 24 * 3600 * 1000;
+      // 🗝️ v1.55 多设备会话：追加新会话（保留其他设备在线，最多 10 个淘汰最旧）
+      // 🔒 安全修复（LD8）：会话 token 带 30 天过期时间
+      pushSession(user, token, body.device || "", body.ip || "");
       await reg.saveRegisteredUsers();
       return new Response(JSON.stringify({ok: true, name, token}));
     }
@@ -171,12 +171,90 @@ export async function handleUsers(reg, request, url) {
       let token = body.token || "";
       if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
       let user = reg.registeredUsers.get(name);
-      if (user && user.token && safeEqual(user.token, token)) {
-        user.token = null;
-        user.tokenExpiry = null;
-        await reg.saveRegisteredUsers();
+      let changed = false;
+      if (user) {
+        // 🗝️ v1.55 多设备会话：只吊销当前 token 对应的会话，其他设备不受影响
+        if (Array.isArray(user.sessions)) {
+          const before = user.sessions.length;
+          user.sessions = user.sessions.filter(s => !(s && s.token && safeEqual(s.token, token)));
+          if (user.sessions.length !== before) changed = true;
+        }
+        if (user.token && safeEqual(user.token, token)) { user.token = null; user.tokenExpiry = null; changed = true; }
+        if (changed) await reg.saveRegisteredUsers();
       }
       return new Response(JSON.stringify({ok: true}));
+    }
+
+    // 🗝️ v1.55 多设备会话管理：list / revoke / revoke-all（用户本人 token 鉴权）
+    case "/user-sessions": {
+      if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
+      let body = await request.json();
+      let name = body.name, token = body.token || "";
+      if (!name) return new Response(JSON.stringify({error: "请提供用户名"}), {status: 400});
+      let user = reg.registeredUsers.get(name);
+      if (!user) return new Response(JSON.stringify({error: "用户不存在"}), {status: 404});
+      let sess = findSession(user, token);
+      if (!sess) return new Response(JSON.stringify({error: "身份验证失败"}), {status: 403});
+      let action = body.action || "list";
+      if (action === "list") {
+        // 脱敏列表：token 只显示前 8 位，不含完整令牌；idx 供 revoke 按索引踢（避免暴露完整 token）
+        let sessions = ensureSessions(user).map((s, idx) => ({
+          idx,
+          tokenPreview: (s.token || "").slice(0, 8) + "…",
+          device: s.device || "", ip: s.ip || "",
+          createdAt: s.createdAt || 0, lastActive: s.lastActive || 0,
+          current: !!(s.token && safeEqual(s.token, token)),
+          expired: !!(s.expiry && s.expiry <= Date.now())
+        }));
+        return new Response(JSON.stringify({ok: true, sessions}), {headers: {"Content-Type": "application/json"}});
+      }
+      if (action === "revoke" && body.revokeIdx != null) {
+        // 按索引踢指定会话（不暴露完整 token）；索引在 list 时给出，revoke 后前端会 reload 刷新
+        let arr = ensureSessions(user);
+        let idx = Number(body.revokeIdx);
+        let target = arr[idx];
+        if (!target) return new Response(JSON.stringify({error: "会话不存在"}), {status: 404});
+        // 防误操作：不能踢出当前正在使用的会话
+        if (target.token && safeEqual(String(target.token), token)) return new Response(JSON.stringify({error: "不能退出当前会话"}), {status: 400});
+        arr.splice(idx, 1);
+        await reg.saveRegisteredUsers();
+        return new Response(JSON.stringify({ok: true, revoked: true}), {headers: {"Content-Type": "application/json"}});
+      }
+      if (action === "revoke-all") {
+        // 清空所有会话（含当前），前端需提示重新登录
+        user.sessions = [];
+        user.token = null; user.tokenExpiry = null;
+        await reg.saveRegisteredUsers();
+        return new Response(JSON.stringify({ok: true, revokedAll: true}), {headers: {"Content-Type": "application/json"}});
+      }
+      return new Response(JSON.stringify({error: "未知操作"}), {status: 400});
+    }
+
+    // 🔑 v1.55 账号纵深：管理员重置密码（找回密码不做自助，走管理员通道）。
+    // admin 层已 super-only 鉴权（/api/admin/reset-password），registry 侧再校验 auth 纵深防御。
+    // 重置后吊销该用户全部会话（改密即强制所有设备下线重新登录）。
+    case "/user-password-admin": {
+      if (request.method !== "POST") return new Response(JSON.stringify({error: "请使用POST"}), {status: 405});
+      let body = await request.json();
+      let name = body.name, newPassword = body.newPassword;
+      let auth = body.auth || "";
+      if (!reg.adminAuthorized(auth)) return new Response(JSON.stringify({error: "无权限执行此操作"}), {status: 403});
+      if (!name || !newPassword) return new Response(JSON.stringify({error: "请提供用户名和新密码"}), {status: 400});
+      if (newPassword.length < 6) return new Response(JSON.stringify({error: "密码至少6个字符"}), {status: 400});
+      let user = reg.registeredUsers.get(name);
+      if (!user) return new Response(JSON.stringify({error: "用户不存在"}), {status: 404});
+      let saltBytes = new Uint8Array(16);
+      crypto.getRandomValues(saltBytes);
+      let newSalt = Array.from(saltBytes, b => b.toString(16).padStart(2, '0')).join('');
+      user.passwordHash = await sha256(newSalt + newPassword);
+      user.salt = newSalt;
+      user.oauthOnly = false; // 重置后该用户可用新密码登录
+      // 🔒 安全修复：重置密码后吊销全部会话，强制重新登录
+      let revokedCount = Array.isArray(user.sessions) ? user.sessions.length : (user.token ? 1 : 0);
+      user.sessions = [];
+      user.token = null; user.tokenExpiry = null;
+      await reg.saveRegisteredUsers();
+      return new Response(JSON.stringify({ok: true, revokedSessions: revokedCount}), {headers: {"Content-Type": "application/json"}});
     }
 
     case "/user-avatar": {
@@ -188,7 +266,7 @@ export async function handleUsers(reg, request, url) {
         let body = await request.json();
         // 🔒 H3 修复：修改头像必须验证 token，只能改自己的
         let token = body.token || "";
-        if (!user || !(user.token && safeEqual(user.token, token))) return new Response(JSON.stringify({error: "请先登录后再修改头像"}), {status: 403});
+        if (!user || !findSession(user, token)) return new Response(JSON.stringify({error: "请先登录后再修改头像"}), {status: 403});
         let avatar = body.avatar || "";
         if (avatar && avatar.length > 200000) return new Response(JSON.stringify({error: "头像文件过大"}), {status: 400});
         // 🔒 安全修复（LD5）：头像必须是 data:image/... 且拒绝 svg+xml（防存储型 XSS 经 /user 主页触发）
@@ -211,7 +289,7 @@ export async function handleUsers(reg, request, url) {
         let body = await request.json();
         // 🔒 H3 修复：修改简介必须验证 token，只能改自己的
         let token = body.token || "";
-        if (!user || !(user.token && safeEqual(user.token, token))) return new Response(JSON.stringify({error: "请先登录后再修改简介"}), {status: 403});
+        if (!user || !findSession(user, token)) return new Response(JSON.stringify({error: "请先登录后再修改简介"}), {status: 403});
         let bio = (body.bio || "").slice(0, 200);
         user.bio = bio;
         await reg.saveRegisteredUsers();
@@ -297,14 +375,17 @@ export async function handleUsers(reg, request, url) {
       if (!name) return new Response(JSON.stringify({registered: false, authenticated: false}), {headers: {"Content-Type": "application/json"}});
       let user = reg.registeredUsers.get(name);
       if (!user) return new Response(JSON.stringify({registered: false, authenticated: false}), {headers: {"Content-Type": "application/json"}});
-      // 🔒 安全修复（LD8/LD11）：token 常量时间比较 + 过期校验（过期视为未认证并清 token）
-      let valid = user.token && (!user.tokenExpiry || user.tokenExpiry > Date.now()) && safeEqual(user.token, token);
+      // 🗝️ v1.55 多设备会话：findSession 统一校验（sessions 数组 + 旧单 token 兼容）
+      let sess = findSession(user, token);
+      let valid = !!sess;
+      // 内存更新 lastActive，不强制落盘（登录检查高频，避免 storage 写放大）
+      if (valid && Array.isArray(user.sessions)) sess.lastActive = Date.now();
       if (user.token && !valid) {
         user.token = null;
         user.tokenExpiry = null;
         await reg.saveRegisteredUsers();
       }
-      return new Response(JSON.stringify({registered: true, authenticated: !!valid}), {headers: {"Content-Type": "application/json"}});
+      return new Response(JSON.stringify({registered: true, authenticated: valid}), {headers: {"Content-Type": "application/json"}});
     }
 
     case "/user-init": {
@@ -321,8 +402,10 @@ export async function handleUsers(reg, request, url) {
       let userAvatar = "", userBio = "";
       if (uiUser) {
         registered = true;
-        // 🔒 安全修复（LD8/LD11）：token 常量时间比较 + 过期校验
-        authenticated = !!(uiUser.token && (!uiUser.tokenExpiry || uiUser.tokenExpiry > Date.now()) && safeEqual(uiUser.token, token));
+        // 🗝️ v1.55 多设备会话：findSession 统一校验（sessions 数组 + 旧单 token 兼容）
+        let uiSess = findSession(uiUser, token);
+        authenticated = !!uiSess;
+        if (uiSess && Array.isArray(uiUser.sessions)) uiSess.lastActive = Date.now();
         if (uiUser.avatar) userAvatar = uiUser.avatar;
         if (uiUser.bio) userBio = uiUser.bio;
       }

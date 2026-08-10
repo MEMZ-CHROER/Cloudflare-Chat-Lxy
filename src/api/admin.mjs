@@ -174,7 +174,8 @@ export async function handleAdmin(path, request, env) {
     result = await handleAdminRooms(path, request, env, url);
 
   // users: all-users, global-kick, global-kick-all, room-kick-all, users, user-ips, ban, global-blacklist, delete-user
-  if (!result && ["all-users", "global-kick", "global-kick-all", "room-kick-all", "users", "user-ips", "ban", "global-blacklist", "kick-protect", "delete-user"].includes(path[1]))
+  // reset-password（v1.55 管理员重置密码）仅 super —— 不进 adminAllowedPaths，普通 admin 在上方 403
+  if (!result && ["all-users", "global-kick", "global-kick-all", "room-kick-all", "users", "user-ips", "ban", "global-blacklist", "kick-protect", "delete-user", "reset-password"].includes(path[1]))
     result = await handleAdminUsers(path, request, env, url);
 
   if (!result && path[1] === "ip-ban")

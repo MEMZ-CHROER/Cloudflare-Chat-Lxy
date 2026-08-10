@@ -94,6 +94,20 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.55</span>
+    <span class="version-date">2026-08-10</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">📱</span><span class="text"><span class="tag tag-feature">功能</span><b>多设备会话管理（账号纵深 · 路线图 #109）</b> — 单 token 升级为 <b>sessions 会话数组</b>（最多 10 个，满员按时间淘汰最旧；每会话记录 device/ip/创建/最近活跃，30 天过期）。登录时自动注入 UA 设备摘要 + CF-Connecting-IP；设置弹窗新增「🔑 多设备会话」入口（modals/sessions.js Vue3）：列出全部会话（脱敏 tokenPreview 前 8 位 + 设备/IP/时间/当前/过期标记），可<b>按索引踢出单个设备</b>或<b>退出所有设备</b>（本机也被退出并登出）</span></div>
+    <div class="feature-item"><span class="icon">🔐</span><span class="text"><span class="tag tag-feature">安全</span><b>全站 token 校验收敛</b> — utils.mjs 新增 <code>findSession / ensureSessions / pushSession</code>：30+ token 校验点全部改走 findSession 统一校验（优先 sessions 数组，旧单 token 字段自动兼容回退），ensureSessions 惰性把旧字段迁移进 sessions[0]；会话吊销基于 idx 而非 token，绝不泄露完整 token</span></div>
+    <div class="feature-item"><span class="icon">🛡️</span><span class="text"><span class="tag tag-feature">功能</span><b>管理员重置密码（super-only）</b> — 找回密码不做自助通道（安全考虑），改为管理后台用户详情行内「🔑 重置密码」按钮（super 可见）：输入 ≥6 位新密码 → <code>/api/admin/reset-password</code> → registry <code>/user-password-admin</code> 重置哈希 + 强制清除 oauthOnly + <b>吊销该用户全部会话</b>（旧 token 立即失效，需重新登录）。普通 admin 无 key → 401、普通 admin → 403 三重鉴权</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>jsdom 37/37（后端多会话纯函数 17 断言 + sessions 弹窗渲染/revoke/退出所有 11 断言 + settings 入口/admin 重置按钮 9 断言）+ 线上冒烟 24/24（4 静态模块 200 + 双设备登录/各 token 独立/revoke 单踢/当前会话拒踢/被踢立即 403 未踢仍可用 + reset-password 无 key 401/普通 admin 403/super 200/新密码可登录/旧会话全清/旧密码被拒）</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.54</span>
     <span class="version-date">2026-08-10</span>
     <span class="version-arrow open">▶</span>
