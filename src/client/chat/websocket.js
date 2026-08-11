@@ -545,6 +545,9 @@ export async function join() {
     } else if (data.type === "room-cleared") {
       addChatMessage(null, t("* 聊天记录已被管理员清空，即将刷新..."));
       setTimeout(() => document.location.reload(), 200);
+    } else if (data.type === "offline-marker") {
+      // 📥 v1.58 离线消息：上线补发的消息数提示
+      addChatMessage(null, "* 📥 你离线期间收到 " + (data.count || 0) + t(" 条消息"));
     } else if (data.type === "highlights-update") {
       // @ts-ignore state._highlights 为运行时挂载
       state._highlights = data.highlights || [];

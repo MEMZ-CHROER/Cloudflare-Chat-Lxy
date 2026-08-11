@@ -31,18 +31,21 @@ export async function handleSessionImpl(room, webSocket, ip) {
   }
 
   // 频道体系：加入时只拉当前频道（general）的最近消息，按 channel 过滤
+  // 🔧 v1.58 修复：原实现先 reverse 再收集，取的是「最旧 50 条」；改为先收集最新 50 条再 reverse 成时间正序。
+  // 同时加对象/时间戳校验，避免 stat:msg 等计数键被当成消息推入 backlog。
   let storage = await room.storage.list({reverse: true, limit: 150});
-  let backlog = [...storage.values()];
-  backlog.reverse();
   let chBacklog = [];
-  for (let value of backlog) {
+  for (let value of storage.values()) {
     try {
       let m = JSON.parse(value);
       // 🔒 安全修复（v1.34）：backlog 推送前剔除 _anonOwner/fid，防匿名身份哈希经历史回放泄漏
-      if ((m.channel || "general") === session.channel) chBacklog.push(JSON.stringify(stripSensitiveMsg(m)));
+      if (m && typeof m === "object" && m.timestamp !== undefined && (m.channel || "general") === session.channel) {
+        chBacklog.push(JSON.stringify(stripSensitiveMsg(m)));
+      }
     } catch (e) {}
     if (chBacklog.length >= 50) break;
   }
+  chBacklog.reverse(); // 最新在前 → 时间正序展示
   chBacklog.forEach(value => {
     session.blockedMessages.push(value);
   });
@@ -129,13 +132,18 @@ export async function handleSessionImpl(room, webSocket, ip) {
   room.updateRegistry();
 }
 
-// 连接关闭/错误统一清理：标记退出、广播 quit、更新注册表
+// 连接关闭/错误统一清理：标记退出、广播 quit、更新注册表、记录最近在线时间
 export async function handleWsCloseImpl(room, webSocket) {
   let session = room.sessions.get(webSocket) || {};
   session.quit = true;
   room.sessions.delete(webSocket);
   if (session.name) {
     room.broadcast({quit: session.name});
+    // 📥 v1.58 离线消息：断开时记录 lastSeen=now，下次上线只补发这段之后的消息
+    try {
+      const { recordLastSeenImpl } = await import("./offline.mjs");
+      await recordLastSeenImpl(room, session.name, Date.now());
+    } catch (e) {}
   }
   room.updateRegistry();
 }

@@ -14,6 +14,7 @@ import {
 } from "./chatroom/permissions.mjs";
 import { handleSchedule, runScheduledMessages } from "./chatroom/schedule.mjs";
 import { handleSessionImpl, handleWsCloseImpl } from "./chatroom/conn.mjs";
+import { deliverOfflineMessagesImpl, recordLastSeenImpl } from "./chatroom/offline.mjs";
 import { _doRollbackImpl } from "./chatroom/rollback.mjs";
 import { handleHttp } from "./chatroom/http.mjs";
 
@@ -421,6 +422,11 @@ export class ChatRoom {
           webSocket.send(queued);
         });
         delete session.blockedMessages;
+
+        // 📥 v1.58 离线消息：上线补发离线期间错过的消息（offline:true），先于 ready
+        try {
+          await deliverOfflineMessagesImpl(this, webSocket, session, Date.now());
+        } catch (e) {}
 
         let joinMsg = { joined: session.name };
         if (session.tag) joinMsg.tag = session.tag;

@@ -94,6 +94,19 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.58</span>
+    <span class="version-date">2026-08-11</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">📥</span><span class="text"><span class="tag tag-feature">功能</span><b>离线消息补发</b> — 用户不在线期间房间里错过的消息，重新上线后自动补发（<code>chatroom/offline.mjs</code>）：每个房间按用户记录 <code>lastSeen</code>（join 与断开时各写一次，确保离线窗口只覆盖真实离线时段，不重复补发已看过的消息）；上线时读取上次 lastSeen 之后、当前频道的最近消息逐条补发并标记 <code>offline:true</code>，末尾发 <code>offline-marker</code> 计数；lastSeen 用 <code>1:</code> 前缀存储键（字典序早于 ISO 时间戳，不污染入房 backlog 的 reverse-limit 窗口）；补发上限 200 条，剔除 <code>_anonOwner/fid</code> 防匿名指纹泄漏；网页端与安卓 App 均显示「📥 你离线期间收到 N 条消息」+ 离线消息角标</span></div>
+    <div class="feature-item"><span class="icon">📱</span><span class="text"><span class="tag tag-feature">安卓</span><b>CloudChat 安卓客户端批5 全量增强（独立仓 Cloudflare-Chat-Android）</b> — Markdown 渲染（块级+行内+@提及高亮）、图片/文件/语音全类型渲染与发送、消息长按（复制/撤回/删除）、日期分组+自动滚动+历史翻页、知识库 /kb、命令面板、后台消息通知；本地 JVM 冒烟 33/33（MockWebServer 模拟 WS 协议全链路 + 命令 + markdown），真机与网页端互通验证通过</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>离线消息逻辑 node 单测 4/4（补发窗口/marker/频道过滤/敏感字段剔除/lastSeen 更新/重复上线不重复补发）+ 全量 lint 0 errors + typecheck 0 errors + App 33/33 回归</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.57</span>
     <span class="version-date">2026-08-10</span>
     <span class="version-arrow open">▶</span>
