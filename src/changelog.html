@@ -94,6 +94,18 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.59</span>
+    <span class="version-date">2026-08-11</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">📦</span><span class="text"><span class="tag tag-feature">功能</span><b>VersionArchive 单文件资源存储</b> — <code>POST /api/archive/file?path=Content/fonts/Font12.xnb</code> 上传单个文件（超管密钥鉴权，≤50MB，base64 分块存绕过 128KB 单值上限）；<code>GET /api/archive/file?path=…</code> 浏览器按路径公开拉取（按扩展名给 Content-Type + <code>Cache-Control: public, max-age=3600</code> + CORS）；附带 <code>file-list</code>（列文件）/ <code>file-delete</code>（删文件，均超管）；路径规范化防穿越（拒绝 <code>..</code>/绝对路径/非法字符，只允许字母数字 <code>._+-/空格</code>）；根目录脚本 <code>archive-file-upload.mjs</code>（上传/列表/删除三合一）</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span>端到端：200KB 随机二进制当 <code>.xnb</code> 上传→拉回 SHA-256 一致（3 chunks 跨块无损）、PNG Content-Type <code>image/png</code>、404 不存在、400 路径穿越、401 无密钥，全过</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.58</span>
     <span class="version-date">2026-08-11</span>
     <span class="version-arrow open">▶</span>
