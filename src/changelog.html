@@ -94,6 +94,19 @@ body {
 
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.60</span>
+    <span class="version-date">2026-08-11</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><b>敏感词 leetspeak 误伤纯数字「58」</b> — 排查"快速连发丢消息"根因（Observability 日志+内容/计数分离实验）：<code>sb→[s5][b8]</code> 字符类使任何含 58 的文本（5→s 8→b）被当"傻逼"拦截。修复：leetspeak 匹配段须含 ≥1 字母才命中，纯数字 58/msg58/我今年58岁 放行，sh1t/f0ck/sb/5b/s8/中文脏词仍拦；线上 60/60 消息无丢失 + 回归测试 16/16</span></div>
+    <div class="feature-item"><span class="icon">📱</span><span class="text"><span class="tag tag-feature">安卓</span><b>App 批B-F：markdown 链接可点 / 语音统一 m4a / /conpwd / 管理员命令 / 通知保活</b> — ①markdown 链接点击用系统浏览器打开（renderWithLinks 记录区间 + ClickableText）；②语音统一 m4a：网页录音优先 <code>audio/mp4</code> 回退 webm，App 按 MIME 选扩展名跨端可播；③<code>/conpwd #房间 密码</code> 带密码切房；④<code>/kick /kickall /ban /unban /tag /untag /clear</code> 管理员命令（我的页设管理密钥）；⑤进房启动前台服务保活 WS，退后台不丢连、消息照常通知</span></div>
+    <div class="feature-item"><span class="icon">🧪</span><span class="text"><span class="tag tag-fix">验证</span><b>Robolectric UI 测试落地</b> — JVM 上渲染 Compose 冒烟 2/2（模拟器不可用时的替代方案），App 全量 38/38（ChatManager 11 + CommandHandler 13 + Markdown 12 + Robolectric 2）+ 服务端 test-offline 5/5 + test-profanity 16/16</span></div>
+  </div>
+</div>
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.59</span>
     <span class="version-date">2026-08-11</span>
     <span class="version-arrow open">▶</span>

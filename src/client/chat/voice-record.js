@@ -49,8 +49,12 @@ export function initVoiceRecord() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showError(t("当前浏览器不支持录音")); return; }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       recordedChunks = [];
-      let mimeType = "audio/webm;codecs=opus";
+      // 📱 v1.60 语音统一 m4a（AAC-in-MP4）：与安卓 App 录音格式一致，跨端可播。
+      // Chrome/Edge/新版 Firefox 均支持 audio/mp4；不支持时回退 webm/opus。
+      let mimeType = "audio/mp4";
       if (typeof MediaRecorder === "undefined") { showError(t("当前浏览器不支持录音")); stream.getTracks().forEach(tr => tr.stop()); return; }
+      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "audio/mp4;codecs=mp4a.40.2";
+      if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "audio/webm;codecs=opus";
       let opts = MediaRecorder.isTypeSupported(mimeType) ? { mimeType } : undefined;
       mediaRecorder = new MediaRecorder(stream, opts);
       recordingStart = Date.now();
