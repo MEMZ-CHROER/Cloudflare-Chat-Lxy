@@ -61,7 +61,15 @@ export function containsProfanityImpl(text) {
     }
     pattern += (pattern ? "|" : "") + p;
   }
-  if (pattern && new RegExp(pattern, "i").test(normalized)) return true;
+  if (pattern) {
+    // 🔧 v1.60 修复：leetspeak 数字字符类误伤纯数字组合（5→s、8→b 使 "58" 命中 "sb"，导致正常含 58 的消息被当敏感词拦截）。
+    // 改为仅当匹配段内含至少一个字母才命中：保留 sh1t/f0ck/sb/s8/5b 检测，放过纯数字 58/msg58。
+    let mm;
+    let re = new RegExp(pattern, "ig");
+    while ((mm = re.exec(normalized)) !== null) {
+      if (/[a-z]/i.test(mm[0])) return true;
+    }
+  }
   for (const root of roots) {
     if (normalized.includes(root)) return true;
   }

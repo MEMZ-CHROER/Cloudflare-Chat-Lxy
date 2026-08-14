@@ -464,7 +464,6 @@ export class ChatRoom {
         webSocket.send(JSON.stringify({ ready: true }));
         return;
       }
-
       // 🔇 禁言检查：被禁言者所有发言/操作被拦（typing 除外，避免打扰）
       if (data.type !== "typing" && session.name && !this.isAdminSession(session)) {
         let muted = null;
@@ -487,7 +486,6 @@ export class ChatRoom {
           return;
         }
       }
-
       if (data.type === "kick") {
         // 🔒 安全修复（M10）：未设名的游客会话禁止踢人
         if (!session.name) {
@@ -651,7 +649,6 @@ export class ChatRoom {
         });
         return;
       }
-
       if (await handleMedia(this, session, data, webSocket)) return;
       // v1.57 拆分：投票/接龙/表情/红包（activity.mjs，schedule 定时消息在 schedule.mjs）
       if (await handleActivity(this, session, data, webSocket)) return;
@@ -1237,7 +1234,6 @@ export class ChatRoom {
           } catch (e) {}
         }
       }
-
       data.timestamp = Math.max(Date.now(), this.lastTimestamp + 1);
       this.lastTimestamp = data.timestamp;
       data.id = ++this.msgCounter;
