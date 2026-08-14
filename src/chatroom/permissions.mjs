@@ -30,9 +30,16 @@ export function containsProfanityImpl(text) {
     "脑残", "智障", "弱智",
     "妓女", "婊子", "贱人", "骚货",
     "cnm", "nmb", "sb", "qnmd",
-    "wqnmlgb", "qnmlgb",
+    "wcnm", "wqnmlgb", "qnmlgb",
     "fuck", "shit", "bitch", "asshole",
   ];
+  // 拼音缩写词根：独立成词才拦（防 "is by"→剥离空格后 isby 含子串 "sb" 的跨词误伤）。
+  // 英文词根（fuck/shit/bitch/asshole）容忍派生词（fucking/shitting 等），仍用 includes。
+  const shortRoots = new Set(["sb", "cnm", "nmb", "qnmd", "wcnm", "qnmlgb", "wqnmlgb"]);
+  const matchesRoot = (txt, root) =>
+    shortRoots.has(root)
+      ? new RegExp("(?:^|[^a-z0-9])" + root + "(?![a-z0-9])", "i").test(txt)
+      : txt.includes(root);
   const homophones = {
     "艹": "操", "曹": "操", "草": "操",
     "吗": "妈", "骂": "妈", "麻": "妈",
@@ -47,31 +54,53 @@ export function containsProfanityImpl(text) {
   // 🔒 安全修复（v1.33）：先对原文（同音映射前）做 root 匹配——homophones 把"草"→"操"会改写原文，
   // 使"草泥马"→"操泥马"反而漏检 root"草泥马"（M9 引入的回归）。原文直接匹配补上此漏检。
   for (const root of roots) {
-    if (t.includes(root)) return true;
+    if (matchesRoot(t, root)) return true;
   }
   // 🔒 安全修复（M9）：leetspeak 归一化匹配 —— 对词根每个拉丁字母构建含常见数字变体的字符类，
   // 使 sh1t/f0ck 等插入数字的变体也命中（仅影响检测，不改变消息内容）
-  const leetExtras = {a:"4", b:"8", e:"3", g:"69", i:"1", l:"1", o:"0", s:"5", t:"7", u:"0", z:"2"};
+  // 🔧 v1.60 加固：①匹配改在"保留标点"的版本上，且词根字母间允许插入 ≤2 个标点/空格
+  //   （堵 f*ck / f--ck / f  uck 等插入字符绕过，原剥离非字母数字会断词根连续性）；
+  //   ②leetspeak 数字字符类误伤纯数字组合（5→s、8→b 使 "58" 命中 "sb"）——仅当匹配段内含
+  //   至少一个字母才命中，保留 sh1t/f0ck/sb/5b/s8 检测，放过纯数字 58/msg58/我今年58岁。
+  const leetExtras = {a:"4", b:"8", e:"3", g:"69", i:"12", l:"1", o:"0", s:"5", t:"7", u:"0", z:"2"};
+  // 旋转/镜像同形：c 可写成 u（u 转 90°）、m 可写成 w（w 倒置）→ 堵 wunw=wcnm 类视觉仿形
+  const lookalike = {c:"u", m:"w"};
   const escRe = (c) => /[.*+?^${}()|[\]\\]/.test(c) ? "\\" + c : c;
   let pattern = "";
   for (const root of roots) {
     let p = "";
-    for (const ch of root) {
-      p += /[a-z]/.test(ch) ? "[" + ch + (leetExtras[ch] || "") + "]" : escRe(ch);
+    const len = root.length;
+    for (let j = 0; j < len; j++) {
+      const ch = root[j];
+      if (/[a-z]/.test(ch)) {
+        const cls = "[" + ch + (leetExtras[ch] || "") + (lookalike[ch] || "") + "]";
+        // 3 字母以上词根：该字母可被 1-2 个标点/空格代替（堵 f*ck 删字母+插符号绕过）；
+        // 2 字母词根保持完全严格（防 "s-" 把末尾标点当字母、"is by"→"s b" 误伤普通文本）
+        p += len >= 3 ? "(?:" + cls + "|\\W{1,2})" : cls;
+      } else {
+        p += escRe(ch);
+      }
+      // 字母间允许插入最多 2 个标点/空格（堵 f u c k）；2 字母词根不插，防 "is by" 类误伤
+      if (j < len - 1 && len >= 3) p += "\\W{0,2}";
     }
+    // 拼音缩写词根独立成词才拦（防 "usb"/"isby" 嵌入误伤）；英文词根可作派生词词干不加锚
+    if (shortRoots.has(root)) p = "(?:^|[^a-z0-9])" + p + "(?![a-z0-9])";
     pattern += (pattern ? "|" : "") + p;
   }
   if (pattern) {
-    // 🔧 v1.60 修复：leetspeak 数字字符类误伤纯数字组合（5→s、8→b 使 "58" 命中 "sb"，导致正常含 58 的消息被当敏感词拦截）。
-    // 改为仅当匹配段内含至少一个字母才命中：保留 sh1t/f0ck/sb/s8/5b 检测，放过纯数字 58/msg58。
+    let s2 = "";
+    for (const ch of s) {
+      const lc = ch.toLowerCase();
+      s2 += homophones[lc] || lc;
+    }
     let mm;
     let re = new RegExp(pattern, "ig");
-    while ((mm = re.exec(normalized)) !== null) {
+    while ((mm = re.exec(s2)) !== null) {
       if (/[a-z]/i.test(mm[0])) return true;
     }
   }
   for (const root of roots) {
-    if (normalized.includes(root)) return true;
+    if (matchesRoot(normalized, root)) return true;
   }
   return false;
 }
