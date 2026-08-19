@@ -114,5 +114,23 @@ console.log("== 数据导出 /lp/data ==");
   assert(d.users[0].permissions[0][0] === "chat.admin.kickUser", "用户 permissions 导出");
 }
 
+console.log("== 复数别名 permissions（容忍用户误写）==");
+{
+  let reg = makeReg();
+  let r = await exec(reg, "/lp user LIU permissions set chat.admin.kickUser true");
+  assert(r.ok && r.text.includes("chat.admin.kickUser = true"), "user permissions(复数) set 正常");
+  assert(await check(reg, "LIU", "chat.admin.kickUser") === true, "复数设置生效");
+  r = await exec(reg, "/lp creategroup mods");
+  assert(r.ok, "creategroup mods 正常");
+  r = await exec(reg, "/lp group mods permissions set chat.admin.ban true");
+  assert(r.ok, "group permissions(复数) 正常");
+  r = await exec(reg, "/lp user LIU permissions unset chat.admin.kickUser");
+  assert(r.ok, "user permissions(复数) unset 正常");
+  r = await exec(reg, "/lp user LIU permissions set chat.admin.pin true");
+  assert(r.ok, "复数再次 set 正常");
+  r = await exec(reg, "/lp user LIU permissions clear");
+  assert(r.ok, "user permissions(复数) clear 正常");
+}
+
 console.log("\n结果: " + pass + " 通过, " + fail + " 失败");
 process.exit(fail ? 1 : 0);

@@ -199,10 +199,10 @@ async function execCommand(reg, cmd) {
   // ---------- group <组> 子命令 ----------
   if (sub === "group") {
     const op = (m(2) || "").toLowerCase();
-    const g = getGroup(reg, name, op !== "info" && op !== "permission"); // info/读 不建
+    const g = getGroup(reg, name, op !== "info" && op !== "permission" && op !== "permissions"); // info/读 不建
     if (!g) return cmdErr("组 " + name + " 不存在");
 
-    if (op === "permission") {
+    if (op === "permission" || op === "permissions") {
       const action = (m(3) || "").toLowerCase();
       if (action === "set") {
         const node = m(4);
@@ -302,7 +302,7 @@ async function execCommand(reg, cmd) {
     const u = getUserLp(reg, name, op !== "info"); // info 只读不建
     if (!u) return cmdErr("用户 " + name + " 不存在");
 
-    if (op === "permission") {
+    if (op === "permission" || op === "permissions") {
       const action = (m(3) || "").toLowerCase();
       if (action === "set") {
         const node = m(4);
