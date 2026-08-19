@@ -58,6 +58,13 @@ const cases = [
   ["fucking", true, "fucking 拦（英文词根容忍派生）"],
   ["shits", true, "shits 拦"],
 
+  // ===== 防误伤：命令/中文组合必须放行（\W 误把中文当标点顶替字母）=====
+  ["/w 游客9933 你好", false, "命令中文用户名不误伤（原 \"游\" 被当标点→nmb 命中）"],
+  ["游客9933", false, "中文+数字组合不误伤"],
+  ["你好 游客9933", false, "中文文本不误伤"],
+  ["/lp user 游客9933 permissions set chat.admin.kickUser true", false, "LP命令中文用户名不误伤"],
+  ["这个项目游客9933", false, "中文句子含数字不误伤"],
+
   // ===== 防误伤：正常文本必须放行 =====
   ["hello", false, "hello 放行"],
   ["the best", false, "the best 放行"],

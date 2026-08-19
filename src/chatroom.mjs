@@ -787,7 +787,11 @@ export class ChatRoom {
         return;
       }
 
-      if (this.containsProfanity(data.message)) {
+      // 🔧 v1.60 修复：命令消息（/ 开头）跳过敏感词检查。系统命令（/lp /gh /ai /bot /icco
+      // /rollback /destroy /help 等）的参数可含任意用户名/节点/URL/中文文本，被当聊天内容过滤
+      // 会误伤（如 "/w 游客9933" 的 "游" 曾被 leetspeak 当标点顶替字母 → nmb 误伤）。且 / 开头的
+      // 消息一律走命令处理（未知命令提示，不广播），不会以普通聊天内容发出，跳过检查无漏检风险。
+      if (!/^\//.test(data.message) && this.containsProfanity(data.message)) {
         // 🔒 安全修复：敏感词只拦截该条消息，不再自动封禁用户名+IP
         // 因用户名可冒名，自动封禁会被恶意利用来封禁任何人的昵称，封禁应由管理员手动执行
         webSocket.send(JSON.stringify({ error: "消息包含违规内容，已拦截。请注意言辞，严重违规将被管理员封禁。" }));
