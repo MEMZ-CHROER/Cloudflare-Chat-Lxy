@@ -273,6 +273,10 @@ export class RoomRegistry {
     if (data.userRelations) this.userRelations = data.userRelations;
     // 🧪 v1.49 LuckPerms 权限系统恢复
     if (data.lp) this.lp = data.lp;
+    // 🔧 v1.60 特性：default 组预置（空组，新用户/无组用户默认继承；管理员可 /lp group default ... 配置）
+    if (!this.lp.groups.has("default")) {
+      this.lp.groups.set("default", { permissions: new Map(), parents: new Set() });
+    }
     // 📈 v1.54 运营数据恢复（峰值 + 积分流水日桶）
     if (data.opsStats)
       this.opsStats = Object.assign(

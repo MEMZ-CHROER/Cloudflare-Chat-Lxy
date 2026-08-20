@@ -132,5 +132,34 @@ console.log("== 复数别名 permissions（容忍用户误写）==");
   assert(r.ok, "user permissions(复数) clear 正常");
 }
 
+console.log("== default 组（无组用户默认继承，组默认为空）==");
+{
+  let reg = makeReg();
+  // 建 LIU 的 LP 记录（直接权限）
+  let r = await exec(reg, "/lp user LIU permission set chat.admin.kickUser false");
+  assert(r.ok, "创建 LIU LP 记录");
+  // ① 无 default 组时：无组用户仅直接权限生效，default 不存在视为空组
+  assert(await check(reg, "LIU", "chat.admin.kickUser") === false, "无组用户直接权限生效");
+  assert(await check(reg, "LIU", "chat.user.login") === null, "无 default 组时无组用户 check=null");
+  // ② 创建 default 组 + 加权限 → 无组用户继承
+  r = await exec(reg, "/lp creategroup default");
+  assert(r.ok, "creategroup default");
+  r = await exec(reg, "/lp group default permission set chat.user.login true");
+  assert(r.ok, "default 组设权限");
+  assert(await check(reg, "LIU", "chat.user.login") === true, "无组用户继承 default 权限");
+  // 无 LP 记录的用户不继承（resolvePerm 对不存在用户返回 null）
+  assert(await check(reg, "不存在", "chat.user.login") === null, "无 LP 记录用户不继承 default");
+  // ③ 用户加入 mods 后不再继承 default（有组即脱离 default）
+  r = await exec(reg, "/lp creategroup mods");
+  await exec(reg, "/lp user LIU parent add mods");
+  assert(await check(reg, "LIU", "chat.user.login") === null, "有组用户不继承 default");
+  r = await exec(reg, "/lp group mods permission set chat.user.login true");
+  assert(await check(reg, "LIU", "chat.user.login") === true, "有组用户从 mods 继承");
+  // ④ user info 无组时提示默认继承 default
+  r = await exec(reg, "/lp user 新人 permission set chat.admin.kickUser false");
+  r = await exec(reg, "/lp user 新人 info");
+  assert(r.ok && r.text.includes("默认继承 default"), "无组用户 info 提示默认继承 default");
+}
+
 console.log("\n结果: " + pass + " 通过, " + fail + " 失败");
 process.exit(fail ? 1 : 0);

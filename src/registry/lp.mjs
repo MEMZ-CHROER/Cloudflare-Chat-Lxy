@@ -111,7 +111,10 @@ export function resolvePerm(lp, name, node) {
     const p = nodeMatch(perm, node);
     if (p) hits.push({p, val});
   }
-  const groups = collectGroups(lp, user.groups);
+  // 🔧 v1.60 特性：无继承组（groups 为空）的用户默认继承 default 组（LuckPerms 语义），
+  //    有任意所属组则不继承 default；default 组不存在时视为空组（无权限）。
+  const userGroups = (user.groups && user.groups.size) ? user.groups : ["default"];
+  const groups = collectGroups(lp, userGroups);
   for (const g of groups) {
     const gp = lp.groups.get(g);
     if (!gp) continue;
@@ -360,7 +363,7 @@ async function execCommand(reg, cmd) {
         lines.push("    （无）");
       }
       const groups = [...(u.groups || [])];
-      lines.push("  所属组: " + (groups.length ? groups.join(", ") : "（无）"));
+      lines.push("  所属组: " + (groups.length ? groups.join(", ") : "（无，默认继承 default）"));
       return cmdOk(lines.join("\n"));
     }
 
