@@ -1,6 +1,7 @@
 // v1.54 运营数据看板 - 在线峰值 / 消息趋势 / 积分吞吐 / 房间活跃度
 // 数据源：/api/admin/ops-stats（registry /ops/stats 聚合 + 遍历房间聚合每日消息量）
 import * as Vue from '/static/admin/vendor/vue.js';
+import { t } from '../i18n.js';
 
 const TYPE_LABELS = { checkin: '签到', task: '任务', game: '游戏', lottery: '抽奖', redpacket: '红包', transfer: '转账', reward: '奖励', admin: '管理员', shop: '商店', other: '其他' };
 
@@ -72,11 +73,11 @@ export default {
 
     Vue.onMounted(load);
 
-    return { stats, rooms, msgTrend, ledgerTrend, err, barH, timeFmt, TYPE_LABELS };
+    return { stats, rooms, msgTrend, ledgerTrend, err, barH, timeFmt, TYPE_LABELS, t };
   },
   template: `
   <div class="av-page">
-    <h1>📈 运营数据</h1>
+    <h1>📈 {{ t('运营数据') }}</h1>
     <p class="av-sub">在线峰值 · 消息趋势 · 积分吞吐 · 房间活跃度</p>
     <div v-if="err" class="av-empty">加载失败，请确认已登录管理后台</div>
     <div class="av-stats">

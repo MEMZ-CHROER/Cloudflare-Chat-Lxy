@@ -23,6 +23,7 @@ import { handleAdminHonor } from "./admin/honor.mjs";
 import { handleAdminMarket } from "./admin/market.mjs";
 import { handleAdminLp } from "./admin/lp.mjs";
 import { handleAdminOpsStats } from "./admin/ops-stats.mjs";
+import { handleAdminExport } from "./admin/export.mjs";
 
 // M7：登录爆破限流（IP → {count, resetTs}），同 IP 10 分钟内失败 ≥20 次封禁
 // 局限：Workers 多实例不共享，属缓解措施
@@ -84,6 +85,7 @@ export async function handleAdmin(path, request, env) {
     // 🔒 安全修复：未配置管理密钥时直接拒绝，绝不用默认弱密钥("del"/"mod")兜底；空 key 一律拒绝
     if (k && safeEqual(k, e.ADMIN_SECRET_KEY)) return "super";
     if (k && safeEqual(k, e.ADMIN_KEY)) return "admin";
+    if (k && safeEqual(k, e.MODERATOR_KEY)) return "moderator";
     try {
       let rid = e.registry.idFromName("global");
       let stub = e.registry.get(rid);
@@ -146,22 +148,28 @@ export async function handleAdmin(path, request, env) {
     return new Response("未经授权。密钥不匹配或未设置。", { status: 401 });
   }
 
-  // 🔒 安全修复（A1）：普通管理员（ADMIN_KEY）仅允许日常运维功能；
-  // destroy-room（销毁房间）、delete-user（删用户）、redeem（兑换码铸币）、log（审计日志）、
-  // kick-protect、global-blacklist、room-users-detail（含真实IP）等破坏性/超管专属操作仅限 super（ADMIN_SECRET_KEY）
-  // M1 修复：移除 "points"——积分管理（set/add/batch 任意 name+amount）仅限 super（ADMIN_SECRET_KEY），普通 admin 不参与铸币
-  // F1/F2 修复：移除 "anon-grant"/"anon-log"——匿名券发放（自助铸券）与匿名真实身份审计日志仅限 super（ADMIN_SECRET_KEY），普通 admin 无权
-  const adminAllowedPaths = ["clear-room", "kick-user", "room-kick-all", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin", "ops-stats"];
+  // 权限细化（基于角色）
+  const roleAllowedPaths = {
+    super: null, // 超管拥有全部权限
+    admin: ["clear-room", "kick-user", "room-kick-all", "auth-check", "room-users", "blacklist", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "room-password", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin", "ops-stats", "points", "exp"],
+    moderator: ["clear-room", "room-users", "room-files", "room-file-data", "room-messages", "shop", "tasks", "task", "announcement", "user-tags", "tag", "bot", "lottery", "emoji", "message", "level-style", "mute", "unmute", "mute-list", "webhook", "pin", "ops-stats"],
+    viewer: [] // 仅可查询 auth-check、ops-stats 等只读接口
+  };
 
+  // auth-check 接口始终开放，返回当前角色
   if (path[1] === "auth-check") {
     return new Response(JSON.stringify({level: permission}), {
       status: 200, headers: {"Content-Type": "application/json"}
     });
   }
 
-  if (permission === "admin" && !adminAllowedPaths.includes(path[1])) {
-    // M1 联动：积分/经验端点仅 super 可写；普通 admin 允许只读查询（get/all 供 dashboard 统计），禁止 set/add/batch 改值
-    if (!((path[1] === "points" || path[1] === "exp") && ["get", "all"].includes(path[2]))) {
+  // 权限检查：如果角色对应的数组为 null（super），直接放行；否则必须在列表中
+  const allowed = roleAllowedPaths[permission];
+  if (allowed && !allowed.includes(path[1])) {
+    // admin 仍可读取 points/exp 的只读接口（get/all）
+    if (permission === "admin" && (path[1] === "points" || path[1] === "exp") && ["get", "all"].includes(path[2])) {
+      // 允许读取
+    } else {
       return new Response("无权限访问此管理功能。", { status: 403 });
     }
   }
@@ -219,6 +227,9 @@ export async function handleAdmin(path, request, env) {
 
   if (!result && path[1] === "log")
     result = await handleAdminLog(path, request, env, url);
+
+  if (!result && path[1] === "export")
+    result = await handleAdminExport(path, request, env, url);
 
   if (!result && ["mute", "unmute", "mute-list"].includes(path[1]))
     result = await handleAdminMute(path, request, env, url);
