@@ -49,6 +49,7 @@ export async function handleHttp(room, request) {
         }
         let pair = new WebSocketPair();
         await room.handleSession(pair[1], ip);
+        pair[1].onmessage = (e) => room.webSocketMessage(pair[1], e.data);
         return new Response(null, { status: 101, webSocket: pair[0] });
       }
       case "/clear-messages": {
