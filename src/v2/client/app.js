@@ -1,173 +1,198 @@
 /**
- * v2 client entry point — Vue 3 app bootstrapper.
- * Currently a minimal shell; Vue 3 will be added in Phase 3 step 6.
- * For now, validates WS connectivity and store integration.
+ * v2 Main entry point — initializes auth, room, and chat modules
  */
+import { state, set, patch } from "./store.js";
+import { checkAuth, login, register, skipAuth } from "./auth.js";
+import { fetchRooms, joinRoom, createRoom, leaveRoom } from "./room.js";
+import { initMessageListener, initConnListener, handleSend } from "./chat.js";
 
-// ── Inline Store (avoid dynamic import issues) ──
-const _v2Listeners = new Map();
-const _v2State = {
-  user: null,
-  currentRoom: null,
-  ws: null,
-  connected: false,
-  messages: [],
-  onlineUsers: [],
-  lang: "zh",
-  theme: "classic",
-};
+export async function initV2App() {
+  console.log("[v2] app initializing");
 
-function _v2Subscribe(key, fn) {
-  if (!_v2Listeners.has(key)) _v2Listeners.set(key, new Set());
-  _v2Listeners.get(key).add(fn);
-  if (key !== "*" && _v2Listeners.has("*")) _v2Listeners.get("*").add(fn);
-  return () => {
-    const s = _v2Listeners.get(key);
-    if (s) s.delete(fn);
-    if (key !== "*" && _v2Listeners.has("*")) _v2Listeners.get("*").delete(fn);
-  };
-}
-
-function _v2Set(key, value) {
-  const prev = _v2State[key];
-  _v2State[key] = value;
-  const notify = (set) => {
-    if (set) set.forEach((fn) => { try { fn(value, prev); } catch(e) { console.error("v2 store error:", e); } });
-  };
-  notify(_v2Listeners.get(key));
-  notify(_v2Listeners.get("*"));
-}
-
-function _v2Patch(patches) {
-  const keys = Object.keys(patches);
-  const prev = {};
-  for (const k of keys) prev[k] = _v2State[k];
-  for (const k of keys) _v2State[k] = patches[k];
-  for (const k of keys) {
-    const notify = (set) => {
-      if (set) set.forEach((fn) => { try { fn(_v2State[k], prev[k]); } catch(e) { console.error("v2 store error:", e); } });
-    };
-    notify(_v2Listeners.get(k));
-    notify(_v2Listeners.get("*"));
+  // Check existing auth
+  const authResult = await checkAuth();
+  if (authResult.ok) {
+    showRoomList();
+  } else {
+    showAuthForm();
   }
+
+  // Init listeners
+  initMessageListener();
+  initConnListener();
 }
 
-const state = _v2State;
-const set = _v2Set;
-const subscribe = _v2Subscribe;
-const patch = _v2Patch;
+function showAuthForm() {
+  const app = document.getElementById("v2-app");
+  app.innerHTML = `
+    <div id="v2-auth">
+      <div class="v2-auth-card">
+        <h1>CloudChat v2</h1>
+        <div class="v2-auth-tabs">
+          <button class="v2-auth-tab active" data-tab="login">登录</button>
+          <button class="v2-auth-tab" data-tab="register">注册</button>
+        </div>
+        <div id="v2-auth-login">
+          <input id="v2-login-name" class="v2-auth-input" placeholder="用户名" maxlength="32">
+          <input id="v2-login-pass" type="password" class="v2-auth-input" placeholder="密码">
+          <button id="v2-login-btn" class="v2-auth-btn">登录</button>
+          <div id="v2-login-error" class="v2-auth-error"></div>
+          <button id="v2-skip-auth" class="v2-auth-skip">跳过，以游客身份进入</button>
+        </div>
+        <div id="v2-auth-register" style="display:none">
+          <input id="v2-reg-name" class="v2-auth-input" placeholder="用户名" maxlength="32">
+          <input id="v2-reg-pass" type="password" class="v2-auth-input" placeholder="密码（至少6位）">
+          <button id="v2-reg-btn" class="v2-auth-btn">注册</button>
+          <div id="v2-reg-error" class="v2-auth-error"></div>
+        </div>
+      </div>
+    </div>
+  `;
 
-// Export for other modules
-export { state, set, subscribe, patch };
-
-/**
- * Initialize v2 client — called after page load when user is authenticated.
- */
-export function initV2Client() {
-  console.log("[v2] client initializing");
-
-  subscribe("currentRoom", (room) => {
-    if (room) {
-      console.log(`[v2] room changed to: ${room}`);
-      connectWebSocket(room);
-    }
+  // Tab switching
+  app.querySelectorAll(".v2-auth-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      app.querySelectorAll(".v2-auth-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const tab = btn.dataset.tab;
+      document.getElementById("v2-auth-login").style.display = tab === "login" ? "block" : "none";
+      document.getElementById("v2-auth-register").style.display = tab === "register" ? "block" : "none";
+    });
   });
 
-  subscribe("user", (user) => {
-    if (user) {
-      console.log(`[v2] user logged in: ${user.name}`);
-    }
-  });
-
-  console.log("[v2] client ready");
-}
-
-/**
- * Connect to chat room via WebSocket with v2 envelope protocol.
- */
-async function connectWebSocket(roomName) {
-  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const host = location.host;
-  const wsUrl = `${protocol}://${host}/api/room/${encodeURIComponent(roomName)}/websocket`;
-
-  console.log(`[v2] connecting to ${wsUrl}`);
-
-  const ws = new WebSocket(wsUrl);
-  set("ws", ws);
-
-  ws.onopen = () => {
-    console.log("[v2] WS connected");
-    patch({ connected: true });
-    const initMsg = JSON.stringify({ type: "v2-init", room: roomName });
-    ws.send(initMsg);
-  };
-
-  ws.onmessage = (event) => {
-    const data = event.data;
-    const envelope = parseV2Envelope(data);
-    if (envelope) {
-      console.log(`[v2] envelope received: ${envelope.type}`, envelope.payload);
-      handleV2Event(envelope.type, envelope.payload);
+  // Login
+  document.getElementById("v2-login-btn").addEventListener("click", async () => {
+    const username = document.getElementById("v2-login-name").value.trim();
+    const password = document.getElementById("v2-login-pass").value;
+    if (!username || !password) {
+      showAuthError("v2-login-error", "请输入用户名和密码");
       return;
     }
-    try {
-      const legacy = JSON.parse(data);
-      console.log(`[v2] legacy message:`, legacy);
-      handleLegacyEvent(legacy);
-    } catch {
-      console.log("[v2] raw message:", data);
+    const result = await login(username, password);
+    if (result.ok) {
+      showRoomList();
+    } else {
+      showAuthError("v2-login-error", result.error);
     }
-  };
+  });
 
-  ws.onerror = (error) => {
-    console.error("[v2] WS error:", error);
-    patch({ connected: false });
-  };
+  // Register
+  document.getElementById("v2-reg-btn").addEventListener("click", async () => {
+    const username = document.getElementById("v2-reg-name").value.trim();
+    const password = document.getElementById("v2-reg-pass").value;
+    if (!username || !password || password.length < 6) {
+      showAuthError("v2-reg-error", "用户名必填，密码至少6位");
+      return;
+    }
+    const result = await register(username, password);
+    if (result.ok) {
+      showRoomList();
+    } else {
+      showAuthError("v2-reg-error", result.error);
+    }
+  });
 
-  ws.onclose = () => {
-    console.log("[v2] WS closed");
-    patch({ connected: false });
-    set("ws", null);
-  };
+  // Skip auth
+  document.getElementById("v2-skip-auth").addEventListener("click", () => {
+    skipAuth();
+    showRoomList();
+  });
+
+  // Enter key support
+  document.getElementById("v2-login-name").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-login-btn").click(); });
+  document.getElementById("v2-login-pass").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-login-btn").click(); });
+  document.getElementById("v2-reg-name").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-reg-btn").click(); });
+  document.getElementById("v2-reg-pass").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-reg-btn").click(); });
 }
 
-function handleV2Event(type, payload) {
-  switch (type) {
-    case "msg":
-      const msgs = [...state.messages, payload];
-      patch({ messages: msgs });
-      break;
-    case "join":
-      console.log("[v2] user joined:", payload.name);
-      break;
-    case "leave":
-      console.log("[v2] user left:", payload.name);
-      break;
-    case "user-list":
-      patch({ onlineUsers: payload.users });
-      break;
-    default:
-      console.log("[v2] unknown event type:", type);
+function showAuthError(id, msg) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = msg;
+    el.style.display = "block";
   }
 }
 
-function handleLegacyEvent(msg) {
-  console.log("[v2] legacy event (ignored):", msg.type || msg);
+async function showRoomList() {
+  const app = document.getElementById("v2-app");
+  const rooms = await fetchRooms();
+
+  app.innerHTML = `
+    <div id="v2-room-list">
+      <div class="v2-header">
+        <h1>CloudChat v2</h1>
+        <span id="v2-user-info">${state.user?.name || "Guest"}</span>
+      </div>
+      <div class="v2-room-input">
+        <input id="v2-room-name" placeholder="输入房间名称" maxlength="32">
+        <button id="v2-join-room">进入</button>
+      </div>
+      <div class="v2-room-divider">或选择已有房间</div>
+      <div id="v2-rooms">
+        ${rooms.map(r => `<button class="v2-room-btn" data-room="${escapeHtml(r.name)}">${escapeHtml(r.name)}</button>`).join("")}
+      </div>
+    </div>
+  `;
+
+  // Join room buttons
+  app.querySelectorAll(".v2-room-btn").forEach(btn => {
+    btn.addEventListener("click", () => joinRoom(btn.dataset.room));
+  });
+
+  // Enter room
+  document.getElementById("v2-join-room").addEventListener("click", () => {
+    const roomName = document.getElementById("v2-room-name").value.trim();
+    if (roomName) joinRoom(roomName);
+  });
+
+  document.getElementById("v2-room-name").addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const roomName = e.target.value.trim();
+      if (roomName) joinRoom(roomName);
+    }
+  });
 }
 
-function parseV2Envelope(data) {
-  let obj;
-  try {
-    obj = typeof data === "string" ? JSON.parse(data) : data;
-  } catch {
-    return null;
-  }
-  if (!obj || obj.v !== "v2") return null;
-  return { type: obj.t, payload: obj.d, version: obj.v };
+function showChat() {
+  const app = document.getElementById("v2-app");
+  app.innerHTML = `
+    <div id="v2-chat">
+      <div class="v2-header">
+        <h1>CloudChat v2</h1>
+        <span id="v2-room-name">${escapeHtml(state.currentRoom)}</span>
+        <span id="v2-status">connecting...</span>
+      </div>
+      <div id="v2-messages"></div>
+      <div id="v2-input-area">
+        <input id="v2-msg-input" placeholder="Type a message..." maxlength="5000">
+        <button id="v2-send-btn">Send</button>
+      </div>
+    </div>
+  `;
+
+  // Send message
+  document.getElementById("v2-send-btn").addEventListener("click", handleSend);
+  document.getElementById("v2-msg-input").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+
+  // Back to room list
+  document.querySelector(".v2-header").addEventListener("click", e => {
+    if (e.target.classList.contains("v2-room-name")) {
+      leaveRoom();
+      showRoomList();
+    }
+  }, true);
 }
 
-// Auto-initialize if loaded in browser context
-if (typeof window !== "undefined") {
-  window.__v2_init = initV2Client;
-  window.__v2_state = state;
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }
+
+// Export for HTML script
+window.__v2_init = initV2App;
