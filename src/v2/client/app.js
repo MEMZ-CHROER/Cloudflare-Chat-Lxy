@@ -153,7 +153,7 @@ async function showRoomList() {
   });
 }
 
-function showChat() {
+export function showChat() {
   const app = document.getElementById("v2-app");
   app.innerHTML = `
     <div id="v2-chat">
@@ -195,7 +195,7 @@ function escapeHtml(text) {
 }
 
 // Export showChat for room.js to call
-window.__v2_showChat = showChat;
+
 
 // Export for HTML script
 window.__v2_init = initV2App;
