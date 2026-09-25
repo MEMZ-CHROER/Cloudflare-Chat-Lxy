@@ -16,27 +16,6 @@ import V2_AUTH from "./client/auth.js";
 import V2_ROOM from "./client/room.js";
 import V2_CHAT from "./client/chat.js";
 
-// ─── v1 API handlers (reused by v2) ───
-import { handleErrors } from "../utils.mjs";
-import { handleAuth } from "../api/auth.mjs";
-import { handleRooms } from "../api/rooms.mjs";
-import { handleLottery } from "../api/lottery.mjs";
-import { handlePoints } from "../api/points.mjs";
-import { handleShop } from "../api/shop.mjs";
-import { handleTasks } from "../api/tasks.mjs";
-import { handleRecall } from "../api/recall.mjs";
-import { handleAdmin } from "../api/admin.mjs";
-import { handlePreview } from "../api/preview.mjs";
-import { handleArchive } from "../api/archive.mjs";
-import { handleRedeemApi } from "../api/redeem.mjs";
-import { handleGame } from "../api/game.mjs";
-import { handleHacknetApi } from "../api/hacknet.mjs";
-import { handleSeasonApi } from "../api/season.mjs";
-import { handleHonorApi } from "../api/honor.mjs";
-import { handleMarket } from "../api/market.mjs";
-import { handleOauthApi } from "../api/oauth.mjs";
-import { handleRelation } from "../api/relation.mjs";
-
 // ─── Inline HTML template ───
 const V2_HTML = `<!DOCTYPE html>
 <html lang="zh">
@@ -105,102 +84,62 @@ const V2_MODULES = {
 
 const JS_CT = "application/javascript; charset=utf-8";
 const HTML_CT = "text/html; charset=utf-8";
-const JSON_CT = "application/json; charset=utf-8";
+const NO_CACHE = { "Cache-Control": "no-cache, must-revalidate", "X-Content-Type-Options": "nosniff" };
 
-/**
- * API route dispatcher (mirrors v1 handleApi)
- */
-async function handleV2Api(apiPath, request, env) {
-  switch (apiPath[0]) {
-    case "rooms":
-    case "room":
-      return handleRooms(apiPath, request, env);
-    case "lottery":
-      return handleLottery(apiPath, request, env);
-    case "points":
-      return handlePoints(apiPath, request, env);
-    case "shop":
-      return handleShop(apiPath, request, env);
-    case "tasks":
-      return handleTasks(apiPath, request, env);
-    case "register":
-    case "login":
-    case "logout":
-    case "check-auth":
-    case "user-sessions":
-      return handleAuth(apiPath, request, env);
-    case "recall":
-      return handleRecall(apiPath, request, env);
-    case "admin":
-      return handleAdmin(apiPath, request, env);
-    case "preview":
-      return handlePreview(apiPath, request, env);
-    case "archive":
-      return handleArchive(apiPath, request, env);
-    case "redeem":
-      return handleRedeemApi(apiPath, request, env);
-    case "game":
-      return handleGame(apiPath, request, env);
-    case "hn":
-      return handleHacknetApi(apiPath, request, env);
-    case "season":
-      return handleSeasonApi(apiPath, request, env);
-    case "honor":
-      return handleHonorApi(apiPath, request, env);
-    case "market":
-      return handleMarket(apiPath, request, env);
-    case "oauth":
-      return handleOauthApi(apiPath, request, env);
-    case "rel":
-      return handleRelation(apiPath, request, env);
-    default:
-      return new Response(JSON.stringify({ error: "not found" }), {
-        status: 404,
-        headers: { "Content-Type": JSON_CT },
-      });
+// ─── v2 专属路由（页面 + 静态资源） ───
+async function handleV2Request(request, env) {
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/^\//, "");
+
+  // 首页
+  if (path === "" || path === "index.html") {
+    return new Response(V2_HTML, { headers: { "Content-Type": HTML_CT, ...NO_CACHE } });
   }
+
+  // 静态 JS 模块
+  const modKey = path.startsWith("static/") ? path.replace(/^static\//, "client/") : path;
+  if (V2_MODULES[modKey]) {
+    return new Response(V2_MODULES[modKey], {
+      headers: { "Content-Type": JS_CT, ...NO_CACHE },
+    });
+  }
+
+  // WebSocket 升级 → 透传到 v1（v1 处理 WS 逻辑）
+  const upgrade = request.headers.get("Upgrade") || "";
+  if (upgrade.toLowerCase() === "websocket") {
+    return null; // null 表示走 fallback
+  }
+
+  // 其他路径也走 fallback
+  return null;
 }
 
+// ─── 优雅降级到 v1 ───
+const V1_HOST = "chat.liuxiyu.cn";
+
+async function fallbackToV1(request) {
+  const url = new URL(request.url);
+  url.host = V1_HOST;
+  url.protocol = "https:";
+  const v1Req = new Request(url.toString(), {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    redirect: "manual",
+  });
+  return fetch(v1Req);
+}
+
+// ─── v2 fetch 入口 ───
 export default {
   async fetch(request, env, ctx) {
-    return await handleErrors(request, async () => {
-      const url = new URL(request.url);
-      const path = url.pathname.replace(/^\//, "");
-
-      // Root — serve v2 chat UI
-      if (path === "" || path === "index.html") {
-        return new Response(V2_HTML, {
-          headers: {
-            "Content-Type": HTML_CT,
-            "Cache-Control": "no-cache, must-revalidate",
-            "X-Content-Type-Options": "nosniff",
-          },
-        });
-      }
-
-      // Static client assets
-      const modKey = path.startsWith("static/")
-        ? path.replace(/^static\//, "client/")
-        : path;
-      if (V2_MODULES[modKey]) {
-        return new Response(V2_MODULES[modKey], {
-          headers: {
-            "Content-Type": JS_CT,
-            "Cache-Control": "no-cache, must-revalidate",
-            "X-Content-Type-Options": "nosniff",
-          },
-        });
-      }
-
-      // API routes → v1-compatible handlers
-      if (path.startsWith("api/")) {
-        return handleV2Api(path.slice(4), request, env);
-      }
-
-      return new Response("CloudChat v2", {
-        status: 200,
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
-    });
+    try {
+      const response = await handleV2Request(request, env);
+      if (response !== null) return response;
+      return await fallbackToV1(request);
+    } catch (e) {
+      console.error("[v2] error, fallback:", e);
+      return await fallbackToV1(request);
+    }
   },
 };
