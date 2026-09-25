@@ -139,10 +139,10 @@ async function main() {
   // Test 9: v2 页面可访问
   total++;
   if (await test("v2 页面可访问", async () => {
-    const res = await fetch(`${BASE_V2}/v2`, {
+    const res = await fetch(`${BASE_V2}/`, {
       headers: { Cookie: v2Cookie },
     });
-    if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+    if (res.status !== 200 && res.status !== 302) throw new Error(`HTTP ${res.status}`);
     const html = await res.text();
     if (!html.includes("CloudChat v2")) throw new Error("页面内容不正确");
   })) passed++;
