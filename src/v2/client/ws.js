@@ -12,7 +12,7 @@ export function connectWebSocket(roomName, password) {
   }
 
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  let wsUrl = `${protocol}://${location.host}/api/room/${encodeURIComponent(roomName)}/websocket`;
+  let wsUrl = `${protocol}//${location.host}/api/room/${encodeURIComponent(roomName)}/websocket`;
   if (password) wsUrl += `?password=${encodeURIComponent(password)}`;
   console.log(`[v2] connecting to ${wsUrl}`);
 
