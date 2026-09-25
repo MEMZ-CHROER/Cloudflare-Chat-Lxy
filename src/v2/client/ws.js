@@ -5,14 +5,15 @@ import { state, set, subscribe, patch } from "./store.js";
 
 let ws = null;
 
-export function connectWebSocket(roomName) {
+export function connectWebSocket(roomName, password) {
   if (ws) {
     ws.close();
     ws = null;
   }
 
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const wsUrl = `${protocol}://${location.host}/api/room/${encodeURIComponent(roomName)}/websocket`;
+  let wsUrl = `${protocol}://${location.host}/api/room/${encodeURIComponent(roomName)}/websocket`;
+  if (password) wsUrl += `?password=${encodeURIComponent(password)}`;
   console.log(`[v2] connecting to ${wsUrl}`);
 
   ws = new WebSocket(wsUrl);

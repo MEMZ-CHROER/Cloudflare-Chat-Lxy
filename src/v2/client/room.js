@@ -6,9 +6,10 @@ import { connectWebSocket } from "./ws.js";
 
 export async function fetchRooms() {
   try {
-    const res = await fetch("/api/rooms");
+    const res = await fetch("/api/rooms/list");
     const data = await res.json();
-    return data.rooms || [];
+    if (Array.isArray(data)) return data;
+    return Object.entries(data).map(([name, info]) => ({ name, ...info }));
   } catch {
     return [];
   }
@@ -16,40 +17,16 @@ export async function fetchRooms() {
 
 export async function joinRoom(roomName, password) {
   try {
-    const res = await fetch(`/api/room/${encodeURIComponent(roomName)}/join`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      patch({ currentRoom: roomName });
-      connectWebSocket(roomName);
-      return { ok: true };
-    }
-    return { ok: false, error: data.error };
+    patch({ currentRoom: roomName });
+    connectWebSocket(roomName, password);
+    return { ok: true };
   } catch (e) {
     return { ok: false, error: e.message };
   }
 }
 
 export async function createRoom(roomName, password) {
-  try {
-    const res = await fetch(`/api/room/${encodeURIComponent(roomName)}/create`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      patch({ currentRoom: roomName });
-      connectWebSocket(roomName);
-      return { ok: true };
-    }
-    return { ok: false, error: data.error };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
+  return joinRoom(roomName, password);
 }
 
 export function leaveRoom() {
