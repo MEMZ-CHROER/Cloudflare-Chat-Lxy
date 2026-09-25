@@ -11,12 +11,17 @@ export function renderMessage(msg) {
 
   const header = document.createElement("div");
   header.className = "v2-msg-header";
-  header.innerHTML = `<span class="v2-msg-name">${escapeHtml(msg.name || "Anonymous")}</span>
+  const nameText = (msg.tag ? `[${msg.tag}] ` : "") + escapeHtml(msg.name || "Anonymous");
+  header.innerHTML = `<span class="v2-msg-name">${nameText}</span>
     <span class="v2-msg-time">${formatTime(msg.timestamp)}</span>`;
 
   const content = document.createElement("div");
   content.className = "v2-msg-content";
-  content.innerHTML = renderMarkdown(msg.content);
+  // Support both 'content' (v2) and 'message' (v1 legacy) fields
+  const text = msg.content || msg.message || "";
+  content.innerHTML = msg.type === "image"
+    ? `<img src="${escapeHtml(text)}" style="max-width:100%;border-radius:8px;">`
+    : renderMarkdown(text);
 
   div.appendChild(header);
   div.appendChild(content);
@@ -86,7 +91,6 @@ function formatTime(ts) {
 }
 
 function renderMarkdown(text) {
-  // Basic markdown rendering
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

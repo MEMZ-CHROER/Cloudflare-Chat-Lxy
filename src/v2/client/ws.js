@@ -96,34 +96,88 @@ function handleV2Message(type, data) {
  * Handle legacy v1 messages (raw format without envelope)
  */
 function handleLegacyMessage(msg) {
-  switch (msg.type) {
-    case "msg":
-      patch({ messages: [...state.messages, msg] });
-      break;
-    case "join":
-      console.log("[v2] join:", msg.name);
-      break;
-    case "quit":
-      console.log("[v2] quit:", msg.quit || msg.name);
-      break;
-    case "user-list":
-      patch({ onlineUsers: msg.users });
-      break;
-    case "system":
-      console.log("[v2] system:", msg.system || msg.content);
-      break;
-    case "channels":
-      console.log("[v2] channels:", msg.channels);
-      break;
-    case "pinned":
-      console.log("[v2] pinned:", msg.pinned);
-      break;
-    case "destroyed":
-      console.log("[v2] room destroyed");
-      break;
-    default:
-      console.log("[v2] legacy-msg", msg.type, msg);
+  // Normal chat message
+  if (msg.message || msg.content) {
+    const chatMsg = {
+      id: msg.timestamp || Date.now(),
+      name: msg.name || "Anonymous",
+      tag: msg.tag,
+      tagColor: msg.tagColor,
+      tagBorder: msg.tagBorder,
+      content: msg.message || msg.content,
+      timestamp: msg.timestamp || Date.now(),
+      channel: msg.channel,
+      type: msg.type || "msg",
+    };
+    patch({ messages: [...state.messages, chatMsg] });
+    return;
   }
+
+  // Join/quit
+  if (msg.joined) {
+    console.log("[v2] joined:", msg.joined);
+    return;
+  }
+  if (msg.quit) {
+    console.log("[v2] quit:", msg.quit);
+    return;
+  }
+
+  // Ready
+  if (msg.ready) {
+    console.log("[v2] connected, ready");
+    return;
+  }
+
+  // Channel info
+  if (msg.type === "channels") {
+    console.log("[v2] channels:", msg.channels);
+    return;
+  }
+  if (msg.type === "pinned") {
+    console.log("[v2] pinned:", msg.pinned);
+    return;
+  }
+  if (msg.type === "destroyed") {
+    console.log("[v2] room destroyed");
+    return;
+  }
+
+  // Image
+  if (msg.type === "image") {
+    const chatMsg = {
+      id: msg.timestamp || Date.now(),
+      name: msg.name || "Anonymous",
+      tag: msg.tag,
+      tagColor: msg.tagColor,
+      tagBorder: msg.tagBorder,
+      content: `[图片] ${msg.url || msg.path}`,
+      timestamp: msg.timestamp || Date.now(),
+      channel: msg.channel,
+      type: "image",
+    };
+    patch({ messages: [...state.messages, chatMsg] });
+    return;
+  }
+
+  // GH card
+  if (msg.type === "gh-card") {
+    const chatMsg = {
+      id: Date.now(),
+      name: msg.name || "System",
+      tag: msg.tag,
+      tagColor: msg.tagColor,
+      tagBorder: msg.tagBorder,
+      content: `📦 [GitHub] ${msg.repo || msg.repoUrl || ''}`,
+      timestamp: Date.now(),
+      channel: msg.channel,
+      type: "gh-card",
+    };
+    patch({ messages: [...state.messages, chatMsg] });
+    return;
+  }
+
+  console.log("[v2] legacy-msg", msg.type, msg);
 }
 
 export function sendMessage(content) {
