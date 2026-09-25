@@ -3,6 +3,9 @@
  */
 import { state, set, patch } from "./store.js";
 
+const TOKEN_KEY = "v2_token";
+const USER_KEY = "v2_user";
+
 export async function login(username, password) {
   try {
     const res = await fetch("/api/login", {
@@ -12,6 +15,8 @@ export async function login(username, password) {
     });
     const data = await res.json();
     if (data.ok) {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(data));
       patch({ user: data });
       return { ok: true, user: data };
     }
@@ -30,6 +35,8 @@ export async function register(username, password) {
     });
     const data = await res.json();
     if (data.ok) {
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(data));
       patch({ user: data });
       return { ok: true, user: data };
     }
@@ -40,20 +47,23 @@ export async function register(username, password) {
 }
 
 export async function checkAuth() {
-  try {
-    const res = await fetch("/api/user-profile");
-    const data = await res.json();
-    if (data.ok) {
-      patch({ user: data });
-      return { ok: true, user: data };
-    }
-    return { ok: false };
-  } catch {
-    return { ok: false };
+  const token = localStorage.getItem(TOKEN_KEY);
+  const userStr = localStorage.getItem(USER_KEY);
+  if (token && userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.token === token) {
+        patch({ user });
+        return { ok: true, user };
+      }
+    } catch {}
   }
+  return { ok: false };
 }
 
 export function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
   patch({ user: null });
   set("currentRoom", null);
 }
