@@ -5,8 +5,7 @@
 
 const listeners = new Map(); // key → Set<function>
 
-/** @type {Record<string, any>} */
-const state = {
+export const state = {
   user: null,        // { name, token, authenticated, isAdmin, avatar }
   currentRoom: null, // room name string
   ws: null,          // WebSocket instance

@@ -2,11 +2,9 @@
  * v2 chat shell view — minimal placeholder for Phase 3.
  * Will be replaced by Vue 3 components in later phases.
  */
-import { state, set, subscribe } from "../store/store.js";
 
 /**
  * Render the v2 chat shell into a container element.
- * @param {HTMLElement} container
  */
 export function renderChatShell(container) {
   container.innerHTML = `
@@ -25,13 +23,15 @@ export function renderChatShell(container) {
     </div>
   `;
 
-  // Wire up send button
   const sendBtn = container.querySelector("#v2-send-btn");
   const msgInput = container.querySelector("#v2-msg-input");
 
   sendBtn.addEventListener("click", () => {
     const text = msgInput.value.trim();
-    if (!text || !state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+    // Use window.__v2_state and window.__v2_subscribe from app.js
+    const state = window.__v2_state;
+    const subscribe = window.__v2_subscribe;
+    if (!text || !state?.ws || state.ws.readyState !== WebSocket.OPEN) return;
     state.ws.send(JSON.stringify({ type: "msg", content: text }));
     msgInput.value = "";
   });
@@ -43,28 +43,30 @@ export function renderChatShell(container) {
     }
   });
 
-  // Subscribe to connection state
-  subscribe("connected", (connected) => {
-    const statusEl = container.querySelector("#v2-status");
-    if (statusEl) {
-      statusEl.textContent = connected ? "connected" : "disconnected";
-      statusEl.style.color = connected ? "#4ade80" : "#f87171";
-    }
-  });
+  // Subscribe via window global
+  const state = window.__v2_state;
+  const subscribe = window.__v2_subscribe;
+  if (subscribe) {
+    subscribe("connected", (connected) => {
+      const statusEl = container.querySelector("#v2-status");
+      if (statusEl) {
+        statusEl.textContent = connected ? "connected" : "disconnected";
+        statusEl.style.color = connected ? "#4ade80" : "#f87171";
+      }
+    });
 
-  // Subscribe to messages
-  subscribe("messages", (msgs) => {
-    const msgList = container.querySelector("#v2-messages");
-    if (!msgList || !msgs) return;
-    // Simple append (will be replaced by Vue reactivity)
-    const lastMsg = msgs[msgs.length - 1];
-    if (lastMsg && lastMsg !== msgList.dataset.lastId) {
-      const div = document.createElement("div");
-      div.className = "v2-msg";
-      div.textContent = `${lastMsg.name || "Anonymous"}: ${lastMsg.content}`;
-      msgList.appendChild(div);
-      msgList.scrollTop = msgList.scrollHeight;
-      msgList.dataset.lastId = lastMsg.id || String(msgs.length - 1);
-    }
-  });
+    subscribe("messages", (msgs) => {
+      const msgList = container.querySelector("#v2-messages");
+      if (!msgList || !msgs) return;
+      const lastMsg = msgs[msgs.length - 1];
+      if (lastMsg && lastMsg !== msgList.dataset.lastId) {
+        const div = document.createElement("div");
+        div.className = "v2-msg";
+        div.textContent = `${lastMsg.name || "Anonymous"}: ${lastMsg.content}`;
+        msgList.appendChild(div);
+        msgList.scrollTop = msgList.scrollHeight;
+        msgList.dataset.lastId = lastMsg.id || String(msgs.length - 1);
+      }
+    });
+  }
 }

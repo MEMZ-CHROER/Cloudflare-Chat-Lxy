@@ -1,21 +1,18 @@
 name = "cloudflare-workers-chat-v2"
 compatibility_date = "2024-01-01"
-
 main = "src/v2/index.mjs"
-
 workers_dev = true
 
-# v2 custom domain — DNS CNAME pointed here separately
 routes = [
-  { pattern = "chatnew.dslirc.indevs.in/*", zone_name = "dslirc.indevs.in", custom_domain = true, enabled = true, previews_enabled = false },
+  { pattern = "chatnew.liuxiyu.cn", zone_name = "liuxiyu.cn", custom_domain = true, enabled = true, previews_enabled = false },
 ]
 
 [durable_objects]
 bindings = [
-  { name = "rooms", class_name = "ChatRoom" },
-  { name = "registry", class_name = "RoomRegistry" },
-  { name = "archive", class_name = "VersionArchive" },
-  { name = "filebucket", class_name = "FileBucket" },
+  { name = "rooms", class_name = "ChatRoom", script_name = "cloudflare-workers-chat", binding_name = "rooms" },
+  { name = "registry", class_name = "RoomRegistry", script_name = "cloudflare-workers-chat", binding_name = "registry" },
+  { name = "archive", class_name = "VersionArchive", script_name = "cloudflare-workers-chat", binding_name = "archive" },
+  { name = "filebucket", class_name = "FileBucket", script_name = "cloudflare-workers-chat", binding_name = "filebucket" },
 ]
 
 [[rules]]
@@ -39,10 +36,14 @@ persist = true
 head_sampling_rate = 1
 
 [vars]
+ADMIN_SECRET_KEY = "9167c945079746dbfa6cd249df4ad64f102e9e34a366624539ee3ac7cfefa16e"
+ADMIN_KEY = "7a7be27563c45956c313005973b4902a15b7a1008c207c05"
+MODERATOR_KEY = "replace-with-mod-key"
+DESTROY_KEY = "lxy130523"
 AI_BASE_URL = "https://api.agnes-ai.cn/v1"
 AI_MODEL = "agnes-2.5-flash"
 AI_SYSTEM_PROMPT = "你是一个友好的助手，请用中文回答。"
-DESTROY_KEY = "lxy130523"
-# GITHUB_TOKEN / AI_API_KEY / CF_API_TOKEN 为 secret，用 `wrangler secret put <名>` 配置，勿写入仓库
-EOF
-echo "wrangler.v2.toml created"
+CF_ACCOUNT_ID = "9286982ec868fbad29cf3f4af093ae53"
+CF_SCRIPT_NAME = "cloudflare-workers-chat"
+GITHUB_CLIENT_ID = "Iv23liafudDYef8zF76v"
+OAUTH_MOCK = "0"

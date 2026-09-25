@@ -7,15 +7,13 @@ import { ChatRoom as CoreChatRoom } from "../core/chatroom.mjs";
  */
 export class ChatRoom extends CoreChatRoom {
   // v2 hook: called after every webSocketMessage dispatch
-  // Override this method in a subclass or patch it post-construction
   async _v2OnMessage(webSocket, data) {
-    // Placeholder for v2 message handling (e.g. push to Vue store)
-    // Currently no-op — v2 client will listen via WS event channels
+    // Placeholder for v2 message handling
   }
 
   // v2 hook: called on session join
   async _v2OnJoin(session) {
-    // Placeholder for v2 join logic (e.g. send v2-init event)
+    // Placeholder for v2 join logic
   }
 
   // v2 hook: called on session leave
@@ -23,26 +21,3 @@ export class ChatRoom extends CoreChatRoom {
     // Placeholder for v2 leave logic
   }
 }
-
-// Re-export all core named exports unchanged
-export {
-  handleHttp,
-  handleSessionImpl,
-  handleWsCloseImpl,
-  deliverOfflineMessagesImpl,
-  recordLastSeenImpl,
-  _doRollbackImpl,
-  getMaxMsgLenImpl,
-  containsProfanityImpl,
-  isAdminSessionImpl,
-  isSuperSessionImpl,
-  hasPermImpl,
-  lpRawPermImpl,
-  handleSchedule,
-  runScheduledMessages,
-  handleMedia,
-  handleManage,
-  stripSensitiveMsg,
-  handleDoc,
-  handleActivity,
-} from "../core/chatroom.mjs";

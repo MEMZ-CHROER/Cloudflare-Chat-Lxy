@@ -3,16 +3,69 @@
  * Currently a minimal shell; Vue 3 will be added in Phase 3 step 6.
  * For now, validates WS connectivity and store integration.
  */
-import { state, set, subscribe, patch } from "./store/store.js";
+
+// ── Inline Store (avoid dynamic import issues) ──
+const _v2Listeners = new Map();
+const _v2State = {
+  user: null,
+  currentRoom: null,
+  ws: null,
+  connected: false,
+  messages: [],
+  onlineUsers: [],
+  lang: "zh",
+  theme: "classic",
+};
+
+function _v2Subscribe(key, fn) {
+  if (!_v2Listeners.has(key)) _v2Listeners.set(key, new Set());
+  _v2Listeners.get(key).add(fn);
+  if (key !== "*" && _v2Listeners.has("*")) _v2Listeners.get("*").add(fn);
+  return () => {
+    const s = _v2Listeners.get(key);
+    if (s) s.delete(fn);
+    if (key !== "*" && _v2Listeners.has("*")) _v2Listeners.get("*").delete(fn);
+  };
+}
+
+function _v2Set(key, value) {
+  const prev = _v2State[key];
+  _v2State[key] = value;
+  const notify = (set) => {
+    if (set) set.forEach((fn) => { try { fn(value, prev); } catch(e) { console.error("v2 store error:", e); } });
+  };
+  notify(_v2Listeners.get(key));
+  notify(_v2Listeners.get("*"));
+}
+
+function _v2Patch(patches) {
+  const keys = Object.keys(patches);
+  const prev = {};
+  for (const k of keys) prev[k] = _v2State[k];
+  for (const k of keys) _v2State[k] = patches[k];
+  for (const k of keys) {
+    const notify = (set) => {
+      if (set) set.forEach((fn) => { try { fn(_v2State[k], prev[k]); } catch(e) { console.error("v2 store error:", e); } });
+    };
+    notify(_v2Listeners.get(k));
+    notify(_v2Listeners.get("*"));
+  }
+}
+
+const state = _v2State;
+const set = _v2Set;
+const subscribe = _v2Subscribe;
+const patch = _v2Patch;
+
+// Export for other modules
+export { state, set, subscribe, patch };
 
 /**
  * Initialize v2 client — called after page load when user is authenticated.
- * Sets up WebSocket connection using v2 envelope protocol.
  */
 export function initV2Client() {
   console.log("[v2] client initializing");
 
-  // Subscribe to room changes to auto-connect WS
   subscribe("currentRoom", (room) => {
     if (room) {
       console.log(`[v2] room changed to: ${room}`);
@@ -20,7 +73,6 @@ export function initV2Client() {
     }
   });
 
-  // Subscribe to user changes
   subscribe("user", (user) => {
     if (user) {
       console.log(`[v2] user logged in: ${user.name}`);
@@ -32,7 +84,6 @@ export function initV2Client() {
 
 /**
  * Connect to chat room via WebSocket with v2 envelope protocol.
- * @param {string} roomName
  */
 async function connectWebSocket(roomName) {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -47,22 +98,18 @@ async function connectWebSocket(roomName) {
   ws.onopen = () => {
     console.log("[v2] WS connected");
     patch({ connected: true });
-
-    // Send v2-init handshake
     const initMsg = JSON.stringify({ type: "v2-init", room: roomName });
     ws.send(initMsg);
   };
 
   ws.onmessage = (event) => {
     const data = event.data;
-    // Try to parse as v2 envelope first
     const envelope = parseV2Envelope(data);
     if (envelope) {
       console.log(`[v2] envelope received: ${envelope.type}`, envelope.payload);
       handleV2Event(envelope.type, envelope.payload);
       return;
     }
-    // Fallback: legacy v1 message format
     try {
       const legacy = JSON.parse(data);
       console.log(`[v2] legacy message:`, legacy);
@@ -84,28 +131,19 @@ async function connectWebSocket(roomName) {
   };
 }
 
-/**
- * Handle v2 protocol events.
- * @param {string} type
- * @param {object} payload
- */
 function handleV2Event(type, payload) {
   switch (type) {
     case "msg":
-      // New message — append to store
       const msgs = [...state.messages, payload];
       patch({ messages: msgs });
       break;
     case "join":
-      // User joined
       console.log("[v2] user joined:", payload.name);
       break;
     case "leave":
-      // User left
       console.log("[v2] user left:", payload.name);
       break;
     case "user-list":
-      // Update online users
       patch({ onlineUsers: payload.users });
       break;
     default:
@@ -113,19 +151,10 @@ function handleV2Event(type, payload) {
   }
 }
 
-/**
- * Handle legacy v1 message format (backward compatibility).
- * @param {object} msg
- */
 function handleLegacyEvent(msg) {
-  // v1 messages flow through v1 client; v2 just logs for now
   console.log("[v2] legacy event (ignored):", msg.type || msg);
 }
 
-/**
- * Parse v2 envelope from raw data.
- * (Duplicate of utils.override.mjs — kept here for client-side standalone use)
- */
 function parseV2Envelope(data) {
   let obj;
   try {

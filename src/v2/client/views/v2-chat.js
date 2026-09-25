@@ -1,11 +1,10 @@
-<!DOCTYPE html>
+export default `<!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CloudChat v2</title>
   <style>
-    /* v2 minimal styles — will be replaced by Vue components */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; }
     #v2-app { display: flex; flex-direction: column; height: 100vh; max-width: 800px; margin: 0 auto; }
@@ -39,10 +38,9 @@
   <script type="module">
     import { initV2Client } from '../app.js';
     import { renderChatShell } from './chat-shell.js';
-
     const app = document.getElementById('v2-app');
     renderChatShell(app);
     initV2Client();
   </script>
 </body>
-</html>
+</html>`;

@@ -14,7 +14,7 @@ export async function handleHttp(room, request) {
 
   // v2 client entry point
   if (url.pathname === "/v2" || url.pathname === "/v2/") {
-    const HTML = await readFile("./v2/client/views/v2-chat.html");
+    const HTML = await readFile("./v2/client/views/v2-chat.js");
     return new Response(HTML, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
@@ -43,11 +43,17 @@ export async function handleHttp(room, request) {
 
 /**
  * Read a file from the worker's module context.
- * In CF Workers, this uses dynamic import.
+ * For HTML files, return as plain string (no ES module export).
  * @param {string} path
  * @returns {Promise<string>}
  */
 async function readFile(path) {
+  // HTML files are imported as raw text, not ES modules
+  if (path.endsWith(".html")) {
+    const mod = await import(path.startsWith(".") ? path : `./${path}`);
+    return mod.default || mod;
+  }
+  // JS/CSS files are ES modules
   const mod = await import(path.startsWith(".") ? path : `./${path}`);
   return mod.default || mod;
 }
