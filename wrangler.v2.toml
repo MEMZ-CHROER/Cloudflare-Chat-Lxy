@@ -1,0 +1,48 @@
+name = "cloudflare-workers-chat-v2"
+compatibility_date = "2024-01-01"
+
+main = "src/v2/index.mjs"
+
+workers_dev = true
+
+# v2 custom domain — DNS CNAME pointed here separately
+routes = [
+  { pattern = "chatnew.dslirc.indevs.in/*", zone_name = "dslirc.indevs.in", custom_domain = true, enabled = true, previews_enabled = false },
+]
+
+[durable_objects]
+bindings = [
+  { name = "rooms", class_name = "ChatRoom" },
+  { name = "registry", class_name = "RoomRegistry" },
+  { name = "archive", class_name = "VersionArchive" },
+  { name = "filebucket", class_name = "FileBucket" },
+]
+
+[[rules]]
+type = "Data"
+globs = ["**/*.html", "**/*.js", "**/*.css"]
+fallthrough = false
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
+[vars]
+AI_BASE_URL = "https://api.agnes-ai.cn/v1"
+AI_MODEL = "agnes-2.5-flash"
+AI_SYSTEM_PROMPT = "你是一个友好的助手，请用中文回答。"
+DESTROY_KEY = "lxy130523"
+# GITHUB_TOKEN / AI_API_KEY / CF_API_TOKEN 为 secret，用 `wrangler secret put <名>` 配置，勿写入仓库
+EOF
+echo "wrangler.v2.toml created"
