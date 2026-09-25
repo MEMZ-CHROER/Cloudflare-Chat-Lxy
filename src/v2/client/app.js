@@ -194,5 +194,8 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Export showChat for room.js to call
+window.__v2_showChat = showChat;
+
 // Export for HTML script
 window.__v2_init = initV2App;

@@ -4,6 +4,11 @@
 import { state, set, patch } from "./store.js";
 import { connectWebSocket } from "./ws.js";
 
+// Import showChat from app.js via window global (avoid circular import)
+function getShowChat() {
+  return window.__v2_showChat;
+}
+
 export async function fetchRooms() {
   try {
     const res = await fetch("/api/rooms/list");
@@ -19,6 +24,9 @@ export async function joinRoom(roomName, password) {
   try {
     patch({ currentRoom: roomName });
     connectWebSocket(roomName, password);
+    // Switch to chat view
+    const showChat = getShowChat();
+    if (showChat) showChat();
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e.message };
