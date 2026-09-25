@@ -8,7 +8,7 @@ export { FileBucket } from "../core/filebucket.mjs";
 export * from "./chatroom.override.mjs";
 export * from "./utils.override.mjs";
 
-// ─── Build-time static asset imports (esbuild flattens to string constants) ───
+// ─── Build-time static asset imports ───
 import V2_APP from "./client/app.js";
 import V2_STORE from "./client/store.js";
 import V2_WS from "./client/ws.js";
@@ -16,7 +16,28 @@ import V2_AUTH from "./client/auth.js";
 import V2_ROOM from "./client/room.js";
 import V2_CHAT from "./client/chat.js";
 
-// Inline HTML template (avoid cross-directory named-export bundling issues)
+// ─── v1 API handlers (reused by v2) ───
+import { handleErrors } from "../utils.mjs";
+import { handleAuth } from "../api/auth.mjs";
+import { handleRooms } from "../api/rooms.mjs";
+import { handleLottery } from "../api/lottery.mjs";
+import { handlePoints } from "../api/points.mjs";
+import { handleShop } from "../api/shop.mjs";
+import { handleTasks } from "../api/tasks.mjs";
+import { handleRecall } from "../api/recall.mjs";
+import { handleAdmin } from "../api/admin.mjs";
+import { handlePreview } from "../api/preview.mjs";
+import { handleArchive } from "../api/archive.mjs";
+import { handleRedeemApi } from "../api/redeem.mjs";
+import { handleGame } from "../api/game.mjs";
+import { handleHacknetApi } from "../api/hacknet.mjs";
+import { handleSeasonApi } from "../api/season.mjs";
+import { handleHonorApi } from "../api/honor.mjs";
+import { handleMarket } from "../api/market.mjs";
+import { handleOauthApi } from "../api/oauth.mjs";
+import { handleRelation } from "../api/relation.mjs";
+
+// ─── Inline HTML template ───
 const V2_HTML = `<!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -41,7 +62,6 @@ const V2_HTML = `<!DOCTYPE html>
     #v2-msg-input:focus { outline: none; border-color: #3b82f6; }
     #v2-send-btn { padding: 12px 24px; border: none; border-radius: 8px; background: #3b82f6; color: white; font-size: 1rem; cursor: pointer; }
     #v2-send-btn:hover { background: #2563eb; }
-    /* Auth styles */
     #v2-auth { display: flex; align-items: center; justify-content: center; height: 100vh; }
     .v2-auth-card { background: #1e293b; padding: 32px; border-radius: 12px; width: 100%; max-width: 400px; }
     .v2-auth-card h1 { text-align: center; margin-bottom: 24px; }
@@ -54,7 +74,6 @@ const V2_HTML = `<!DOCTYPE html>
     .v2-auth-error { color: #f87171; font-size: 0.875rem; margin-top: 8px; display: none; }
     .v2-auth-skip { display: block; text-align: center; margin-top: 16px; color: #64748b; font-size: 0.875rem; cursor: pointer; background: none; border: none; }
     .v2-auth-skip:hover { color: #94a3b8; }
-    /* Room list styles */
     #v2-room-list { padding: 16px; }
     .v2-room-input { display: flex; gap: 8px; margin-bottom: 16px; }
     .v2-room-input input { flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 6px; background: #1e293b; color: #e2e8f0; }
@@ -86,49 +105,102 @@ const V2_MODULES = {
 
 const JS_CT = "application/javascript; charset=utf-8";
 const HTML_CT = "text/html; charset=utf-8";
+const JSON_CT = "application/json; charset=utf-8";
 
 /**
- * v2 Worker fetch handler.
+ * API route dispatcher (mirrors v1 handleApi)
  */
+async function handleV2Api(apiPath, request, env) {
+  switch (apiPath[0]) {
+    case "rooms":
+    case "room":
+      return handleRooms(apiPath, request, env);
+    case "lottery":
+      return handleLottery(apiPath, request, env);
+    case "points":
+      return handlePoints(apiPath, request, env);
+    case "shop":
+      return handleShop(apiPath, request, env);
+    case "tasks":
+      return handleTasks(apiPath, request, env);
+    case "register":
+    case "login":
+    case "logout":
+    case "check-auth":
+    case "user-sessions":
+      return handleAuth(apiPath, request, env);
+    case "recall":
+      return handleRecall(apiPath, request, env);
+    case "admin":
+      return handleAdmin(apiPath, request, env);
+    case "preview":
+      return handlePreview(apiPath, request, env);
+    case "archive":
+      return handleArchive(apiPath, request, env);
+    case "redeem":
+      return handleRedeemApi(apiPath, request, env);
+    case "game":
+      return handleGame(apiPath, request, env);
+    case "hn":
+      return handleHacknetApi(apiPath, request, env);
+    case "season":
+      return handleSeasonApi(apiPath, request, env);
+    case "honor":
+      return handleHonorApi(apiPath, request, env);
+    case "market":
+      return handleMarket(apiPath, request, env);
+    case "oauth":
+      return handleOauthApi(apiPath, request, env);
+    case "rel":
+      return handleRelation(apiPath, request, env);
+    default:
+      return new Response(JSON.stringify({ error: "not found" }), {
+        status: 404,
+        headers: { "Content-Type": JSON_CT },
+      });
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const path = url.pathname.replace(/^\//, "");
+    return await handleErrors(request, async () => {
+      const url = new URL(request.url);
+      const path = url.pathname.replace(/^\//, "");
 
-    // Root path — serve v2 chat UI
-    if (path === "" || path === "index.html") {
-      return new Response(V2_HTML, {
-        headers: { "Content-Type": HTML_CT },
+      // Root — serve v2 chat UI
+      if (path === "" || path === "index.html") {
+        return new Response(V2_HTML, {
+          headers: {
+            "Content-Type": HTML_CT,
+            "Cache-Control": "no-cache, must-revalidate",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
+
+      // Static client assets
+      const modKey = path.startsWith("static/")
+        ? path.replace(/^static\//, "client/")
+        : path;
+      if (V2_MODULES[modKey]) {
+        return new Response(V2_MODULES[modKey], {
+          headers: {
+            "Content-Type": JS_CT,
+            "Cache-Control": "no-cache, must-revalidate",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
+
+      // API routes → v1-compatible handlers
+      if (path.startsWith("api/")) {
+        return handleV2Api(path.slice(4), request, env);
+      }
+
+      return new Response("CloudChat v2", {
+        status: 200,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
       });
-    }
-
-    // Static client assets: /static/<name> → module lookup
-    // Also supports /client/<name> directly (for module imports)
-    const modKey = path.startsWith("static/")
-      ? path.replace(/^static\//, "client/")
-      : path;
-
-    if (V2_MODULES[modKey]) {
-      return new Response(V2_MODULES[modKey], {
-        headers: {
-          "Content-Type": JS_CT,
-          "Cache-Control": "no-cache, must-revalidate",
-          "X-Content-Type-Options": "nosniff",
-        },
-      });
-    }
-
-    // API routes — forward to core handler
-    if (url.pathname.startsWith("/api/")) {
-      return new Response(JSON.stringify({ error: "v2 API routing in progress" }), {
-        status: 501,
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-      });
-    }
-
-    return new Response("CloudChat v2", {
-      status: 200,
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   },
 };

@@ -4,7 +4,7 @@
  */
 
 const listeners = new Map();
-const state = {
+export const state = {
   user: null,
   currentRoom: null,
   ws: null,

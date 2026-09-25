@@ -110,6 +110,17 @@ body {
   </div>
 </div>
 
+
+<div class="version-group">
+  <div class="version-header" onclick="toggle(this)">
+    <span class="version-tag">v1.61</span>
+    <span class="version-date">2026-09-25</span>
+    <span class="version-arrow open">▶</span>
+  </div>
+  <div class="version-body open">
+    <div class="feature-item"><span class="icon">🔧</span><span class="text"><span class="tag tag-fix">修复</span><b>@AI / /ai 命令完全失效</b> — 定位根因：<code>chatroom/http.mjs</code> 的 <code>/websocket</code> 端点建立了 WebSocketPair 但只调了 <code>handleSession(pair[1])</code>，从未给服务端端点 <code>pair[1]</code> 绑定 <code>onmessage</code>，导致所有 WS 入站消息（含 /ai /gh /lp 等命令）完全不经过 <code>webSocketMessage</code> 处理。修复：在 pair[1] accept 后增加 <code>pair[1].onmessage = e => room.webSocketMessage(pair[1], e.data)</code>；部署 9d824c00</span></div>
+  </div>
+</div>
 <div class="version-group">
   <div class="version-header" onclick="toggle(this)">
     <span class="version-tag">v1.59</span>
