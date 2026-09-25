@@ -1,4 +1,7 @@
-export default `<!DOCTYPE html>
+/**
+ * v2 Chat UI — HTML page template (used as a named const for clean bundling)
+ */
+export const V2_HTML = `<!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
