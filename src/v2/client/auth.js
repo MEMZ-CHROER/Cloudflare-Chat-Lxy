@@ -3,8 +3,8 @@
  */
 import { state, set, patch } from "./store.js";
 
-const TOKEN_KEY = "v2_token";
-const USER_KEY = "v2_user";
+const TOKEN_KEY = "chat_token";
+const USER_KEY = "chat_user";
 
 export async function login(username, password) {
   try {

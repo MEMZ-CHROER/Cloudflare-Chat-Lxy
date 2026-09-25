@@ -24,7 +24,7 @@ export function connectWebSocket(roomName, password) {
   ws.onopen = () => {
     console.log("[v2] WS connected");
     patch({ connected: true });
-    // Send v2 init with auth token if available (legacy format for server compatibility)
+    // Send join with auth token (same format as v1)
     const token = localStorage.getItem("chat_token") || "";
     ws.send(JSON.stringify({ name: state.user?.name || "Guest", token }));
   };
