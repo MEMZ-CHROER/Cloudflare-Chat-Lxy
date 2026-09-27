@@ -3,36 +3,14 @@
  */
 import { state, set, subscribe, patch } from "./store.js";
 import { sendMessage } from "./ws.js";
+import { renderChatMessage, renderMessageBatch } from "./renderers.override.js";
 
-export function renderMessage(msg) {
-  const div = document.createElement("div");
-  div.className = "v2-msg";
-  div.dataset.id = msg.id || Date.now();
-
-  const header = document.createElement("div");
-  header.className = "v2-msg-header";
-  const nameText = (msg.tag ? `[${msg.tag}] ` : "") + escapeHtml(msg.name || "Anonymous");
-  header.innerHTML = `<span class="v2-msg-name">${nameText}</span>
-    <span class="v2-msg-time">${formatTime(msg.timestamp)}</span>`;
-
-  const content = document.createElement("div");
-  content.className = "v2-msg-content";
-  // Support both 'content' (v2) and 'message' (v1 legacy) fields
-  const text = msg.content || msg.message || "";
-  content.innerHTML = msg.type === "image"
-    ? `<img src="${escapeHtml(text)}" style="max-width:100%;border-radius:8px;">`
-    : renderMarkdown(text);
-
-  div.appendChild(header);
-  div.appendChild(content);
-  return div;
-}
+let msgSubscription = null;
+let connSubscription = null;
 
 export function scrollToBottom() {
   const msgList = document.getElementById("v2-messages");
-  if (msgList) {
-    msgList.scrollTop = msgList.scrollHeight;
-  }
+  if (msgList) msgList.scrollTop = msgList.scrollHeight;
 }
 
 export function handleSend() {
@@ -40,33 +18,29 @@ export function handleSend() {
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
-
   const sent = sendMessage(text);
-  if (sent) {
-    input.value = "";
-  }
+  if (sent) input.value = "";
 }
 
-// Subscribe to new messages
-let msgSubscription = null;
 export function initMessageListener() {
   if (msgSubscription) msgSubscription();
   msgSubscription = subscribe("messages", (msgs) => {
     const msgList = document.getElementById("v2-messages");
     if (!msgList || !msgs) return;
-
     const lastMsg = msgs[msgs.length - 1];
-    if (lastMsg && lastMsg.id !== msgList.dataset.lastId) {
-      const div = renderMessage(lastMsg);
+    if (!lastMsg) return;
+    // Skip if already rendered
+    if (lastMsg.id && lastMsg.id === msgList.dataset.lastId) return;
+    const isSelf = state.user?.name && lastMsg.name === state.user.name;
+    const div = renderChatMessage(lastMsg, isSelf);
+    if (div) {
       msgList.appendChild(div);
-      msgList.dataset.lastId = lastMsg.id;
-      scrollToBottom();
+      if (lastMsg.id) msgList.dataset.lastId = String(lastMsg.id);
+      msgList.scrollTop = msgList.scrollHeight;
     }
   });
 }
 
-// Subscribe to connection status
-let connSubscription = null;
 export function initConnListener() {
   if (connSubscription) connSubscription();
   connSubscription = subscribe("connected", (connected) => {
@@ -78,25 +52,36 @@ export function initConnListener() {
   });
 }
 
+export function initOnlineUsersListener() {
+  subscribe("onlineUsers", (users) => {
+    const roster = document.getElementById("v2-roster-list");
+    if (!roster || !users) return;
+    roster.innerHTML = users.map(u => {
+      const isSelf = state.user?.name === u;
+      return `<div class="v2-roster-item${isSelf ? " self" : ""}" data-name="${escapeHtml(u)}">${escapeHtml(u)}${isSelf ? " (你)" : ""}</div>`;
+    }).join("");
+    const countEl = document.getElementById("v2-roster-count");
+    if (countEl) countEl.textContent = users.length;
+  });
+}
+
+export function loadMessages(container, messages) {
+  if (!container || !messages) return;
+  renderMessageBatch(container, messages, (name) => name === state.user?.name);
+}
+
+export function addSystemMessage(text) {
+  const msgList = document.getElementById("v2-messages");
+  if (!msgList) return;
+  const p = document.createElement("p");
+  p.className = "v2-system-msg";
+  p.textContent = text;
+  msgList.appendChild(p);
+  msgList.scrollTop = msgList.scrollHeight;
+}
+
 function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
-}
-
-function formatTime(ts) {
-  if (!ts) return "";
-  const d = new Date(ts);
-  return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function renderMarkdown(text) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/\n/g, "<br>");
 }

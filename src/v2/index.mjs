@@ -15,6 +15,7 @@ import V2_WS from "./client/ws.js";
 import V2_AUTH from "./client/auth.js";
 import V2_ROOM from "./client/room.js";
 import V2_CHAT from "./client/chat.js";
+import V2_RENDERERS from "./client/renderers.override.js";
 
 // ─── Inline HTML template ───
 const V2_HTML = `<!DOCTYPE html>
@@ -30,7 +31,18 @@ const V2_HTML = `<!DOCTYPE html>
     .v2-header { padding: 16px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
     .v2-header h1 { font-size: 1.25rem; }
     #v2-status { font-size: 0.875rem; padding: 4px 12px; border-radius: 9999px; background: #334155; }
+    #v2-chat-body { display: flex; flex: 1; overflow: hidden; }
     #v2-messages { flex: 1; overflow-y: auto; padding: 16px; }
+    .v2-msg { padding: 6px 12px; margin-bottom: 4px; background: transparent; word-wrap: break-word; }
+    .v2-msg.self { background: rgba(59,130,246,0.1); border-radius: 8px; padding: 6px 12px; margin-left: 20px; }
+    .v2-msg.other { background: rgba(30,41,59,0.5); border-radius: 8px; padding: 6px 12px; margin-right: 20px; }
+    .v2-system-msg { color: #64748b; font-style: italic; font-size: 0.875rem; padding: 4px 12px; margin-bottom: 4px; }
+    #v2-roster { width: 160px; background: #1e293b; border-left: 1px solid #334155; overflow-y: auto; padding: 8px; }
+    .v2-roster-item { padding: 4px 8px; font-size: 0.875rem; color: #94a3b8; border-radius: 4px; cursor: pointer; }
+    .v2-roster-item:hover { background: #334155; }
+    .v2-roster-item.self { color: #60a5fa; }
+    .v2-roster-header { font-size: 0.75rem; color: #64748b; padding: 4px 8px; text-transform: uppercase; }
+    textarea#v2-msg-input { resize: none; min-height: 44px; }
     .v2-msg { padding: 8px 12px; margin-bottom: 8px; background: #1e293b; border-radius: 8px; word-wrap: break-word; }
     .v2-msg-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.875rem; }
     .v2-msg-name { font-weight: 600; color: #60a5fa; }
@@ -80,6 +92,7 @@ const V2_MODULES = {
   "client/auth.js": V2_AUTH,
   "client/room.js": V2_ROOM,
   "client/chat.js": V2_CHAT,
+  "client/renderers.override.js": V2_RENDERERS,
 };
 
 const JS_CT = "application/javascript; charset=utf-8";
