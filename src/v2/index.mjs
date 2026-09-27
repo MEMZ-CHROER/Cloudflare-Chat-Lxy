@@ -40,6 +40,13 @@ import V2_KEYWORDS from "./client/modules/keywords.override.js";
 import V2_MUSIC from "./client/modules/music.override.js";
 import V2_NAV from "./client/modules/nav.override.js";
 import V2_PROFILE from "./client/modules/profile.override.js";
+import V2_SHOP from "./client/modules/shop.override.js";
+import V2_TASKS from "./client/modules/tasks.override.js";
+import V2_LOTTERY from "./client/modules/lottery.override.js";
+import V2_MARKET from "./client/modules/market.override.js";
+import V2_SEASON from "./client/modules/season.override.js";
+import V2_RELATION from "./client/modules/relation.override.js";
+import V2_VOICE from "./client/modules/voice-record.override.js";
 import V2_CHAT_SHELL from "./client/views/chat-shell.js";
 import V2_V2_CHAT from "./client/views/v2-chat.js";
 import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
@@ -267,6 +274,13 @@ const V2_MODULES = {
   "client/modules/music.override.js": V2_MUSIC,
   "client/modules/nav.override.js": V2_NAV,
   "client/modules/profile.override.js": V2_PROFILE,
+  "client/modules/shop.override.js": V2_SHOP,
+  "client/modules/tasks.override.js": V2_TASKS,
+  "client/modules/lottery.override.js": V2_LOTTERY,
+  "client/modules/market.override.js": V2_MARKET,
+  "client/modules/season.override.js": V2_SEASON,
+  "client/modules/relation.override.js": V2_RELATION,
+  "client/modules/voice-record.override.js": V2_VOICE,
   "client/views/chat-shell.js": V2_CHAT_SHELL,
   "client/views/v2-chat.js": V2_V2_CHAT,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
