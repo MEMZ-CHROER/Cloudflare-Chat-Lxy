@@ -211,7 +211,7 @@ export function showChat(roomName) {
 
   // Hide room list, show chat
   document.getElementById("v2-room-list").style.display = "none";
-  const chatroom = document.getElementById("v2-chatroom");
+  const chatroom = document.getElementById("chatroom");
   chatroom.style.display = "flex";
   chatroom.style.flexDirection = "column";
   chatroom.style.position = "fixed";
@@ -219,7 +219,7 @@ export function showChat(roomName) {
   chatroom.style.zIndex = "1";
 
   // Set room name in header area
-  document.querySelector("#v2-chatroom h2")?.remove(); // remove any leftover title
+  document.querySelector("#chatroom h2")?.remove(); // remove any leftover title
   const roomTitle = document.createElement("div");
   roomTitle.style.cssText = "padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;";
   roomTitle.innerHTML = `

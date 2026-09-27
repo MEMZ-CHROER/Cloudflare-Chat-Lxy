@@ -104,7 +104,7 @@ function handleSearchKey(e) {
 }
 
 function scrollToMessage(idx) {
-  const msgList = document.getElementById("v2-messages");
+  const msgList = document.getElementById("chatlog");
   if (!msgList) return;
 
   const msg = searchResults[idx];

@@ -83,7 +83,7 @@ function listChannels() {
 }
 
 function pinMessage() {
-  const msgList = document.getElementById("v2-messages");
+  const msgList = document.getElementById("chatlog");
   const lastMsg = msgList?.querySelector(".v2-msg:last-child");
   if (!lastMsg) throw new Error("没有可置顶的消息");
   const msgId = lastMsg.dataset.msgId;

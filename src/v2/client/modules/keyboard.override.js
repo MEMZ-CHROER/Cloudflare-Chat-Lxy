@@ -52,7 +52,7 @@ function handleShortcut(e) {
 }
 
 function openCommandPalette() {
-  const input = document.getElementById("v2-msg-input");
+  const input = document.getElementById("chat-input");
   if (input) {
     input.focus();
     input.value = "/";
@@ -68,12 +68,12 @@ function closePanels() {
 }
 
 function goToLatest() {
-  const msgList = document.getElementById("v2-messages");
+  const msgList = document.getElementById("chatlog");
   if (msgList) msgList.scrollTop = msgList.scrollHeight;
 }
 
 function goToOldest() {
-  const msgList = document.getElementById("v2-messages");
+  const msgList = document.getElementById("chatlog");
   if (msgList) msgList.scrollTop = 0;
 }
 

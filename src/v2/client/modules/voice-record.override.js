@@ -4,7 +4,7 @@ import { showToast, showError } from "./toast.override.js";
 import { attachReply } from "../upload.override.js";
 
 export function initVoiceRecord() {
-  const inputArea = document.getElementById("v2-input-area");
+  const inputArea = document.getElementById("chatroom");
   if (!inputArea) return;
 
   let mediaRecorder = null;

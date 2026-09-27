@@ -58,7 +58,7 @@ export const V2_HTML = `<!DOCTYPE html>
     </div>
   </div>
   <!-- Chat Room -->
-  <form id="v2-chatroom" action="/fake-form-action" style="display:none">
+  <form id="chatroom" action="/fake-form-action" style="display:none">
     <div id="v2-announcement-banner" style="display:none;padding:8px 16px;margin:0 8px 8px;background:linear-gradient(135deg,#fff3cd,#ffe0b2);border-radius:8px;font-size:13px;color:#856404;align-items:center;gap:8px;flex-shrink:0;">
       <span style="font-size:16px;">📢</span>
       <span id="v2-announcement-text" style="flex:1;"></span>

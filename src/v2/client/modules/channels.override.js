@@ -74,7 +74,7 @@ export function switchChannel(name) {
 }
 
 export function loadChannelMessages(channel) {
-  const msgList = document.getElementById("v2-messages");
+  const msgList = document.getElementById("chatlog");
   if (!msgList) return;
 
   // Check cache first

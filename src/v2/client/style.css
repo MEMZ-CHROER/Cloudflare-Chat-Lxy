@@ -5190,3 +5190,36 @@ body.theme-hacknet ::-webkit-scrollbar-track {
   font-family: inherit;
 }
 .msg-fold-btn:hover { background: var(--primary, #4a6cf7); color: #fff; }
+
+/* ─── v2 专属面板样式 ─── */
+#v2-achievements-panel,
+#v2-profile-panel,
+#v2-room-info-panel {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+#v2-achievements-panel .v2-achievements-close,
+#v2-profile-panel .v2-profile-close,
+#v2-room-info-panel .v2-room-info-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+#v2-achievements-panel > div,
+#v2-profile-panel > div,
+#v2-room-info-panel > div {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}

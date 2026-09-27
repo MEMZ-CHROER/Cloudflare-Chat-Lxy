@@ -52,7 +52,7 @@ export function toggleEmojiPanel() {
     btn.className = "v2-emoji-btn";
     btn.textContent = emoji;
     btn.addEventListener("click", () => {
-      const input = document.getElementById("v2-msg-input");
+      const input = document.getElementById("chat-input");
       if (input) {
         const start = input.selectionStart;
         const end = input.selectionEnd;

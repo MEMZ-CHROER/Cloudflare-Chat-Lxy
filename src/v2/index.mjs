@@ -57,6 +57,7 @@ import V2_UI from "./client/modules/ui.override.js";
 import V2_CHAT_SHELL from "./client/views/chat-shell.js";
 import V2_V2_CHAT from "./client/views/v2-chat.js";
 import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
+import V2_STYLE from "./client/style.css";
 
 // ─── v2 HTML template (from v2-chat.js) ───
 const V2_HTML = V2_V2_CHAT;
@@ -110,6 +111,7 @@ const V2_MODULES = {
   "client/views/chat-shell.js": V2_CHAT_SHELL,
   "client/views/v2-chat.js": V2_V2_CHAT,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
+  "client/style.css": V2_STYLE,
 };
 
 const JS_CT = "application/javascript; charset=utf-8";

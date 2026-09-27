@@ -3,7 +3,7 @@ import { state } from "../store.js";
 import { showToast } from "./toast.override.js";
 
 export function initImageUpload() {
-  const inputArea = document.getElementById("v2-input-area");
+  const inputArea = document.getElementById("chatroom");
   if (!inputArea) return;
 
   // Drag and drop zone
