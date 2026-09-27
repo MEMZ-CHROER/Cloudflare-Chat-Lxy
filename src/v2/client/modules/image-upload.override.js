@@ -1,6 +1,6 @@
 // v2 image upload override — drag & drop image upload
 import { state } from "./store.js";
-import { showToast } from "./tost.override.js";
+import { showToast } from "./toast.override.js";
 
 export function initImageUpload() {
   const inputArea = document.getElementById("v2-input-area");

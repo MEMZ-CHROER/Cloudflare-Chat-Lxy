@@ -20,7 +20,7 @@ import { isVip, initVipUI } from "./modules/vip.override.js";
 import { checkAchievements, renderAchievementsPanel } from "./modules/achievements.override.js";
 import { getV2State } from "./state.override.js";
 import { initI18n } from "./modules/i18n.override.js";
-import { showToast, showSuccess, showError } from "./modules/tost.override.js";
+import { showToast, showSuccess, showError } from "./modules/toast.override.js";
 
 export async function initV2App() {
   console.log("[v2] app initializing");
