@@ -1,5 +1,5 @@
 // v2 commands override — /command handler for v2 chat
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const COMMANDS = {
   help: { desc: "显示帮助", exec: showHelp },

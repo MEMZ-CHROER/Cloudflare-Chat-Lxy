@@ -1,5 +1,5 @@
 // v2 lottery override — simple random draw (backup if API not available)
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { showToast, showSuccess, showError } from "./toast.override.js";
 import { escapeHtml } from "../renderers.override.js";
 

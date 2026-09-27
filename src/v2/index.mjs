@@ -33,6 +33,7 @@ import V2_ROOMINFO from "./client/modules/roominfo.override.js";
 import V2_VIP from "./client/modules/vip.override.js";
 import V2_ACHIEVEMENTS from "./client/modules/achievements.override.js";
 import V2_TOAST from "./client/modules/toast.override.js";
+import V2_STATE from "./client/state.override.js";
 import V2_ASCII from "./client/modules/ascii.override.js";
 import V2_BANNER from "./client/modules/banner.override.js";
 import V2_I18N from "./client/modules/i18n.override.js";
@@ -273,6 +274,7 @@ const V2_MODULES = {
   "client/modules/vip.override.js": V2_VIP,
   "client/modules/achievements.override.js": V2_ACHIEVEMENTS,
   "client/modules/toast.override.js": V2_TOAST,
+  "client/state.override.js": V2_STATE,
   "client/modules/ascii.override.js": V2_ASCII,
   "client/modules/banner.override.js": V2_BANNER,
   "client/modules/i18n.override.js": V2_I18N,

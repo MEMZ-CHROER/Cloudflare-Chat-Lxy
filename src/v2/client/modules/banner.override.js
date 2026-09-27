@@ -1,5 +1,5 @@
 // v2 banner override — room announcement banner
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 export function renderBanner(announcement) {
   let banner = document.getElementById("v2-banner");

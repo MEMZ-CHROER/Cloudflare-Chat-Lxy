@@ -1,6 +1,6 @@
 // v2 DM (direct message) override — private messaging between users
-import { state, patch } from "./store.js";
-import { escapeHtml, formatTime } from "./renderers.override.js";
+import { state, patch } from "../store.js";
+import { escapeHtml, formatTime } from "../renderers.override.js";
 
 const DM_CACHE = new Map();
 

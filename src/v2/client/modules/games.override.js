@@ -1,5 +1,5 @@
 // v2 games override — simple browser games hub
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { showToast, showSuccess } from "./toast.override.js";
 
 const GAMES = {

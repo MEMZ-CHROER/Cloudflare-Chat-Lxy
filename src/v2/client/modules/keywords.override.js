@@ -1,5 +1,5 @@
 // v2 keywords override — sensitive word filtering (client-side preview)
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const BLOCKED_PATTERNS = [
   /傻逼/i, /草泥马/i, /操你妈/i, /日你娘/i, /干你妹/i,

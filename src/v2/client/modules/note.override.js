@@ -1,5 +1,5 @@
 // v2 note override — sticky notes / personal notepad
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { escapeHtml } from "../renderers.override.js";
 
 const NOTES_KEY = "v2_notes";

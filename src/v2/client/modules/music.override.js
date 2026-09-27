@@ -1,5 +1,5 @@
 // v2 music override — inline music player
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 let currentAudio = null;
 let musicQueue = [];

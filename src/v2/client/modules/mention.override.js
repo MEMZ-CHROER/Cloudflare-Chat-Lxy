@@ -1,5 +1,5 @@
 // v2 mention override — @mention system with notification
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 export function extractMentions(text) {
   const mentions = [];

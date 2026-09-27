@@ -1,6 +1,6 @@
 // v2 settings override — user settings panel
-import { state, patch } from "./store.js";
-import { escapeHtml } from "./renderers.override.js";
+import { state, patch } from "../store.js";
+import { escapeHtml } from "../renderers.override.js";
 
 export function openSettings() {
   let panel = document.getElementById("v2-settings-panel");

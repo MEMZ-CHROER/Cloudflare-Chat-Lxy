@@ -1,5 +1,5 @@
 // v2 keyboard shortcuts override — global key handlers
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { handleSend } from "../chat.js";
 
 const SHORTCUTS = {

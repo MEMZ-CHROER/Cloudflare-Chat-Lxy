@@ -1,5 +1,5 @@
 // v2 hacknet override — hacknet-style terminal game
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { showToast, showSuccess, showError } from "./toast.override.js";
 
 let hacknetState = null;

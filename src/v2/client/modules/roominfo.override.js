@@ -1,5 +1,5 @@
 // v2 room info override — room details panel
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { escapeHtml } from "../renderers.override.js";
 
 export function openRoomInfo() {

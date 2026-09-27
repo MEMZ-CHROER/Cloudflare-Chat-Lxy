@@ -1,5 +1,5 @@
 // v2 nav override — navigation between views
-import { state, patch } from "./store.js";
+import { state, patch } from "../store.js";
 
 export function navTo(view, params = {}) {
   const app = document.getElementById("v2-app");

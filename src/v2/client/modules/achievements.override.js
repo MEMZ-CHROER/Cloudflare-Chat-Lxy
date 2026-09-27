@@ -1,5 +1,5 @@
 // v2 achievements override — user achievement system
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const ACHIEVEMENTS = [
   { id: "first_msg", name: "初出茅庐", desc: "发送第一条消息", icon: "💬", check: (s) => s.totalMsgs >= 1 },

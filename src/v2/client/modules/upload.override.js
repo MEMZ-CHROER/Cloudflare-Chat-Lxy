@@ -1,5 +1,5 @@
 // v2 upload override — file/image upload via WebSocket or API
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { showToast } from "./toast.override.js";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB

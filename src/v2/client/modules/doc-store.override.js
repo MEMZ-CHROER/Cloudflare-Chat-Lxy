@@ -1,5 +1,5 @@
 // v2 doc store override — document storage and retrieval
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const DOC_PREFIX = "doc:";
 

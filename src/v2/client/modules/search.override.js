@@ -1,6 +1,6 @@
 // v2 search override — client-side message search
-import { state } from "./store.js";
-import { escapeHtml, formatTime } from "./renderers.override.js";
+import { state } from "../store.js";
+import { escapeHtml, formatTime } from "../renderers.override.js";
 
 let searchResults = [];
 let searchIndex = -1;

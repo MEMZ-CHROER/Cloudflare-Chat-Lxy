@@ -1,6 +1,6 @@
 // v2 channels override — channel tab UI with v2 styling
-import { state, patch } from "./store.js";
-import { escapeHtml } from "./renderers.override.js";
+import { state, patch } from "../store.js";
+import { escapeHtml } from "../renderers.override.js";
 
 const CHANNEL_CACHE = new Map();
 const MAX_CACHE = 150;

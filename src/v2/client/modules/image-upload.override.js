@@ -1,5 +1,5 @@
 // v2 image upload override — drag & drop image upload
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { showToast } from "./toast.override.js";
 
 export function initImageUpload() {

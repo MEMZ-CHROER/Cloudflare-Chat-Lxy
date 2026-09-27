@@ -1,5 +1,5 @@
 // v2 ui override — common UI utilities
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { showToast } from "./toast.override.js";
 
 export function confirmDialog(message, callback) {

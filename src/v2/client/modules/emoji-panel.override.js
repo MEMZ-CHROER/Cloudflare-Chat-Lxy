@@ -1,5 +1,5 @@
 // v2 emoji panel override — emoji picker for chat
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const EMOJI_LIST = [
   "😀", "😃", "😄", "😁", "😆", "😅",

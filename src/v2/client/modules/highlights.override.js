@@ -1,5 +1,5 @@
 // v2 highlights override — keyword highlighting for messages
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const HIGHLIGHTS_KEY = "v2_highlights";
 

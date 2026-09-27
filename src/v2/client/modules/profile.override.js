@@ -1,5 +1,5 @@
 // v2 user profile override — user card on click
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const EXP_TABLE = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500, 6700, 8000, 9500, 11200, 13000, 15000, 17500, 20000, 25000];
 

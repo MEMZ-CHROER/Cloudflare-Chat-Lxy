@@ -1,5 +1,5 @@
 // v2 favorites override — message bookmarking system
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 const FAVORITES_KEY = "v2_favorites";
 

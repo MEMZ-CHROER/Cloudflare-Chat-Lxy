@@ -1,5 +1,5 @@
 // v2 season override — seasonal battle pass / event system
-import { state } from "./store.js";
+import { state } from "../store.js";
 import { showToast, showSuccess, showError } from "./toast.override.js";
 import { escapeHtml } from "../renderers.override.js";
 

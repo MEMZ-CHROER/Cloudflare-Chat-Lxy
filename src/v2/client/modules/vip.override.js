@@ -1,5 +1,5 @@
 // v2 vip override — VIP feature checks and UI
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 export function isVip() {
   return state.user?.vip || false;

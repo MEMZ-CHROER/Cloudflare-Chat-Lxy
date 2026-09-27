@@ -1,5 +1,5 @@
 // v2 notifications override — browser notifications for mentions and DMs
-import { state } from "./store.js";
+import { state } from "../store.js";
 
 let notifPermission = "default";
 
