@@ -255,20 +255,6 @@ const V2_MODULES = {
   "client/views/v2-chat.js": V2_V2_CHAT,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
 };
-  "client/modules/favorites.override.js": await import("./client/modules/favorites.override.js"),
-  "client/modules/commands.override.js": await import("./client/modules/commands.override.js"),
-  "client/modules/notifications.override.js": await import("./client/modules/notifications.override.js"),
-  "client/modules/keyboard.override.js": await import("./client/modules/keyboard.override.js"),
-  "client/modules/upload.override.js": await import("./client/modules/upload.override.js"),
-  "client/modules/image-upload.override.js": await import("./client/modules/image-upload.override.js"),
-  "client/modules/highlights.override.js": await import("./client/modules/highlights.override.js"),
-  "client/modules/roominfo.override.js": await import("./client/modules/roominfo.override.js"),
-  "client/modules/vip.override.js": await import("./client/modules/vip.override.js"),
-  "client/modules/achievements.override.js": await import("./client/modules/achievements.override.js"),
-  "client/views/chat-shell.js": await import("./client/views/chat-shell.js"),
-  "client/views/v2-chat.js": await import("./client/views/v2-chat.js"),
-  "client/views/auto-discover.js": await import("./client/views/auto-discover.js"),
-};
 
 const JS_CT = "application/javascript; charset=utf-8";
 const HTML_CT = "text/html; charset=utf-8";
