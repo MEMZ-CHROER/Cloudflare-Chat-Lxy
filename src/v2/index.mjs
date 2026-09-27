@@ -16,6 +16,25 @@ import V2_AUTH from "./client/auth.js";
 import V2_ROOM from "./client/room.js";
 import V2_CHAT from "./client/chat.js";
 import V2_RENDERERS from "./client/renderers.override.js";
+import V2_CHANNELS from "./client/modules/channels.override.js";
+import V2_DM from "./client/modules/dm.override.js";
+import V2_SEARCH from "./client/modules/search.override.js";
+import V2_SETTINGS from "./client/modules/settings.override.js";
+import V2_EMOJI from "./client/modules/emoji-panel.override.js";
+import V2_MENTION from "./client/modules/mention.override.js";
+import V2_FAVORITES from "./client/modules/favorites.override.js";
+import V2_COMMANDS from "./client/modules/commands.override.js";
+import V2_NOTIF from "./client/modules/notifications.override.js";
+import V2_KEYBOARD from "./client/modules/keyboard.override.js";
+import V2_UPLOAD from "./client/modules/upload.override.js";
+import V2_IMGUPLOAD from "./client/modules/image-upload.override.js";
+import V2_HIGHLIGHTS from "./client/modules/highlights.override.js";
+import V2_ROOMINFO from "./client/modules/roominfo.override.js";
+import V2_VIP from "./client/modules/vip.override.js";
+import V2_ACHIEVEMENTS from "./client/modules/achievements.override.js";
+import V2_CHAT_SHELL from "./client/views/chat-shell.js";
+import V2_V2_CHAT from "./client/views/v2-chat.js";
+import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
 
 // ─── Inline HTML template ───
 const V2_HTML = `<!DOCTYPE html>
@@ -216,12 +235,26 @@ const V2_MODULES = {
   "client/room.js": V2_ROOM,
   "client/chat.js": V2_CHAT,
   "client/renderers.override.js": V2_RENDERERS,
-  "client/modules/channels.override.js": await import("./client/modules/channels.override.js"),
-  "client/modules/dm.override.js": await import("./client/modules/dm.override.js"),
-  "client/modules/search.override.js": await import("./client/modules/search.override.js"),
-  "client/modules/settings.override.js": await import("./client/modules/settings.override.js"),
-  "client/modules/emoji-panel.override.js": await import("./client/modules/emoji-panel.override.js"),
-  "client/modules/mention.override.js": await import("./client/modules/mention.override.js"),
+  "client/modules/channels.override.js": V2_CHANNELS,
+  "client/modules/dm.override.js": V2_DM,
+  "client/modules/search.override.js": V2_SEARCH,
+  "client/modules/settings.override.js": V2_SETTINGS,
+  "client/modules/emoji-panel.override.js": V2_EMOJI,
+  "client/modules/mention.override.js": V2_MENTION,
+  "client/modules/favorites.override.js": V2_FAVORITES,
+  "client/modules/commands.override.js": V2_COMMANDS,
+  "client/modules/notifications.override.js": V2_NOTIF,
+  "client/modules/keyboard.override.js": V2_KEYBOARD,
+  "client/modules/upload.override.js": V2_UPLOAD,
+  "client/modules/image-upload.override.js": V2_IMGUPLOAD,
+  "client/modules/highlights.override.js": V2_HIGHLIGHTS,
+  "client/modules/roominfo.override.js": V2_ROOMINFO,
+  "client/modules/vip.override.js": V2_VIP,
+  "client/modules/achievements.override.js": V2_ACHIEVEMENTS,
+  "client/views/chat-shell.js": V2_CHAT_SHELL,
+  "client/views/v2-chat.js": V2_V2_CHAT,
+  "client/views/auto-discover.js": V2_AUTO_DISCOVER,
+};
   "client/modules/favorites.override.js": await import("./client/modules/favorites.override.js"),
   "client/modules/commands.override.js": await import("./client/modules/commands.override.js"),
   "client/modules/notifications.override.js": await import("./client/modules/notifications.override.js"),
