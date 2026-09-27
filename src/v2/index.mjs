@@ -32,6 +32,7 @@ import V2_HIGHLIGHTS from "./client/modules/highlights.override.js";
 import V2_ROOMINFO from "./client/modules/roominfo.override.js";
 import V2_VIP from "./client/modules/vip.override.js";
 import V2_ACHIEVEMENTS from "./client/modules/achievements.override.js";
+import V2_TOAST from "./client/modules/toast.override.js";
 import V2_CHAT_SHELL from "./client/views/chat-shell.js";
 import V2_V2_CHAT from "./client/views/v2-chat.js";
 import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
@@ -251,6 +252,7 @@ const V2_MODULES = {
   "client/modules/roominfo.override.js": V2_ROOMINFO,
   "client/modules/vip.override.js": V2_VIP,
   "client/modules/achievements.override.js": V2_ACHIEVEMENTS,
+  "client/modules/toast.override.js": V2_TOAST,
   "client/views/chat-shell.js": V2_CHAT_SHELL,
   "client/views/v2-chat.js": V2_V2_CHAT,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
