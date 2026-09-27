@@ -172,7 +172,8 @@ export function sendMessage(content) {
     console.error("[v2] WS not connected");
     return false;
   }
-  ws.send(JSON.stringify({ v: "v2", t: "msg", d: { type: "msg", content } }));
+  // v2 envelope with message field (server expects data.message)
+  ws.send(JSON.stringify({ v: "v2", t: "msg", d: { message: content } }));
   return true;
 }
 
