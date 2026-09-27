@@ -1,22 +1,53 @@
 /**
  * v2 Main entry point — initializes auth, room, and chat modules
+ * Integrates all override modules for full v2 UI
  */
 import { state, set, patch } from "./store.js";
 import { checkAuth, login, register, skipAuth } from "./auth.js";
 import { fetchRooms, joinRoom, createRoom, leaveRoom } from "./room.js";
 import { initMessageListener, initConnListener, initOnlineUsersListener, handleSend, addSystemMessage, loadMessages } from "./chat.js";
+import { buildChannelBar, updateChannelBadges } from "./modules/channels.override.js";
+import { openDM, closeDM, updateDmBadge } from "./modules/dm.override.js";
+import { toggleSearch, doSearch } from "./modules/search.override.js";
+import { openSettings, closeV2Settings, saveV2Settings, initSettings } from "./modules/settings.override.js";
+import { toggleEmojiPanel } from "./modules/emoji-panel.override.js";
+import { handleCommand } from "./modules/commands.override.js";
+import { initKeyboardShortcuts } from "./modules/keyboard.override.js";
+import { initNotifications, requestNotifPermission } from "./modules/notifications.override.js";
+import { initImageUpload } from "./modules/image-upload.override.js";
+import { openRoomInfo } from "./modules/roominfo.override.js";
+import { isVip, initVipUI } from "./modules/vip.override.js";
+import { checkAchievements, renderAchievementsPanel } from "./modules/achievements.override.js";
+import { getV2State } from "./state.override.js";
+import { initI18n } from "./modules/i18n.override.js";
+import { showToast, showSuccess, showError } from "./modules/tost.override.js";
 
 export async function initV2App() {
   console.log("[v2] app initializing");
+
+  // Init i18n and settings first
+  initI18n();
+  initSettings();
+
   const authResult = await checkAuth();
   if (authResult.ok) {
     showRoomList();
   } else {
     showAuthForm();
   }
+
   initMessageListener();
   initConnListener();
   initOnlineUsersListener();
+  initKeyboardShortcuts();
+
+  // Delayed inits (need DOM)
+  setTimeout(() => {
+    initImageUpload();
+    initVipUI();
+    checkAchievements(getV2State());
+    requestNotifPermission();
+  }, 500);
 }
 
 function showAuthForm() {
@@ -25,6 +56,7 @@ function showAuthForm() {
     <div id="v2-auth">
       <div class="v2-auth-card">
         <h1>CloudChat v2</h1>
+        <div class="v2-auth-subtitle">Dual Worker Architecture</div>
         <div class="v2-auth-tabs">
           <button class="v2-auth-tab active" data-tab="login">登录</button>
           <button class="v2-auth-tab" data-tab="register">注册</button>
@@ -42,6 +74,10 @@ function showAuthForm() {
           <button id="v2-reg-btn" class="v2-auth-btn">注册</button>
           <div id="v2-reg-error" class="v2-auth-error"></div>
         </div>
+        <div class="v2-auth-footer">
+          <button class="v2-lang-btn" onclick="window.__v2_setLanguage('en')">EN</button>
+          <button class="v2-lang-btn" onclick="window.__v2_setLanguage('zh')">中文</button>
+        </div>
       </div>
     </div>
   `;
@@ -57,27 +93,24 @@ function showAuthForm() {
   document.getElementById("v2-login-btn").addEventListener("click", async () => {
     const username = document.getElementById("v2-login-name").value.trim();
     const password = document.getElementById("v2-login-pass").value;
-    if (!username || !password) { showAuthError("v2-login-error", "请输入用户名和密码"); return; }
+    if (!username || !password) { showError("请输入用户名和密码"); return; }
     const result = await login(username, password);
-    if (result.ok) { showRoomList(); } else { showAuthError("v2-login-error", result.error); }
+    if (result.ok) { showSuccess("登录成功"); showRoomList(); }
+    else { showError(result.error || "登录失败"); }
   });
   document.getElementById("v2-reg-btn").addEventListener("click", async () => {
     const username = document.getElementById("v2-reg-name").value.trim();
     const password = document.getElementById("v2-reg-pass").value;
-    if (!username || !password || password.length < 6) { showAuthError("v2-reg-error", "用户名必填，密码至少6位"); return; }
+    if (!username || !password || password.length < 6) { showError("用户名必填，密码至少6位"); return; }
     const result = await register(username, password);
-    if (result.ok) { showRoomList(); } else { showAuthError("v2-reg-error", result.error); }
+    if (result.ok) { showSuccess("注册成功"); showRoomList(); }
+    else { showError(result.error || "注册失败"); }
   });
   document.getElementById("v2-skip-auth").addEventListener("click", () => { skipAuth(); showRoomList(); });
   document.getElementById("v2-login-name").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-login-btn").click(); });
   document.getElementById("v2-login-pass").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-login-btn").click(); });
   document.getElementById("v2-reg-name").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-reg-btn").click(); });
   document.getElementById("v2-reg-pass").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("v2-reg-btn").click(); });
-}
-
-function showAuthError(id, msg) {
-  const el = document.getElementById(id);
-  if (el) { el.textContent = msg; el.style.display = "block"; }
 }
 
 async function showRoomList() {
@@ -87,7 +120,11 @@ async function showRoomList() {
     <div id="v2-room-list">
       <div class="v2-header">
         <h1>CloudChat v2</h1>
-        <span id="v2-user-info">${escapeHtml(state.user?.name || "Guest")}</span>
+        <div class="v2-header-actions">
+          <span id="v2-user-info">${escapeHtml(state.user?.name || "Guest")}${isVip() ? '<span class="v2-vip-badge">VIP</span>' : ''}</span>
+          <button class="v2-header-btn" onclick="window.__v2_openSettings()">⚙️</button>
+          <button class="v2-header-btn" onclick="window.__v2_renderAchievements()">🏆</button>
+        </div>
       </div>
       <div class="v2-room-input">
         <input id="v2-room-name" placeholder="输入房间名称" maxlength="32">
@@ -95,7 +132,10 @@ async function showRoomList() {
       </div>
       <div class="v2-room-divider">或选择已有房间</div>
       <div id="v2-rooms">
-        ${rooms.map(r => `<button class="v2-room-btn" data-room="${escapeHtml(r.name)}">${escapeHtml(r.name)}</button>`).join("")}
+        ${rooms.length > 0 ? rooms.map(r => `<button class="v2-room-btn" data-room="${escapeHtml(r.name)}">${escapeHtml(r.name)}</button>`).join("") : '<div class="v2-no-rooms">暂无房间，创建一个吧</div>'}
+      </div>
+      <div class="v2-room-footer">
+        <button class="v2-create-room-btn" onclick="window.__v2_showCreateRoom()">+ 创建房间</button>
       </div>
     </div>
   `;
@@ -111,34 +151,76 @@ async function showRoomList() {
   });
 }
 
-export function showChat() {
+function showCreateRoom() {
+  const name = prompt("输入房间名称：");
+  if (!name) return;
+  const password = prompt("设置房间密码（留空则无密码）：");
+  joinRoom(name, password || undefined);
+}
+
+export function showChat(roomName) {
+  if (roomName) state.currentRoom = roomName;
+
   const app = document.getElementById("v2-app");
   app.innerHTML = `
     <div id="v2-chat">
       <div class="v2-header">
         <h1>CloudChat v2</h1>
-        <span class="v2-room-name" id="v2-room-name">${escapeHtml(state.currentRoom)}</span>
-        <span id="v2-status">connecting...</span>
+        <div class="v2-header-center">
+          <span class="v2-room-name" id="v2-room-name" onclick="window.__v2_openRoomInfo()">#${escapeHtml(state.currentRoom)}</span>
+          <span class="v2-channel-tabs" id="v2-channel-bar"></span>
+        </div>
+        <div class="v2-header-actions">
+          <span id="v2-status">connecting...</span>
+          <span id="v2-dm-badge" class="v2-dm-badge" style="display:none">0</span>
+          <button class="v2-header-btn" onclick="window.__v2_openSettings()">⚙️</button>
+          <button class="v2-header-btn" onclick="window.__v2_toggleSearch()">🔍</button>
+          <button class="v2-header-btn" onclick="window.__v2_openRoomInfo()">ℹ️</button>
+        </div>
       </div>
       <div id="v2-chat-body">
         <div id="v2-messages">
           <div id="v2-msg-spinner" style="text-align:center;padding:20px;color:#64748b;">加载历史消息...</div>
         </div>
         <div id="v2-input-area">
-          <textarea id="v2-msg-input" placeholder="输入消息... (Shift+Enter 换行)" maxlength="5000" rows="1"></textarea>
+          <button class="v2-emoji-btn" onclick="window.__v2_toggleEmoji()">😊</button>
+          <button class="v2-upload-btn" onclick="window.__v2_triggerFileUpload()">📎</button>
+          <textarea id="v2-msg-input" placeholder="输入消息... (Shift+Enter 换行, / 命令)" maxlength="5000" rows="1"></textarea>
           <button id="v2-send-btn">发送</button>
         </div>
       </div>
     </div>
   `;
 
+  // Build channel bar
+  buildChannelBar();
+
   // Send message
-  document.getElementById("v2-send-btn").addEventListener("click", handleSend);
+  document.getElementById("v2-send-btn").addEventListener("click", () => {
+    const input = document.getElementById("v2-msg-input");
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Check for commands
+    if (text.startsWith("/")) {
+      if (handleCommand(text)) {
+        input.value = "";
+        return;
+      }
+    }
+
+    if (window.__v2_handleSend?.(text)) {
+      input.value = "";
+    }
+  });
+
   const input = document.getElementById("v2-msg-input");
   input.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      document.getElementById("v2-send-btn").click();
+    }
   });
-  // Auto-resize textarea
   input.addEventListener("input", () => {
     input.style.height = "auto";
     input.style.height = Math.min(input.scrollHeight, 200) + "px";
@@ -177,7 +259,10 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Export for room.js
+// Export all functions for window access
 window.__v2_showChat = showChat;
-// Export for HTML script
 window.__v2_init = initV2App;
+window.__v2_showRoomList = showRoomList;
+window.__v2_showAuth = showAuthForm;
+window.__v2_showCreateRoom = showCreateRoom;
+window.__v2_handleSend = handleSend;

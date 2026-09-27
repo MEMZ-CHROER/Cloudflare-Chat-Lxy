@@ -74,12 +74,135 @@ const V2_HTML = `<!DOCTYPE html>
     .v2-room-btn { padding: 12px 16px; border: 1px solid #334155; border-radius: 6px; background: #1e293b; color: #e2e8f0; text-align: left; cursor: pointer; }
     .v2-room-btn:hover { background: #334155; }
     #v2-user-info { font-size: 0.875rem; color: #64748b; }
+    .v2-header-actions { display: flex; align-items: center; gap: 8px; }
+    .v2-header-center { flex: 1; text-align: center; }
+    .v2-room-name { font-size: 0.9rem; color: #94a3b8; cursor: pointer; }
+    .v2-room-name:hover { color: #e2e8f0; }
+    .v2-channel-tabs { display: flex; gap: 4px; margin-top: 4px; justify-content: center; }
+    .v2-channel { padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; background: #334155; color: #94a3b8; cursor: pointer; border: none; }
+    .v2-channel.active { background: #3b82f6; color: white; }
+    .v2-channel-badge { font-size: 0.7rem; background: #ef4444; color: white; border-radius: 50%; padding: 1px 5px; margin-left: 4px; }
+    .v2-header-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+    .v2-header-btn:hover { background: #334155; }
+    .v2-dm-badge { background: #ef4444; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.75rem; margin-left: 4px; }
+    .v2-msg-bubble { margin-top: 4px; line-height: 1.5; }
+    .v2-msg-bubble code { background: #334155; padding: 2px 4px; border-radius: 3px; font-size: 0.9em; }
+    .v2-msg-bubble strong { color: #60a5fa; }
+    .v2-msg-bubble em { color: #94a3b8; font-style: italic; }
+    #v2-input-area { padding: 16px; background: #1e293b; border-top: 1px solid #334155; display: flex; gap: 8px; align-items: flex-end; }
+    .v2-emoji-btn, .v2-upload-btn { padding: 12px; border: none; border-radius: 8px; background: #334155; color: #e2e8f0; font-size: 1.2rem; cursor: pointer; }
+    .v2-emoji-btn:hover, .v2-upload-btn:hover { background: #475569; }
+    .v2-emoji-panel { position: absolute; bottom: 80px; left: 16px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; max-height: 200px; overflow-y: auto; }
+    .v2-emoji-btn-item { font-size: 1.5rem; cursor: pointer; padding: 4px; border-radius: 4px; }
+    .v2-emoji-btn-item:hover { background: #334155; }
+    #v2-msg-input { flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; font-size: 1rem; resize: none; }
+    #v2-msg-input:focus { outline: none; border-color: #3b82f6; }
+    #v2-send-btn { padding: 12px 24px; border: none; border-radius: 8px; background: #3b82f6; color: white; font-size: 1rem; cursor: pointer; }
+    #v2-send-btn:hover { background: #2563eb; }
+    .v2-auth-card { position: relative; }
+    .v2-auth-subtitle { text-align: center; color: #64748b; font-size: 0.875rem; margin-bottom: 16px; }
+    .v2-auth-footer { display: flex; justify-content: center; gap: 16px; margin-top: 16px; }
+    .v2-lang-btn { background: none; border: 1px solid #334155; color: #94a3b8; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
+    .v2-lang-btn:hover { background: #334155; }
+    .v2-no-rooms { text-align: center; color: #64748b; padding: 20px; }
+    .v2-create-room-btn { width: 100%; padding: 12px; border: 2px dashed #334155; border-radius: 6px; background: transparent; color: #64748b; cursor: pointer; font-size: 1rem; }
+    .v2-create-room-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+    .v2-settings-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .v2-settings-modal { background: #1e293b; border-radius: 12px; padding: 24px; width: 90%; max-width: 400px; }
+    .v2-settings-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .v2-settings-header h2 { font-size: 1.25rem; }
+    .v2-settings-close { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; }
+    .v2-settings-section { margin-bottom: 20px; }
+    .v2-settings-section h3 { font-size: 1rem; color: #94a3b8; margin-bottom: 12px; }
+    .v2-settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .v2-settings-row label { color: #e2e8f0; }
+    .v2-settings-row input[type="text"], .v2-settings-row select { padding: 8px; border: 1px solid #334155; border-radius: 4px; background: #0f172a; color: #e2e8f0; }
+    .v2-settings-footer { display: flex; gap: 12px; justify-content: flex-end; }
+    .v2-settings-save, .v2-settings-cancel { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+    .v2-settings-save { background: #3b82f6; color: white; }
+    .v2-settings-cancel { background: #334155; color: #e2e8f0; }
+    .v2-room-info-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .v2-room-info-card { background: #1e293b; border-radius: 12px; padding: 24px; width: 90%; max-width: 400px; }
+    .v2-room-info-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .v2-room-info-header h2 { font-size: 1.25rem; }
+    .v2-room-info-close { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; }
+    .v2-info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155; }
+    .v2-info-row .label { color: #64748b; }
+    .v2-info-row .value { color: #e2e8f0; }
+    .v2-room-info-footer { display: flex; gap: 12px; margin-top: 20px; }
+    .v2-room-info-footer button { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+    .v2-room-info-footer button:first-child { background: #3b82f6; color: white; }
+    .v2-room-info-footer button:last-child { background: #ef4444; color: white; }
+    .v2-achievements-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .v2-achievements-modal { background: #1e293b; border-radius: 12px; padding: 24px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+    .v2-achievements-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .v2-achievements-header h2 { font-size: 1.25rem; }
+    .v2-achievements-close { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; }
+    .v2-achievement { display: flex; align-items: center; padding: 12px; border-radius: 8px; margin-bottom: 8px; background: #0f172a; }
+    .v2-achievement.locked { opacity: 0.5; }
+    .v2-achievement-icon { font-size: 2rem; margin-right: 12px; }
+    .v2-achievement-info { flex: 1; }
+    .v2-achievement-name { font-weight: 600; color: #e2e8f0; }
+    .v2-achievement-desc { font-size: 0.875rem; color: #64748b; }
+    .v2-achievement-unlocked { color: #22c55e; font-size: 0.875rem; }
+    .v2-search-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-start; justify-content: center; padding-top: 100px; z-index: 1000; }
+    .v2-search-panel { background: #1e293b; border-radius: 12px; padding: 20px; width: 90%; max-width: 600px; }
+    .v2-search-header { display: flex; gap: 12px; margin-bottom: 16px; }
+    .v2-search-input { flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #e2e8f0; font-size: 1rem; }
+    .v2-search-close { background: #334155; border: none; color: #e2e8f0; padding: 12px 16px; border-radius: 6px; cursor: pointer; }
+    .v2-search-results { max-height: 400px; overflow-y: auto; }
+    .v2-search-item { padding: 12px; border-radius: 6px; margin-bottom: 8px; background: #0f172a; cursor: pointer; }
+    .v2-search-item:hover, .v2-search-item.active { background: #334155; }
+    .v2-search-item-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .v2-search-item-name { font-weight: 600; color: #60a5fa; }
+    .v2-search-item-time { color: #64748b; font-size: 0.875rem; }
+    .v2-search-item-text { color: #e2e8f0; font-size: 0.9rem; }
+    .v2-search-empty { text-align: center; color: #64748b; padding: 20px; }
+    mark { background: #fbbf24; color: #0f172a; padding: 2px 4px; border-radius: 2px; }
+    .v2-dm-panel { position: absolute; right: 0; top: 0; bottom: 0; width: 300px; background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; }
+    .v2-dm-header { padding: 16px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .v2-dm-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
+    .v2-dm-messages { flex: 1; overflow-y: auto; padding: 16px; }
+    .v2-dm-msg { margin-bottom: 12px; }
+    .v2-dm-msg.self { text-align: right; }
+    .v2-dm-msg.other { text-align: left; }
+    .v2-dm-name { font-size: 0.75rem; color: #64748b; margin-bottom: 2px; }
+    .v2-dm-text { display: inline-block; padding: 8px 12px; border-radius: 8px; background: #334155; color: #e2e8f0; max-width: 80%; }
+    .v2-dm-msg.self .v2-dm-text { background: #3b82f6; color: white; }
+    .v2-dm-time { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
+    .v2-dm-system { text-align: center; color: #64748b; font-size: 0.875rem; padding: 20px; }
+    .v2-dm-input-area { padding: 16px; border-top: 1px solid #334155; display: flex; flex-direction: column; gap: 8px; }
+    .v2-dm-input { width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #e2e8f0; resize: none; }
+    .v2-dm-send { padding: 10px; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer; }
+    .v2-dm-send:hover { background: #2563eb; }
+    .v2-toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; }
+    .v2-toast { padding: 12px 20px; border-radius: 8px; color: white; font-size: 0.9rem; animation: slideIn 0.3s ease; }
+    .v2-toast-success { background: #22c55e; }
+    .v2-toast-error { background: #ef4444; }
+    .v2-toast-warning { background: #f59e0b; }
+    .v2-toast-info { background: #3b82f6; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    .v2-toast-hide { animation: slideOut 0.3s ease forwards; }
+    .v2-highlight-badge { background: #fbbf24; color: #0f172a; font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-left: 4px; }
   </style>
 </head>
 <body>
   <div id="v2-app"></div>
   <script type="module">
     import { initV2App } from '/static/app.js';
+    import { openSettings } from '/static/modules/settings.override.js';
+    import { toggleSearch } from '/static/modules/search.override.js';
+    import { toggleEmojiPanel } from '/static/modules/emoji-panel.override.js';
+    import { openRoomInfo } from '/static/modules/roominfo.override.js';
+    import { renderAchievementsPanel } from '/static/modules/achievements.override.js';
+    import { initKeyboardShortcuts } from '/static/modules/keyboard.override.js';
+    window.__v2_openSettings = openSettings;
+    window.__v2_toggleSearch = toggleSearch;
+    window.__v2_toggleEmoji = toggleEmojiPanel;
+    window.__v2_openRoomInfo = openRoomInfo;
+    window.__v2_renderAchievements = renderAchievementsPanel;
+    window.__v2_initKeyboardShortcuts = initKeyboardShortcuts;
     initV2App();
   </script>
 </body>
@@ -93,6 +216,25 @@ const V2_MODULES = {
   "client/room.js": V2_ROOM,
   "client/chat.js": V2_CHAT,
   "client/renderers.override.js": V2_RENDERERS,
+  "client/modules/channels.override.js": await import("./client/modules/channels.override.js"),
+  "client/modules/dm.override.js": await import("./client/modules/dm.override.js"),
+  "client/modules/search.override.js": await import("./client/modules/search.override.js"),
+  "client/modules/settings.override.js": await import("./client/modules/settings.override.js"),
+  "client/modules/emoji-panel.override.js": await import("./client/modules/emoji-panel.override.js"),
+  "client/modules/mention.override.js": await import("./client/modules/mention.override.js"),
+  "client/modules/favorites.override.js": await import("./client/modules/favorites.override.js"),
+  "client/modules/commands.override.js": await import("./client/modules/commands.override.js"),
+  "client/modules/notifications.override.js": await import("./client/modules/notifications.override.js"),
+  "client/modules/keyboard.override.js": await import("./client/modules/keyboard.override.js"),
+  "client/modules/upload.override.js": await import("./client/modules/upload.override.js"),
+  "client/modules/image-upload.override.js": await import("./client/modules/image-upload.override.js"),
+  "client/modules/highlights.override.js": await import("./client/modules/highlights.override.js"),
+  "client/modules/roominfo.override.js": await import("./client/modules/roominfo.override.js"),
+  "client/modules/vip.override.js": await import("./client/modules/vip.override.js"),
+  "client/modules/achievements.override.js": await import("./client/modules/achievements.override.js"),
+  "client/views/chat-shell.js": await import("./client/views/chat-shell.js"),
+  "client/views/v2-chat.js": await import("./client/views/v2-chat.js"),
+  "client/views/auto-discover.js": await import("./client/views/auto-discover.js"),
 };
 
 const JS_CT = "application/javascript; charset=utf-8";
