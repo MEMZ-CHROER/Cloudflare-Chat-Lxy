@@ -1,8 +1,21 @@
-// v2 settings override — user settings panel
+// v2 settings override — user settings panel (dual-mode: v1 overlay + v2 panel)
 import { state, patch } from "../store.js";
 import { escapeHtml } from "../renderers.override.js";
 
 export function openSettings() {
+  // Try v1-compatible overlay first
+  let overlay = document.getElementById("settings-overlay");
+  if (overlay) {
+    overlay.style.display = "flex";
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.zIndex = "1000";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    return;
+  }
+
+  // Fallback to dynamically created panel
   let panel = document.getElementById("v2-settings-panel");
   if (panel) {
     panel.remove();
@@ -11,69 +24,31 @@ export function openSettings() {
 
   panel = document.createElement("div");
   panel.id = "v2-settings-panel";
-  panel.className = "v2-settings-overlay";
+  panel.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;";
   panel.innerHTML = `
-    <div class="v2-settings-modal">
-      <div class="v2-settings-header">
-        <h2>设置</h2>
-        <button class="v2-settings-close" onclick="closeV2Settings()">&times;</button>
+    <div style="background:#1e293b;border-radius:12px;padding:24px;width:90%;max-width:400px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2 style="font-size:1.25rem;">设置</h2>
+        <button style="background:none;border:none;font-size:1.5rem;color:#94a3b8;cursor:pointer;" onclick="closeV2Settings()">&times;</button>
       </div>
-      <div class="v2-settings-body">
-        <div class="v2-settings-section">
-          <h3>个人信息</h3>
-          <div class="v2-settings-row">
-            <label>用户名</label>
-            <input id="v2-settings-name" value="${escapeHtml(state.user?.name || "")}" maxlength="32">
-          </div>
-          <div class="v2-settings-row">
-            <label>签名</label>
-            <input id="v2-settings-tag" value="${escapeHtml(state.user?.tag || "")}" maxlength="20" placeholder="选填">
-          </div>
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:1rem;color:#94a3b8;margin-bottom:12px;">个人信息</h3>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <label style="color:#e2e8f0;">用户名</label>
+          <input id="v2-settings-name" value="${escapeHtml(state.user?.name || "")}" maxlength="32" style="padding:8px;border:1px solid #334155;border-radius:4px;background:#0f172a;color:#e2e8f0;">
         </div>
-        <div class="v2-settings-section">
-          <h3>显示设置</h3>
-          <div class="v2-settings-row">
-            <label>主题</label>
-            <select id="v2-settings-theme">
-              <option value="dark">深色</option>
-              <option value="light">浅色</option>
-              <option value="auto">自动</option>
-            </select>
-          </div>
-          <div class="v2-settings-row">
-            <label>字体大小</label>
-            <select id="v2-settings-fontsize">
-              <option value="12">12px</option>
-              <option value="14" selected>14px</option>
-              <option value="16">16px</option>
-              <option value="18">18px</option>
-            </select>
-          </div>
-          <div class="v2-settings-row">
-            <label>显示时间</label>
-            <input type="checkbox" id="v2-settings-showtime" ${state.showTime !== false ? "checked" : ""}>
-          </div>
-        </div>
-        <div class="v2-settings-section">
-          <h3>通知</h3>
-          <div class="v2-settings-row">
-            <label>消息提醒</label>
-            <input type="checkbox" id="v2-settings-notif" ${state.notify !== false ? "checked" : ""}>
-          </div>
-          <div class="v2-settings-row">
-            <label>@提醒</label>
-            <input type="checkbox" id="v2-settings-atnotif" ${state.atNotif !== false ? "checked" : ""}>
-          </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <label style="color:#e2e8f0;">签名</label>
+          <input id="v2-settings-tag" value="${escapeHtml(state.user?.tag || "")}" maxlength="20" placeholder="选填" style="padding:8px;border:1px solid #334155;border-radius:4px;background:#0f172a;color:#e2e8f0;">
         </div>
       </div>
-      <div class="v2-settings-footer">
+      <div style="display:flex;gap:12px;justify-content:flex-end;">
         <button class="v2-settings-save" onclick="saveV2Settings()">保存</button>
         <button class="v2-settings-cancel" onclick="closeV2Settings()">取消</button>
       </div>
     </div>
   `;
   document.body.appendChild(panel);
-
   panel.addEventListener("click", e => { if (e.target === panel) closeV2Settings(); });
 }
 

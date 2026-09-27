@@ -6,7 +6,7 @@ const CHANNEL_CACHE = new Map();
 const MAX_CACHE = 150;
 
 export function buildChannelBar(container) {
-  if (!container) container = document.getElementById("v2-channel-bar");
+  if (!container) container = document.getElementById("channel-bar");
   if (!container) return;
 
   container.innerHTML = "";

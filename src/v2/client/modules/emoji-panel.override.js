@@ -66,7 +66,7 @@ export function toggleEmojiPanel() {
   });
 
   panel.appendChild(grid);
-  document.getElementById("v2-input-area")?.appendChild(panel);
+  document.getElementById("chat-input")?.insertAdjacentElement("afterend", panel);
 
   // Close on outside click
   setTimeout(() => {

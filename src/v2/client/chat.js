@@ -9,12 +9,12 @@ let msgSubscription = null;
 let connSubscription = null;
 
 export function scrollToBottom() {
-  const msgList = document.getElementById("v2-messages");
+  const msgList = document.getElementById("chatlog");
   if (msgList) msgList.scrollTop = msgList.scrollHeight;
 }
 
 export function handleSend() {
-  const input = document.getElementById("v2-msg-input");
+  const input = document.getElementById("chat-input");
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
@@ -25,7 +25,7 @@ export function handleSend() {
 export function initMessageListener() {
   if (msgSubscription) msgSubscription();
   msgSubscription = subscribe("messages", (msgs) => {
-    const msgList = document.getElementById("v2-messages");
+    const msgList = document.getElementById("chatlog");
     if (!msgList || !msgs) return;
     const lastMsg = msgs[msgs.length - 1];
     if (!lastMsg) return;
@@ -44,9 +44,9 @@ export function initMessageListener() {
 export function initConnListener() {
   if (connSubscription) connSubscription();
   connSubscription = subscribe("connected", (connected) => {
-    const statusEl = document.getElementById("v2-status");
+    const statusEl = document.getElementById("v2-room-status");
     if (statusEl) {
-      statusEl.textContent = connected ? "connected" : "disconnected";
+      statusEl.textContent = connected ? "已连接" : "已断开";
       statusEl.style.color = connected ? "#4ade80" : "#f87171";
     }
   });
@@ -54,13 +54,23 @@ export function initConnListener() {
 
 export function initOnlineUsersListener() {
   subscribe("onlineUsers", (users) => {
-    const roster = document.getElementById("v2-roster-list");
+    const roster = document.getElementById("roster");
     if (!roster || !users) return;
-    roster.innerHTML = users.map(u => {
+    // Keep header, clear rest
+    const header = roster.querySelector("#roster-header");
+    roster.innerHTML = "";
+    if (header) roster.appendChild(header);
+    users.forEach(u => {
       const isSelf = state.user?.name === u;
-      return `<div class="v2-roster-item${isSelf ? " self" : ""}" data-name="${escapeHtml(u)}">${escapeHtml(u)}${isSelf ? " (你)" : ""}</div>`;
-    }).join("");
-    const countEl = document.getElementById("v2-roster-count");
+      const p = document.createElement("p");
+      p.className = isSelf ? "self" : "";
+      p.textContent = u + (isSelf ? " (你)" : "");
+      p.addEventListener("click", () => {
+        window.__v2_openDM?.(u);
+      });
+      roster.appendChild(p);
+    });
+    const countEl = document.getElementById("roster-count");
     if (countEl) countEl.textContent = users.length;
   });
 }
@@ -71,10 +81,10 @@ export function loadMessages(container, messages) {
 }
 
 export function addSystemMessage(text) {
-  const msgList = document.getElementById("v2-messages");
+  const msgList = document.getElementById("chatlog");
   if (!msgList) return;
   const p = document.createElement("p");
-  p.className = "v2-system-msg";
+  p.className = "system-msg";
   p.textContent = text;
   msgList.appendChild(p);
   msgList.scrollTop = msgList.scrollHeight;

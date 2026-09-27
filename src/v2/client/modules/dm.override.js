@@ -20,43 +20,22 @@ export function closeDM() {
 }
 
 export function updateDmBadge() {
-  // v2: show DM count in header
-  const badge = document.getElementById("v2-dm-badge");
-  if (badge) {
-    if (state.dmUnread > 0) {
-      badge.textContent = state.dmUnread;
-      badge.style.display = "inline-flex";
-    } else {
-      badge.style.display = "none";
-    }
-  }
+  // v2: show DM count in header (no v2-dm-badge in new HTML, skip)
 }
 
 function renderDMPanels() {
-  const chatBody = document.getElementById("v2-chat-body");
-  if (!chatBody) return;
-
-  // Remove existing DM panel
-  const existing = chatBody.querySelector("#v2-dm-panel");
-  if (existing) existing.remove();
+  // Remove existing DM panel (v1-style #dm-panel or v2-style)
+  const existing = document.getElementById("dm-panel") || document.getElementById("v2-dm-panel");
+  if (existing) existing.style.display = "none";
 
   if (!state.dmTarget) return;
 
-  const panel = document.createElement("div");
-  panel.id = "v2-dm-panel";
-  panel.className = "v2-dm-panel";
-  panel.innerHTML = `
-    <div class="v2-dm-header">
-      <span>💬 私信: <strong>${escapeHtml(state.dmTarget)}</strong></span>
-      <button class="v2-dm-close" onclick="window.__v2_closeDM()">&times;</button>
-    </div>
-    <div id="v2-dm-messages" class="v2-dm-messages"></div>
-    <div class="v2-dm-input-area">
-      <textarea id="v2-dm-input" placeholder="输入私信..." maxlength="2000" rows="2"></textarea>
-      <button id="v2-dm-send">发送</button>
-    </div>
-  `;
-  chatBody.appendChild(panel);
+  // Use v1-compatible #dm-panel DOM
+  const panel = document.getElementById("dm-panel");
+  if (!panel) return;
+  panel.style.display = "flex";
+  document.getElementById("dm-username").textContent = "💬 私信: " + state.dmTarget;
+  document.getElementById("dm-log").innerHTML = "";
 
   // Load DM history
   renderDMLog(state.dmTarget);
@@ -69,7 +48,7 @@ function renderDMPanels() {
 }
 
 function renderDMLog(user) {
-  const log = document.getElementById("v2-dm-messages");
+  const log = document.getElementById("dm-log");
   if (!log) return;
 
   const msgs = DM_CACHE.get(user) || [];

@@ -2,9 +2,6 @@
 import { state, patch } from "../store.js";
 
 export function navTo(view, params = {}) {
-  const app = document.getElementById("v2-app");
-  if (!app) return;
-
   switch (view) {
     case "room-list":
       window.__v2_showRoomList?.();
@@ -13,7 +10,10 @@ export function navTo(view, params = {}) {
       window.__v2_showChat?.(params.room);
       break;
     case "auth":
-      window.__v2_showAuth?.();
+      document.getElementById("v2-auth-form").style.display = "flex";
+      document.getElementById("v2-auth-form").style.position = "fixed";
+      document.getElementById("v2-auth-form").style.inset = "0";
+      document.getElementById("v2-auth-form").style.zIndex = "3";
       break;
     case "settings":
       window.__v2_openSettings?.();
