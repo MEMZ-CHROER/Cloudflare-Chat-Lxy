@@ -33,6 +33,13 @@ import V2_ROOMINFO from "./client/modules/roominfo.override.js";
 import V2_VIP from "./client/modules/vip.override.js";
 import V2_ACHIEVEMENTS from "./client/modules/achievements.override.js";
 import V2_TOAST from "./client/modules/toast.override.js";
+import V2_ASCII from "./client/modules/ascii.override.js";
+import V2_BANNER from "./client/modules/banner.override.js";
+import V2_I18N from "./client/modules/i18n.override.js";
+import V2_KEYWORDS from "./client/modules/keywords.override.js";
+import V2_MUSIC from "./client/modules/music.override.js";
+import V2_NAV from "./client/modules/nav.override.js";
+import V2_PROFILE from "./client/modules/profile.override.js";
 import V2_CHAT_SHELL from "./client/views/chat-shell.js";
 import V2_V2_CHAT from "./client/views/v2-chat.js";
 import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
@@ -253,6 +260,13 @@ const V2_MODULES = {
   "client/modules/vip.override.js": V2_VIP,
   "client/modules/achievements.override.js": V2_ACHIEVEMENTS,
   "client/modules/toast.override.js": V2_TOAST,
+  "client/modules/ascii.override.js": V2_ASCII,
+  "client/modules/banner.override.js": V2_BANNER,
+  "client/modules/i18n.override.js": V2_I18N,
+  "client/modules/keywords.override.js": V2_KEYWORDS,
+  "client/modules/music.override.js": V2_MUSIC,
+  "client/modules/nav.override.js": V2_NAV,
+  "client/modules/profile.override.js": V2_PROFILE,
   "client/views/chat-shell.js": V2_CHAT_SHELL,
   "client/views/v2-chat.js": V2_V2_CHAT,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
