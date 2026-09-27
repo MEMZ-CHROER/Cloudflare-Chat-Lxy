@@ -47,6 +47,12 @@ import V2_MARKET from "./client/modules/market.override.js";
 import V2_SEASON from "./client/modules/season.override.js";
 import V2_RELATION from "./client/modules/relation.override.js";
 import V2_VOICE from "./client/modules/voice-record.override.js";
+import V2_NOTES from "./client/modules/note.override.js";
+import V2_DOCSTORE from "./client/modules/doc-store.override.js";
+import V2_GAMES from "./client/modules/games.override.js";
+import V2_HACKNET from "./client/modules/hacknet.override.js";
+import V2_MODAL from "./client/modules/modal-manager.override.js";
+import V2_UI from "./client/modules/ui.override.js";
 import V2_CHAT_SHELL from "./client/views/chat-shell.js";
 import V2_V2_CHAT from "./client/views/v2-chat.js";
 import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
@@ -281,6 +287,12 @@ const V2_MODULES = {
   "client/modules/season.override.js": V2_SEASON,
   "client/modules/relation.override.js": V2_RELATION,
   "client/modules/voice-record.override.js": V2_VOICE,
+  "client/modules/note.override.js": V2_NOTES,
+  "client/modules/doc-store.override.js": V2_DOCSTORE,
+  "client/modules/games.override.js": V2_GAMES,
+  "client/modules/hacknet.override.js": V2_HACKNET,
+  "client/modules/modal-manager.override.js": V2_MODAL,
+  "client/modules/ui.override.js": V2_UI,
   "client/views/chat-shell.js": V2_CHAT_SHELL,
   "client/views/v2-chat.js": V2_V2_CHAT,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
