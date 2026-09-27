@@ -1,8 +1,7 @@
 /**
  * v2 Renderers — message rendering utilities (ported from v1 renderers.js)
- * Re-exports core rendering functions so v2 client code can use them.
+ * Self-contained — no dependency on v1 core modules.
  */
-import { escapeHtml as coreEscapeHtml } from "../utils.mjs";
 
 const TAG_COLOR_MAP = {
   blue: "#3b82f6", red: "#ef4444", green: "#22c55e",
