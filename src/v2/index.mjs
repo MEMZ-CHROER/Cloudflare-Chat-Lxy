@@ -99,7 +99,7 @@ const JS_CT = "application/javascript; charset=utf-8";
 const HTML_CT = "text/html; charset=utf-8";
 const NO_CACHE = { "Cache-Control": "no-cache, must-revalidate", "X-Content-Type-Options": "nosniff" };
 
-// ─── v2 专属路由（页面 + 静态资源） ───
+// ─── v2 专属路由（页面 + 静态资源 + WebSocket） ───
 async function handleV2Request(request, env) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\//, "");
@@ -117,14 +117,66 @@ async function handleV2Request(request, env) {
     });
   }
 
-  // WebSocket 升级 → 透传到 v1（v1 处理 WS 逻辑）
+  // WebSocket 升级 → v2 自己处理（避免 CF fetch() 无法代理 WS 的问题）
   const upgrade = request.headers.get("Upgrade") || "";
   if (upgrade.toLowerCase() === "websocket") {
-    return null; // null 表示走 fallback
+    return handleV2WebSocket(request, env);
   }
 
   // 其他路径也走 fallback
   return null;
+}
+
+/**
+ * v2 WebSocket handler — creates a DO instance and handles the session.
+ * Reuses core ChatRoom.handleSession + webSocketMessage (same as v1).
+ */
+async function handleV2WebSocket(request, env) {
+  const url = new URL(request.url);
+  const parts = url.pathname.split("/").filter(Boolean);
+  const roomName = parts[1] || "";
+  if (!roomName) return new Response("Missing room name", { status: 400 });
+
+  const room = env.V2_CHAT_ROOM.get(roomName);
+  room.roomName = roomName; // v1 sets this in http.mjs; we need it here for password check
+  const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
+
+  // Password check (same logic as v1)
+  if (room.roomName && env.registry) {
+    try {
+      const pwd = url.searchParams.get("password") || "";
+      const registryId = env.registry.idFromName("global");
+      const stub = env.registry.get(registryId);
+      const pwdCheck = await stub.fetch("https://dummy-url/verify-password", {
+        method: "POST",
+        body: JSON.stringify({ name: roomName, password: pwd }),
+        headers: { "Content-Type": "application/json" }
+      });
+      const pwdResult = await pwdCheck.json();
+      if (!pwdResult.ok) return new Response("需要密码", { status: 403 });
+    } catch {
+      return new Response("验证服务暂时不可用", { status: 503 });
+    }
+  }
+
+  const pair = new WebSocketPair();
+  const [client, server] = pair;
+
+  await room.handleSession(server, ip);
+
+  server.onmessage = (event) => {
+    room.webSocketMessage(server, event.data).catch(() => {});
+  };
+
+  server.onclose = (event) => {
+    room.webSocketClose(server, event.code, event.reason, event.wasClean).catch(() => {});
+  };
+
+  server.onerror = (event) => {
+    room.webSocketError(server, event).catch(() => {});
+  };
+
+  return new Response(null, { status: 101, webSocket: client });
 }
 
 // ─── 优雅降级到 v1 ───

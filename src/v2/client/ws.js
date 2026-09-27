@@ -172,7 +172,7 @@ export function sendMessage(content) {
     console.error("[v2] WS not connected");
     return false;
   }
-  // Send in v1 format since WS falls back to v1's handler
+  // v2 envelope — server's ChatRoom.broadcast override wraps it for v2 clients
   ws.send(JSON.stringify({ message: content }));
   return true;
 }
