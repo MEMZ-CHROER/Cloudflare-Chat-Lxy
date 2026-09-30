@@ -33,3 +33,8 @@ export function goBack() {
 
 window.__v2_navTo = navTo;
 window.__v2_navBack = goBack;
+
+export function initNav() {
+  // Initialize navigation handlers if needed
+  console.log("[v2] nav initialized");
+}
