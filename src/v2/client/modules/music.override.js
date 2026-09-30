@@ -80,6 +80,19 @@ export function initMusic() {
   }
 }
 
+export function closeMusic() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
+  const btn = document.getElementById("v2-music-btn");
+  if (btn) {
+    btn.textContent = "▶";
+    btn.title = "音乐播放器";
+  }
+}
+
 window.__v2_playMusic = playMusic;
 window.__v2_pauseMusic = pauseMusic;
 window.__v2_toggleMusic = toggleMusic;
+window.__v2_closeMusic = closeMusic;

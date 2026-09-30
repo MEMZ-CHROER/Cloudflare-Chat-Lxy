@@ -107,6 +107,9 @@ export function initSettings() {
   applyV2Settings();
 }
 
+// Alias for HTML inline onclick handlers
+export const closeSettings = closeV2Settings;
+
 window.__v2_openSettings = openSettings;
 window.__v2_closeSettings = closeV2Settings;
 window.__v2_saveSettings = saveV2Settings;

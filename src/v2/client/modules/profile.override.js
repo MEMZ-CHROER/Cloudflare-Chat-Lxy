@@ -63,3 +63,10 @@ function renderProfileCard(username, data) {
 }
 
 window.__v2_showUserProfile = showUserProfile;
+
+export function hideProfile() {
+  const panel = document.getElementById("v2-profile-panel") || document.getElementById("profile-modal");
+  if (panel) panel.style.display = "none";
+}
+
+window.__v2_hideProfile = hideProfile;
