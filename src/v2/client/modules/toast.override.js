@@ -5,21 +5,23 @@ const TOAST_DURATION = 4000;
 export function showToast(message, type = "info", duration = TOAST_DURATION) {
   let container = document.getElementById("v2-toast-container");
   if (!container) {
-    container = document.createElement("div");
-    container.id = "v2-toast-container";
-    container.className = "v2-toast-container";
-    document.body.appendChild(container);
+    container = document.getElementById("toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toast-container";
+      document.body.appendChild(container);
+    }
   }
 
   const toast = document.createElement("div");
-  toast.className = `v2-toast v2-toast-${type}`;
+  toast.className = `toast toast-${type}`;
   toast.textContent = message;
   container.appendChild(toast);
 
   TOASTS.push(toast);
 
   setTimeout(() => {
-    toast.classList.add("v2-toast-hide");
+    toast.classList.add("removing");
     setTimeout(() => {
       toast.remove();
       const idx = TOASTS.indexOf(toast);

@@ -35,21 +35,23 @@ const EMOJI_LIST = [
 ];
 
 export function toggleEmojiPanel() {
-  let panel = document.getElementById("v2-emoji-panel");
-  if (panel) {
+  let panel = document.getElementById("emoji-panel");
+  if (panel && panel._emojiInitialized) {
     panel.remove();
+    panel._emojiInitialized = false;
     return;
   }
 
   panel = document.createElement("div");
-  panel.id = "v2-emoji-panel";
-  panel.className = "v2-emoji-panel";
+  panel.id = "emoji-panel";
+  panel.className = "emoji-panel";
+  panel._emojiInitialized = true;
 
   const grid = document.createElement("div");
-  grid.className = "v2-emoji-grid";
+  grid.className = "emoji-grid";
   EMOJI_LIST.forEach(emoji => {
     const btn = document.createElement("button");
-    btn.className = "v2-emoji-btn";
+    btn.className = "emoji-item";
     btn.textContent = emoji;
     btn.addEventListener("click", () => {
       const input = document.getElementById("chat-input");
@@ -61,12 +63,14 @@ export function toggleEmojiPanel() {
         input.focus();
       }
       panel.remove();
+      panel._emojiInitialized = false;
     });
     grid.appendChild(btn);
   });
 
   panel.appendChild(grid);
-  document.getElementById("chat-input")?.insertAdjacentElement("afterend", panel);
+  document.body.appendChild(panel);
+  panel.classList.add("show");
 
   // Close on outside click
   setTimeout(() => {

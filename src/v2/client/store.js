@@ -13,6 +13,13 @@ export const state = {
   onlineUsers: [],
   lang: "zh",
   theme: "classic",
+  soundMuted: false,
+  dmTarget: null,
+  dmUnread: 0,
+  currentChannel: null,
+  replyTarget: null,
+  replyText: "",
+  replyId: null,
 };
 
 export function subscribe(key, fn) {

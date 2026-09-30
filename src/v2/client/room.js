@@ -35,4 +35,6 @@ export function leaveRoom() {
   patch({ currentRoom: null });
   patch({ messages: [] });
   patch({ onlineUsers: [] });
+  patch({ dmTarget: null });
+  if (state.ws) { try { state.ws.close(); } catch {} state.ws = null; }
 }

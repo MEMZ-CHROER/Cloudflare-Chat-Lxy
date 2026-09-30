@@ -41,8 +41,8 @@ function renderDMPanels() {
   renderDMLog(state.dmTarget);
 
   // Bind send
-  document.getElementById("v2-dm-send").addEventListener("click", sendDM);
-  document.getElementById("v2-dm-input").addEventListener("keydown", e => {
+  document.getElementById("dm-send").addEventListener("click", sendDM);
+  document.getElementById("dm-input").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDM(); }
   });
 }
@@ -68,7 +68,7 @@ function renderDMLog(user) {
 }
 
 export function sendDM() {
-  const input = document.getElementById("v2-dm-input");
+  const input = document.getElementById("dm-input");
   if (!input || !state.ws) return;
   const text = input.value.trim();
   if (!text) return;

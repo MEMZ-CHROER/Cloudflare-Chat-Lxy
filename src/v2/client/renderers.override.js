@@ -55,7 +55,7 @@ export function createTagBadge(tag, tagColor, tagBorder) {
 
 export function createMsgWrapper(name, isSelf, timestamp, msgId) {
   const wrapper = document.createElement("div");
-  wrapper.className = "v2-msg" + (isSelf ? " self" : " other");
+  wrapper.className = "chat-msg" + (isSelf ? " self" : " other");
   if (timestamp) wrapper.dataset.timestamp = String(timestamp);
   if (msgId) wrapper.dataset.msgId = String(msgId);
   return wrapper;
@@ -63,13 +63,13 @@ export function createMsgWrapper(name, isSelf, timestamp, msgId) {
 
 export function buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf }) {
   const header = document.createElement("div");
-  header.className = "v2-msg-header";
+  header.className = "msg-header";
 
   const tagBadge = createTagBadge(tag, tagColor, tagBorder);
   if (tagBadge) header.appendChild(tagBadge);
 
   const nameSpan = document.createElement("span");
-  nameSpan.className = "v2-msg-name";
+  nameSpan.className = "username";
   nameSpan.textContent = name;
   if (!isSelf) {
     nameSpan.style.cursor = "pointer";
@@ -84,7 +84,7 @@ export function buildMsgHeader(wrapper, { name, tag, tagColor, tagBorder, isSelf
 export function appendMsgTime(wrapper, timestamp) {
   if (timestamp) {
     const timeSpan = document.createElement("span");
-    timeSpan.className = "v2-msg-time";
+    timeSpan.className = "msg-time";
     timeSpan.textContent = formatTime(timestamp);
     wrapper.appendChild(timeSpan);
   }
@@ -92,7 +92,7 @@ export function appendMsgTime(wrapper, timestamp) {
 
 export function renderMarkdownBubble(text, type) {
   const bubble = document.createElement("div");
-  bubble.className = "v2-msg-bubble";
+  bubble.className = "bubble";
   if (type === "image") {
     const img = document.createElement("img");
     img.src = text;
@@ -116,7 +116,7 @@ export function renderChatMessage(msg, isSelf) {
   // System message (no name)
   if (!msg.name) {
     const p = document.createElement("p");
-    p.className = "v2-system-msg";
+    p.className = "system-msg";
     p.textContent = msg.content || msg.message || "";
     return p;
   }

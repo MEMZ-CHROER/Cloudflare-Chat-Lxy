@@ -45,6 +45,7 @@ export const V2_HTML = `<!DOCTYPE html>
   <div id="v2-room-list" style="display:none">
     <div class="room-form-inner">
       <h2>加入聊天</h2>
+      <div id="account-bar" style="display:none;font-size:13px;color:var(--text-secondary);margin-bottom:10px;padding:6px 12px;background:var(--surface);border-radius:6px;border:1px solid var(--border);"></div>
       <div class="room-input-row">
         <input id="v2-room-name" placeholder="输入房间名称" maxlength="32">
         <button id="v2-join-room">进入</button>
@@ -280,6 +281,7 @@ export const V2_HTML = `<!DOCTYPE html>
     import { initMusic, closeMusic } from '/static/modules/music.override.js';
     import { hideProfile } from '/static/modules/profile.override.js';
     import { exportChatLog } from '/static/modules/ui.override.js';
+    import { initVoiceRecord } from '/static/modules/voice-record.override.js';
     window.__v2_openSettings = openSettings;
     window.__v2_closeSettings = closeSettings;
     window.__v2_toggleSearch = toggleSearch;
@@ -297,6 +299,7 @@ export const V2_HTML = `<!DOCTYPE html>
     window.__v2_closeMusic = closeMusic;
     window.__v2_hideProfile = hideProfile;
     window.__v2_exportChatLog = exportChatLog;
+    window.__v2_initVoiceRecord = initVoiceRecord;
     initV2App();
   </script>
 </body>

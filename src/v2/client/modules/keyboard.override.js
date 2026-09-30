@@ -61,10 +61,16 @@ function openCommandPalette() {
 }
 
 function closePanels() {
-  document.getElementById("v2-emoji-panel")?.remove();
-  document.getElementById("v2-search-panel")?.remove();
-  document.getElementById("v2-settings-panel")?.remove();
-  document.getElementById("v2-favorites-panel")?.remove();
+  const ep = document.getElementById("emoji-panel");
+  if (ep) { ep.remove(); }
+  const sb = document.getElementById("search-bar");
+  if (sb) sb.style.display = "none";
+  const so = document.getElementById("settings-overlay");
+  if (so) so.style.display = "none";
+  const mp = document.getElementById("more-menu-panel");
+  const mback = document.getElementById("more-menu-backdrop");
+  if (mp) mp.classList.remove("show");
+  if (mback) mback.classList.remove("show");
 }
 
 function goToLatest() {

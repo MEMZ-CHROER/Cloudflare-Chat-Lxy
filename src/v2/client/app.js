@@ -8,7 +8,7 @@ import { fetchRooms, joinRoom, createRoom, leaveRoom } from "./room.js";
 import { initMessageListener, initConnListener, initOnlineUsersListener, handleSend, addSystemMessage, loadMessages } from "./chat.js";
 import { buildChannelBar, updateChannelBadges } from "./modules/channels.override.js";
 import { openDM, closeDM, updateDmBadge } from "./modules/dm.override.js";
-import { toggleSearch, doSearch } from "./modules/search.override.js";
+import { toggleSearch, doSearch, searchPrev, searchNext } from "./modules/search.override.js";
 import { openSettings, closeV2Settings, saveV2Settings, initSettings } from "./modules/settings.override.js";
 import { toggleEmojiPanel } from "./modules/emoji-panel.override.js";
 import { handleCommand } from "./modules/commands.override.js";
@@ -40,25 +40,33 @@ window.sendDM = () => {
 };
 
 export async function initV2App() {
-  console.log("[v2] app initializing");
-  initI18n();
-  initSettings();
+  try {
+    console.log("[v2] app initializing");
+    initI18n();
+    initSettings();
 
-  // Show auth form initially
-  document.getElementById("v2-auth-form").style.display = "flex";
-  document.getElementById("v2-auth-form").style.alignItems = "center";
-  document.getElementById("v2-auth-form").style.justifyContent = "center";
-  document.getElementById("v2-auth-form").style.height = "100vh";
-  document.getElementById("v2-auth-form").style.position = "fixed";
-  document.getElementById("v2-auth-form").style.inset = "0";
-  document.getElementById("v2-auth-form").style.zIndex = "3";
+    // Show auth form initially
+    const authForm = document.getElementById("v2-auth-form");
+    if (authForm) {
+      authForm.style.display = "flex";
+      authForm.style.alignItems = "center";
+      authForm.style.justifyContent = "center";
+      authForm.style.height = "100vh";
+      authForm.style.position = "fixed";
+      authForm.style.inset = "0";
+      authForm.style.zIndex = "3";
+      console.log("[v2] auth form shown");
+    } else {
+      console.error("[v2] v2-auth-form element NOT FOUND!");
+    }
 
-  const authResult = await checkAuth();
-  if (authResult.ok) {
-    showRoomList();
-  } else {
-    setupAuthForm();
-  }
+    const authResult = await checkAuth();
+    console.log("[v2] auth result:", authResult);
+    if (authResult.ok) {
+      showRoomList();
+    } else {
+      setupAuthForm();
+    }
 
   initMessageListener();
   initConnListener();
@@ -71,6 +79,15 @@ export async function initV2App() {
     checkAchievements(getV2State());
     requestNotifPermission();
   }, 500);
+  } catch (e) {
+    console.error("[v2] initV2App error:", e);
+    const authForm = document.getElementById("v2-auth-form");
+    if (authForm) {
+      authForm.style.display = "flex";
+      authForm.style.alignItems = "center";
+      authForm.style.justifyContent = "center";
+    }
+  }
 }
 
 function setupAuthForm() {
@@ -373,7 +390,13 @@ export function showChat(roomName) {
   });
   document.getElementById("image-picker")?.addEventListener("change", e => {
     const file = e.target.files[0];
-    if (file) triggerFileUpload && triggerFileUpload();
+    if (!file) return;
+    import("./modules/upload.override.js").then(m => m.uploadFile(file)).then(url => {
+      if (url && state.ws?.readyState === WebSocket.OPEN) {
+        state.ws.send(JSON.stringify({ type: "image", url }));
+      }
+    });
+    e.target.value = "";
   });
 
   // File button
@@ -431,14 +454,50 @@ export function showChat(roomName) {
     }
   });
 
-  // Lightbox
+  // Lightbox close
   document.getElementById("lightbox")?.addEventListener("click", e => {
     if (e.target.classList.contains("lb-close") || e.target === e.currentTarget) {
       document.getElementById("lightbox").style.display = "none";
+      _galleryImages = [];
+      _galleryIndex = -1;
     }
   });
   document.getElementById("gallery-prev")?.addEventListener("click", e => { e.stopPropagation(); galleryPrev(); });
   document.getElementById("gallery-next")?.addEventListener("click", e => { e.stopPropagation(); galleryNext(); });
+
+  // Lightbox — click image to open
+  document.getElementById("chatlog")?.addEventListener("click", e => {
+    const img = e.target.closest(".chat-msg img");
+    if (img && img.src) {
+      buildGallery();
+      _galleryIndex = _galleryImages.indexOf(img.src);
+      const lb = document.getElementById("lightbox");
+      const lbImg = document.getElementById("lightbox-img");
+      if (lbImg) lbImg.src = img.src;
+      if (lb) { lb.style.display = "flex"; updateGalleryNav(); }
+    }
+  });
+
+  // Mobile bottom bar
+  document.getElementById("mbb-sound")?.addEventListener("click", () => {
+    state.soundMuted = !state.soundMuted;
+    const btn = document.getElementById("mbb-sound");
+    if (btn) btn.textContent = state.soundMuted ? "🔇" : "🔊";
+    const st = document.getElementById("sound-toggle");
+    if (st) st.textContent = state.soundMuted ? "🔇" : "🔊";
+  });
+  document.getElementById("mbb-dark")?.addEventListener("click", () => {
+    const on = document.body.classList.toggle("dark");
+    localStorage.setItem("darkMode", on ? "1" : "0");
+    const btn = document.getElementById("mbb-dark");
+    if (btn) btn.textContent = on ? "☀️" : "🌙";
+    const dt = document.getElementById("dark-toggle");
+    if (dt) dt.textContent = on ? "☀️" : "🌙";
+  });
+  document.getElementById("mbb-search")?.addEventListener("click", () => window.__v2_toggleSearch?.());
+  document.getElementById("mbb-more")?.addEventListener("click", () => {
+    document.getElementById("more-menu-btn")?.click();
+  });
 
   // Global Escape
   document.addEventListener("keydown", e => {
@@ -526,8 +585,12 @@ function renderMsg(msg, isSelf) {
     img.style.display = "block";
     img.style.cursor = "zoom-in";
     img.addEventListener("click", () => {
-      document.getElementById("lightbox-img").src = text;
-      document.getElementById("lightbox").style.display = "flex";
+      buildGallery();
+      _galleryIndex = _galleryImages.indexOf(text);
+      const lb = document.getElementById("lightbox");
+      const lbImg = document.getElementById("lightbox-img");
+      if (lbImg) lbImg.src = text;
+      if (lb) { lb.style.display = "flex"; updateGalleryNav(); }
     });
     bubble.appendChild(img);
   } else {
@@ -582,8 +645,41 @@ window.addEventListener("click", e => {
   }
 });
 
-function galleryPrev() {}
-function galleryNext() {}
+// Gallery state
+let _galleryImages = [];
+let _galleryIndex = -1;
+
+function buildGallery() {
+  const chatlog = document.getElementById("chatlog");
+  if (!chatlog) return;
+  _galleryImages = [];
+  chatlog.querySelectorAll(".chat-msg img").forEach(img => {
+    if (img.src && !_galleryImages.includes(img.src)) _galleryImages.push(img.src);
+  });
+}
+
+function updateGalleryNav() {
+  const prev = document.getElementById("gallery-prev");
+  const next = document.getElementById("gallery-next");
+  if (prev) prev.style.display = _galleryIndex > 0 ? "block" : "none";
+  if (next) next.style.display = _galleryIndex < _galleryImages.length - 1 ? "block" : "none";
+}
+
+function galleryPrev() {
+  if (_galleryImages.length < 2 || _galleryIndex <= 0) return;
+  _galleryIndex--;
+  const img = document.getElementById("lightbox-img");
+  if (img) img.src = _galleryImages[_galleryIndex];
+  updateGalleryNav();
+}
+
+function galleryNext() {
+  if (_galleryImages.length < 2 || _galleryIndex >= _galleryImages.length - 1) return;
+  _galleryIndex++;
+  const img = document.getElementById("lightbox-img");
+  if (img) img.src = _galleryImages[_galleryIndex];
+  updateGalleryNav();
+}
 window.__v2_leaveRoom = () => { leaveRoom(); showRoomList(); };
 window.__v2_showChat = showChat;
 window.__v2_init = initV2App;

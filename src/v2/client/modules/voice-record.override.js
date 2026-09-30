@@ -1,7 +1,7 @@
 // v2 voice record override — voice message recording
 import { state } from "../store.js";
 import { showToast, showError } from "./toast.override.js";
-import { attachReply } from "../upload.override.js";
+import { attachReply } from "./upload.override.js";
 
 export function initVoiceRecord() {
   const inputArea = document.getElementById("chatroom");

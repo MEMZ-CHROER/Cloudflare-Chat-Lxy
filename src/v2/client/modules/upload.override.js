@@ -5,6 +5,14 @@ import { showToast } from "./toast.override.js";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "audio/webm", "audio/mpeg", "video/mp4"];
 
+export function attachReply(msg) {
+  // Add reply reference if active (same as v1)
+  if (state.replyTarget) {
+    msg.reply = { name: state.replyTarget, text: state.replyText || "", id: state.replyId || "" };
+  }
+  return msg;
+}
+
 export async function uploadFile(file) {
   if (file.size > MAX_FILE_SIZE) {
     showToast("文件过大（最大10MB）", "error");
