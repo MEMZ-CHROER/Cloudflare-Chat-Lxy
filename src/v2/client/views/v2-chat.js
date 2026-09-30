@@ -301,7 +301,7 @@ export const V2_HTML = `<!DOCTYPE html>
     window.__v2_exportChatLog = exportChatLog;
     window.__v2_initVoiceRecord = initVoiceRecord;
     // Show auth form immediately
-    (function(){const f=document.getElementById("v2-auth-form");if(f){f.style.display="flex";f.style.alignItems="center";f.style.justifyContent="center";f.style.height="100vh";f.style.position="fixed";f.style.inset="0";f.style.zIndex="3";}})();
+    console.log("[DEBUG] IIFE running, showing auth form");(function(){const f=document.getElementById("v2-auth-form");if(f){f.style.display="flex";f.style.alignItems="center";f.style.justifyContent="center";f.style.height="100vh";f.style.position="fixed";f.style.inset="0";f.style.zIndex="3";console.log("[DEBUG] Auth form displayed");}})();
     initV2App();
   </script>
 </body>
