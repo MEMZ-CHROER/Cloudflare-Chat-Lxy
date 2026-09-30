@@ -1072,7 +1072,7 @@ body::after {
 }
 
 /* ---- Name Form ---- */
-#name-form {
+#name-form,#v2-auth-form {
   position: fixed;
   z-index: 3;
   top: 0;
@@ -1089,7 +1089,7 @@ body::after {
   justify-content: center;
 }
 
-#name-form .name-card {
+#name-form,#v2-auth-form .name-card {
   background: var(--surface-2);
   border: 1px solid var(--frosted-border);
   border-radius: 24px;
@@ -1102,7 +1102,7 @@ body::after {
   -webkit-backdrop-filter: var(--frosted-blur);
 }
 
-#name-form .name-card h1 {
+#name-form,#v2-auth-form .name-card h1 {
   font-size: 24px;
   font-weight: 700;
   background: linear-gradient(135deg, #8aa1ff, #c084fc);
@@ -1112,23 +1112,23 @@ body::after {
   margin-bottom: 4px;
 }
 
-#name-form .name-card>p {
+#name-form,#v2-auth-form .name-card>p {
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0 0 24px;
 }
 
-#name-form .name-card>p a {
+#name-form,#v2-auth-form .name-card>p a {
   color: var(--primary);
   text-decoration: none;
 }
 
-#name-form .name-card>p a:hover {
+#name-form,#v2-auth-form .name-card>p a:hover {
   text-decoration: underline;
 }
 
-#name-form .auth-input {
+#name-form,#v2-auth-form .auth-input {
   width: 100%;
   font-size: 15px;
   height: 44px;
@@ -1145,11 +1145,11 @@ body::after {
   color: var(--text);
 }
 
-#name-form .auth-input:focus {
+#name-form,#v2-auth-form .auth-input:focus {
   border-color: var(--primary);
 }
 
-#name-form .auth-btn {
+#name-form,#v2-auth-form .auth-btn {
   width: 100%;
   height: 44px;
   border: none;
@@ -1163,11 +1163,11 @@ body::after {
   font-family: inherit;
 }
 
-#name-form .auth-btn:hover {
+#name-form,#v2-auth-form .auth-btn:hover {
   opacity: 0.9;
 }
 
-#name-form .auth-error {
+#name-form,#v2-auth-form .auth-error {
   color: #fb7185;
   font-size: 13px;
   margin-top: 8px;
@@ -1175,38 +1175,38 @@ body::after {
   min-height: 20px;
 }
 
-#name-form .auth-switch {
+#name-form,#v2-auth-form .auth-switch {
   font-size: 13px;
   margin-top: 12px;
   color: var(--text-secondary);
 }
 
-#name-form .auth-switch a {
+#name-form,#v2-auth-form .auth-switch a {
   color: var(--primary);
   cursor: pointer;
   text-decoration: none;
 }
 
-#name-form .auth-switch a:hover {
+#name-form,#v2-auth-form .auth-switch a:hover {
   text-decoration: underline;
 }
 
-#name-form .auth-skip {
+#name-form,#v2-auth-form .auth-skip {
   font-size: 12px;
   margin-top: 6px;
 }
 
-#name-form .auth-skip a {
+#name-form,#v2-auth-form .auth-skip a {
   color: var(--text-muted, #7a8ba8);
   cursor: pointer;
   text-decoration: none;
 }
 
-#name-form .auth-skip a:hover {
+#name-form,#v2-auth-form .auth-skip a:hover {
   text-decoration: underline;
 }
 
-#name-form .auth-tabs {
+#name-form,#v2-auth-form .auth-tabs {
   display: flex;
   gap: 0;
   margin: 0 auto 20px;
@@ -1216,7 +1216,7 @@ body::after {
   max-width: 220px;
 }
 
-#name-form .auth-tab {
+#name-form,#v2-auth-form .auth-tab {
   flex: 1;
   padding: 8px 0;
   border: none;
@@ -1229,12 +1229,12 @@ body::after {
   transition: all 0.2s;
 }
 
-#name-form .auth-tab.active {
+#name-form,#v2-auth-form .auth-tab.active {
   background: var(--primary);
   color: #fff;
 }
 
-#name-form .auth-tab:hover:not(.active) {
+#name-form,#v2-auth-form .auth-tab:hover:not(.active) {
   background: rgba(113, 137, 255, 0.12);
 }
 
