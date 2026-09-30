@@ -40,13 +40,27 @@ window.sendDM = () => {
 };
 
 export async function initV2App() {
+  // Show auth form FIRST, before any module imports can fail
+  const authForm = document.getElementById("v2-auth-form");
+  if (authForm) {
+    authForm.style.display = "flex";
+    authForm.style.alignItems = "center";
+    authForm.style.justifyContent = "center";
+    authForm.style.height = "100vh";
+    authForm.style.position = "fixed";
+    authForm.style.inset = "0";
+    authForm.style.zIndex = "3";
+  }
   try {
     console.log("[v2] app initializing");
     initI18n();
     initSettings();
 
-    // Show auth form initially
-    const authForm = document.getElementById("v2-auth-form");
+    // Re-show in case initI18n/initSettings somehow hid it
+    const authForm2 = document.getElementById("v2-auth-form");
+    if (authForm2 && authForm2.style.display === 'none') {
+      authForm2.style.display = "flex";
+    }
     if (authForm) {
       authForm.style.display = "flex";
       authForm.style.alignItems = "center";
@@ -68,17 +82,17 @@ export async function initV2App() {
       setupAuthForm();
     }
 
-  initMessageListener();
-  initConnListener();
-  initOnlineUsersListener();
-  initKeyboardShortcuts();
+    initMessageListener();
+    initConnListener();
+    initOnlineUsersListener();
+    initKeyboardShortcuts();
 
-  setTimeout(() => {
-    initImageUpload();
-    initVoiceRecord();
-    checkAchievements(getV2State());
-    requestNotifPermission();
-  }, 500);
+    setTimeout(() => {
+      initImageUpload();
+      initVoiceRecord();
+      checkAchievements(getV2State());
+      requestNotifPermission();
+    }, 500);
   } catch (e) {
     console.error("[v2] initV2App error:", e);
     const authForm = document.getElementById("v2-auth-form");
