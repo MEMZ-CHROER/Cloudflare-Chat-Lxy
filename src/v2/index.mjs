@@ -55,12 +55,11 @@ import V2_HACKNET from "./client/modules/hacknet.override.js";
 import V2_MODAL from "./client/modules/modal-manager.override.js";
 import V2_UI from "./client/modules/ui.override.js";
 import V2_CHAT_SHELL from "./client/views/chat-shell.js";
-import V2_V2_CHAT from "./client/views/v2-chat.js";
 import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
 import V2_STYLE from "./client/style.css";
+import V2_HTML from "./client/v2-html-inline.js";
 
-// ─── v2 HTML template (from v2-chat.js) ───
-const V2_HTML = V2_V2_CHAT;
+// V2_HTML is the default export containing the raw HTML string
 
 const V2_MODULES = {
   "client/app.js": V2_APP,
@@ -109,7 +108,7 @@ const V2_MODULES = {
   "client/modules/modal-manager.override.js": V2_MODAL,
   "client/modules/ui.override.js": V2_UI,
   "client/views/chat-shell.js": V2_CHAT_SHELL,
-  "client/views/v2-chat.js": V2_V2_CHAT,
+  "client/views/v2-chat.js": V2_HTML,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
   "client/style.css": V2_STYLE,
 };
@@ -128,11 +127,13 @@ async function handleV2Request(request, env) {
     return new Response(V2_HTML, { headers: { "Content-Type": HTML_CT, ...NO_CACHE } });
   }
 
-  // 静态 JS 模块
+  // 静态资源（JS/CSS/HTML）
   const modKey = path.startsWith("static/") ? path.replace(/^static\//, "client/") : path;
   if (V2_MODULES[modKey]) {
+    // CSS文件需要text/css Content-Type
+    const isCss = modKey.endsWith(".css");
     return new Response(V2_MODULES[modKey], {
-      headers: { "Content-Type": JS_CT, ...NO_CACHE },
+      headers: { "Content-Type": isCss ? "text/css; charset=utf-8" : JS_CT, ...NO_CACHE },
     });
   }
 
