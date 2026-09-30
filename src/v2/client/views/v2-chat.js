@@ -268,8 +268,6 @@ export const V2_HTML = `<!DOCTYPE html>
   <!-- Modal mount point for Vue3 overlays -->
   <div id="chat-modals"></div>
   <script type="module">
-    // Show auth form immediately
-    (function(){const f=document.getElementById("v2-auth-form");if(f){f.style.display="flex";f.style.alignItems="center";f.style.justifyContent="center";f.style.height="100vh";f.style.position="fixed";f.style.inset="0";f.style.zIndex="3";}})();
     import { initV2App } from '/static/app.js';
     import { openSettings } from '/static/modules/settings.override.js';
     import { closeSettings } from '/static/modules/settings.override.js';
@@ -302,6 +300,8 @@ export const V2_HTML = `<!DOCTYPE html>
     window.__v2_hideProfile = hideProfile;
     window.__v2_exportChatLog = exportChatLog;
     window.__v2_initVoiceRecord = initVoiceRecord;
+    // Show auth form immediately
+    (function(){const f=document.getElementById("v2-auth-form");if(f){f.style.display="flex";f.style.alignItems="center";f.style.justifyContent="center";f.style.height="100vh";f.style.position="fixed";f.style.inset="0";f.style.zIndex="3";}})();
     initV2App();
   </script>
 </body>
