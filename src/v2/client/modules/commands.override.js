@@ -1,25 +1,33 @@
-// v2 commands override — /command handler for v2 chat
+// v2 commands override — local + server-command dispatch
 import { state } from "../store.js";
 import { addSystemMessage } from "../chat.js";
 
-const COMMANDS = {
-  help: { desc: "显示帮助", exec: showHelp },
-  nick: { desc: "修改昵称", exec: changeNick, args: ["新名字"] },
-  tag: { desc: "设置标签", args: ["标签名 [颜色]"], exec: changeTag },
-  color: { desc: "设置消息颜色", args: ["颜色名"], exec: changeColor },
-  channels: { desc: "查看频道列表", exec: listChannels },
-  info: { desc: "房间信息", exec: showRoomInfo },
-  users: { desc: "在线用户列表", exec: listUsers },
-  kick: { desc: "踢出用户（管理员）", args: ["用户名"], exec: kickUser },
-  ban: { desc: "封禁用户（管理员）", args: ["用户名"], exec: banUser },
-  mute: { desc: "禁言用户（管理员）", args: ["用户名 [时长]"], exec: muteUser },
-  version: { desc: "显示版本", exec: showVersion },
-  echo: { desc: "回显消息（调试）", args: ["文本"], exec: echo },
-  random: { desc: "随机数", args: ["min max"], exec: randomNum },
-  roll: { desc: "掷骰子", args: ["[次数]d[面数]"], exec: rollDice },
-  icco: { desc: "ICCO入侵警告动画", exec: triggerIcco },
-  wiki: { desc: "搜索维基百科", args: ["关键词"], exec: wikiSearch },
+const COLOR_MAP = {
+  red: "#dc3545", orange: "#e67e22", gold: "#f1c40f",
+  green: "#28a745", cyan: "#17a2b8", blue: "#007bff",
+  purple: "#6f42c1", pink: "#e83e8c", black: "#000000",
+  white: "#ffffff", gray: "#6c757d"
 };
+
+const COMMANDS = {
+  help:       { desc: "显示帮助",               exec: showHelp },
+  color:      { desc: "设置消息字体颜色",        exec: setColor,    args: ["颜色名/#hex"] },
+  bg:         { desc: "设置房间背景",            exec: setBackground, args: ["颜色/#hex/url 或 clear"] },
+  clean:      { desc: "清除本地聊天记录",         exec: cleanLocal },
+  info:       { desc: "房间信息",                exec: showRoomInfo },
+  users:      { desc: "在线用户列表",            exec: listUsers },
+  channels:   { desc: "查看频道列表",            exec: listChannels },
+  version:    { desc: "显示版本",                exec: showVersion },
+  roll:       { desc: "掷骰子",                  exec: rollDice,    args: ["[n]d[sides]"] },
+  random:     { desc: "随机数",                  exec: randomNum,   args: ["min max"] },
+  echo:       { desc: "回显消息（调试）",         exec: echo,        args: ["文本"] },
+  icco:       { desc: "ICCO入侵警告动画",         exec: triggerIcco },
+  wiki:       { desc: "搜索维基百科",             exec: wikiSearch,  args: ["关键词"] },
+};
+
+// Server-side commands (passed through to chatroom.mjs):
+// /lp, /gh, /ai, /bot, /rollback, /destroy, /kick, /ban, /mute, /announce,
+// /pin, /unpin, /clear (admin), /notice
 
 export function handleCommand(text) {
   if (!text.startsWith("/")) return false;
@@ -30,7 +38,7 @@ export function handleCommand(text) {
 
   const command = COMMANDS[cmd];
   if (!command) {
-    // 未知命令交给服务端处理（如 /lp、/gh、/ai、/bot、/rollback 等）
+    // 未知命令 → 交给服务端（/lp /gh /ai /bot /rollback /destroy /pin /unpin 等）
     return false;
   }
 
@@ -38,20 +46,13 @@ export function handleCommand(text) {
     command.exec(args);
     return true;
   } catch (e) {
-    showLocalMessage("命令执行错误: " + e.message);
+    showLocalMessage("错误: " + e.message);
     return true;
   }
 }
 
-// 仅本地显示，不发送到服务端（避免被当作普通消息处理）
 function showLocalMessage(text) {
   addSystemMessage(text);
-}
-
-function sendCommand(type, data) {
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify(Object.assign({ type: type }, data)));
-  }
 }
 
 function showHelp() {
@@ -60,47 +61,82 @@ function showHelp() {
     var args = info.args ? " " + info.args.join(" ") : "";
     return "  /" + cmd + args + " — " + info.desc;
   });
-  showLocalMessage("可用命令:\n" + lines.join("\n"));
+  const serverCmds = [
+    "  /lp <指令> — 权限系统（需管理员）",
+    "  /gh <repo> — GitHub仓库卡片",
+    "  /ai <问题> — AI问答",
+    "  /bot <cmd> — Bot命令",
+    "  /rollback <快照名> <原因> — 回滚房间",
+    "  /destroy <原因> — 销毁房间（超管）",
+    "  /kick <用户名> — 踢出用户",
+    "  /ban <用户名> — 封禁用户",
+    "  /mute <用户名> [时长] — 禁言",
+    "  /announce <内容> — 发布公告",
+    "  /pin — 置顶最后一条消息",
+    "  /unpin — 取消置顶",
+    "  /clear — 清空房间（超管）",
+  ];
+  showLocalMessage("可用命令:\n" + lines.join("\n") + "\n\n服务器命令:\n" + serverCmds.join("\n"));
 }
 
-function changeNick(args) {
-  const name = args[0] ? args[0].trim() : "";
-  if (!name) throw new Error("请提供新名字");
-  sendCommand("rename", { name: name });
+function setColor(args) {
+  const arg = args[0] ? args[0].trim() : "";
+  const key = "chat_color";
+  if (!arg) {
+    const current = localStorage.getItem(key) || "#000000";
+    showLocalMessage("当前颜色: " + current + "（支持: red/orange/gold/green/cyan/blue/purple/pink/black/white/gray 或 #hex）");
+    return;
+  }
+  let newColor = COLOR_MAP[arg.toLowerCase()] || arg;
+  if (!/^#[0-9a-f]{6}$/i.test(newColor)) {
+    showLocalMessage("无效颜色，可用: red/orange/gold/green/cyan/blue/purple/pink/black/white/gray 或 #hex");
+    return;
+  }
+  localStorage.setItem(key, newColor);
+  showLocalMessage("颜色已设置为 " + arg);
 }
 
-function changeTag(args) {
-  const tag = args[0] ? args[0].trim() : "";
-  const color = args[1] || "blue";
-  if (!tag) throw new Error("请提供标签名");
-  sendCommand("tag", { tag: tag, tagColor: color });
+function setBackground(args) {
+  const room = state.currentRoom;
+  const key = "chat_bg_" + room;
+  const arg = args.join(" ").trim();
+  if (!arg) {
+    showLocalMessage("当前背景: " + (localStorage.getItem(key) || "默认"));
+    return;
+  }
+  if (arg === "清除" || arg === "reset" || arg === "default") {
+    localStorage.removeItem(key);
+    applyRoomBackground(room);
+    showLocalMessage("已清除房间背景");
+    return;
+  }
+  localStorage.setItem(key, arg);
+  applyRoomBackground(room);
+  showLocalMessage("已设置房间背景: " + arg);
 }
 
-function changeColor(args) {
-  const color = args[0] ? args[0].trim() : "";
-  if (!color) throw new Error("请提供颜色名称");
-  sendCommand("color", { color: color });
+function applyRoomBackground(room) {
+  const bg = localStorage.getItem("chat_bg_" + room);
+  const chatroom = document.getElementById("chatroom");
+  if (bg && chatroom) {
+    if (bg.startsWith("#") || bg.startsWith("rgb") || bg.startsWith("url")) {
+      chatroom.style.background = bg;
+    } else {
+      chatroom.style.backgroundImage = "url(" + bg + ")";
+      chatroom.style.backgroundSize = "cover";
+    }
+  } else if (chatroom) {
+    chatroom.style.background = "";
+    chatroom.style.backgroundImage = "";
+  }
 }
 
-function listChannels() {
-  const chs = (state.channels || []).map(function(c) { return "#" + c.name + " (" + c.type + ")"; }).join(", ");
-  showLocalMessage("频道: " + (chs || "无"));
-}
-
-function pinMessage() {
-  const msgList = document.getElementById("chatlog");
-  const lastMsg = msgList ? msgList.querySelector(".chat-msg") : null;
-  if (!lastMsg) throw new Error("没有可置顶的消息");
-  const msgId = lastMsg.dataset.msgId;
-  sendCommand("pin", { msgId: msgId });
-}
-
-function unpinMessage() {
-  sendCommand("unpin", {});
-}
-
-function clearChannel() {
-  sendCommand("clear-channel", {});
+function cleanLocal() {
+  const chatlog = document.getElementById("chatlog");
+  if (chatlog) {
+    chatlog.querySelectorAll(".chat-msg, .system-msg").forEach(el => el.remove());
+    showLocalMessage("本地聊天记录已清除");
+  }
 }
 
 function showRoomInfo() {
@@ -113,44 +149,13 @@ function listUsers() {
   showLocalMessage("在线用户: " + (users || "无"));
 }
 
-function kickUser(args) {
-  const target = args[0] ? args[0].trim() : "";
-  if (!target) throw new Error("请提供用户名");
-  sendCommand("kick", { target: target });
-}
-
-function banUser(args) {
-  const target = args[0] ? args[0].trim() : "";
-  if (!target) throw new Error("请提供用户名");
-  sendCommand("ban", { target: target });
-}
-
-function muteUser(args) {
-  const target = args[0] ? args[0].trim() : "";
-  if (!target) throw new Error("请提供用户名");
-  const duration = args[1] || "60";
-  sendCommand("mute", { name: target, duration: parseInt(duration) || 60 });
-}
-
-function announce(args) {
-  const text = args.join(" ");
-  if (!text) throw new Error("请提供公告内容");
-  sendCommand("announce", { text: text });
+function listChannels() {
+  const chs = (state.channels || []).map(function(c) { return "#" + c.name + " (" + c.type + ")"; }).join(", ");
+  showLocalMessage("频道: " + (chs || "无"));
 }
 
 function showVersion() {
-  showLocalMessage("CloudChat v2.3.1 — Dual Worker Architecture");
-}
-
-function echo(args) {
-  showLocalMessage("Echo: " + args.join(" "));
-}
-
-function randomNum(args) {
-  const min = parseInt(args[0]) || 1;
-  const max = parseInt(args[1]) || 100;
-  const result = Math.floor(Math.random() * (max - min + 1)) + min;
-  showLocalMessage("随机数(" + min + "-" + max + "): " + result);
+  showLocalMessage("CloudChat v2.4.3 — Dual Worker Architecture");
 }
 
 function rollDice(args) {
@@ -168,6 +173,17 @@ function rollDice(args) {
   showLocalMessage("掷骰子 " + count + "d" + sides + ": [" + rolls.join(",") + "] = " + total);
 }
 
+function randomNum(args) {
+  const min = parseInt(args[0]) || 1;
+  const max = parseInt(args[1]) || 100;
+  const result = Math.floor(Math.random() * (max - min + 1)) + min;
+  showLocalMessage("随机数(" + min + "-" + max + "): " + result);
+}
+
+function echo(args) {
+  showLocalMessage("Echo: " + args.join(" "));
+}
+
 function triggerIcco() {
   window.__v2_triggerIcco?.();
 }
@@ -175,7 +191,9 @@ function triggerIcco() {
 function wikiSearch(args) {
   const query = args.join(" ");
   if (!query) throw new Error("请提供搜索关键词");
-  sendCommand("wiki", { query: query });
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify({ type: "wiki", query: query }));
+  }
 }
 
 window.__v2_handleCommand = handleCommand;
