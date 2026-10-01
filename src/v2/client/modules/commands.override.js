@@ -21,6 +21,8 @@ const COMMANDS = {
   echo: { desc: "回显消息（调试）", args: ["文本"], exec: echo },
   random: { desc: "随机数", args: ["min max"], exec: randomNum },
   roll: { desc: "掷骰子", args: ["[次数]d[面数]"], exec: rollDice },
+  icco: { desc: "ICCO入侵警告动画", exec: triggerIcco },
+
   wiki: { desc: "搜索维基百科", args: ["关键词"], exec: wikiSearch },
 };
 
@@ -169,6 +171,10 @@ function rollDice(args) {
     total += r;
   }
   showLocalMessage("掷骰子 " + count + "d" + sides + ": [" + rolls.join(",") + "] = " + total);
+}
+
+function triggerIcco() {
+  window.__v2_triggerIcco?.();
 }
 
 function wikiSearch(args) {

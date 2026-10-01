@@ -1177,3 +1177,22 @@ function toggle(header) {
       <li>修复v2-chat.js未导入menu模块的问题</li>
       <li>预览版部署到 dev.chat.liuxiyu.cn</li>
     </ul>
+
+    <!-- v2.3.1: 核心功能修复 -->
+    <h3>v2.3.1 <span class="label fix">修复</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>修复命令无法使用：改为发送{message}格式，本地渲染系统消息</li>
+      <li>修复返回按钮多次点击重叠：roomTitle添加id管理，先移除旧元素</li>
+      <li>修复Markdown无法渲染：loadHistory改用renderChatMessage</li>
+      <li>修复在线用户列表空白：连接后通过API获取用户列表</li>
+      <li>添加roster toggle事件监听，确保侧边栏正常显示</li>
+    </ul>
+
+    <!-- v2.3.4: 新功能模块 -->
+    <h3>v2.3.4 <span class="label new">新增</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>新增快捷短语功能（⚡按钮），支持增删自定义短语</li>
+      <li>新增ICCO入侵警告动画效果（/icco命令触发）</li>
+      <li>新增附件管理面板（🗂️按钮）</li>
+      <li>修复files-btn事件绑定</li>
+    </ul>
