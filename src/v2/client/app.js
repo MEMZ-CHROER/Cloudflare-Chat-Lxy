@@ -387,6 +387,7 @@ export function showChat(roomName) {
         case "changelog": window.open("/changelog", "_blank"); break;
         case "archive": window.open("/archive", "_blank"); break;
         case "export": window.__v2_exportChatLog?.(); break;
+        case "games": window.__v2_openGames?.(); break;
       }
     });
   });

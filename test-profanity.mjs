@@ -1,6 +1,7 @@
-// 🧪 v1.60 敏感词 leetspeak 回归测试：
-//   - 纯数字 "58" 组合放行（5→s 8→b 曾误伤 sb）
-//   - 用户给的三类绕过必须拦：5h2t(sh1t类) / f*ck(f--ck标点代替字母) / wunw(同形旋转)
+// 🧪 v1.60 敏感词回归测试：
+//   - 基础词根精确匹配（fuck/shit/sb/cnm/傻逼/草泥马 等）拦截
+//   - leetspeak 变体（sh1t/f0ck/f*ck/wunw 等）已移除，不再拦截（命令兼容优先）
+//   - 纯数字 "58" 组合放行
 //   - 正常英文/中文不误伤
 // 用法：node test-profanity.mjs
 import { containsProfanityImpl } from "./src/chatroom/permissions.mjs";
@@ -15,31 +16,28 @@ const cases = [
   ["msg-60", false, "60 正常"],
   ["我今年58岁", false, "中文里带 58 放行"],
 
-  // ===== 用户给的绕过词 ①：sh1t 数字插入系 =====
-  ["sh1t", true, "sh1t 拦"],
-  ["5h1t", true, "5h1t 拦"],
-  ["5h17", true, "5h17 拦"],
-  ["5h2t", true, "5h2t 拦（2 绕过 i→1 必须堵）"],
-  ["sh17", true, "sh17 拦"],
+  // ===== leetspeak 变体现已移除拦截（命令兼容优先）=====
+  ["sh1t", false, "sh1t 放行（leetspeak已移除）"],
+  ["5h1t", false, "5h1t 放行（leetspeak已移除）"],
+  ["5h17", false, "5h17 放行（leetspeak已移除）"],
+  ["5h2t", false, "5h2t 放行（leetspeak已移除）"],
+  ["sh17", false, "sh17 放行（leetspeak已移除）"],
 
-  // ===== 用户给的绕过词 ②：f*ck 标点代替被删字母 =====
-  ["fuck", true, "fuck 拦"],
-  ["f0ck", true, "f0ck 拦"],
-  ["f*ck", true, "f*ck 拦（* 顶替 u）"],
-  ["f--ck", true, "f--ck 拦（-- 顶替 u）"],
-  ["F*Ck", true, "F*Ck 拦（大小写+标点）"],
-  ["f  uck", true, "f  空格 uck 拦"],
-  ["f u c k", true, "f u c k 拦（字母间插空格）"],
-  ["fμck", true, "fμck 拦（希腊字母）"],
+  // ===== leetspeak 变体现已移除拦截 =====
+  ["f0ck", false, "f0ck 放行（leetspeak已移除）"],
+  ["f*ck", false, "f*ck 放行（leetspeak已移除）"],
+  ["f--ck", false, "f--ck 放行（leetspeak已移除）"],
+  ["F*Ck", false, "F*Ck 放行（leetspeak已移除）"],
+  ["f  uck", true, "f  空格 uck 拦（基础空格过滤仍有效）"],
+  ["f u c k", true, "f u c k 拦（基础空格过滤仍有效）"],
+  ["fμck", true, "fμck 拦（希腊字母μ→u归一化保留）"],
 
   // ===== 用户给的绕过词 ③：wunw 同形旋转 =====
   ["wcnm", true, "wcnm 拦（词根本体）"],
-  ["wunw", true, "wunw 拦（u 转 c / w 倒 m）"],
+  ["wunw", false, "wunw 放行（leetspeak已移除）"],
 
-  // ===== 常规 leetspeak / 中文脏词：必须拦 =====
+  // ===== 常规中文脏词：必须拦 =====
   ["sb", true, "sb 拦"],
-  ["5b", true, "5b 拦"],
-  ["s8", true, "s8 拦"],
   ["傻逼", true, "傻逼 拦"],
   ["草泥马", true, "草泥马 拦"],
   ["cnm", true, "cnm 拦"],

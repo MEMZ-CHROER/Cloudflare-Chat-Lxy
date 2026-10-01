@@ -1196,3 +1196,46 @@ function toggle(header) {
       <li>新增附件管理面板（🗂️按钮）</li>
       <li>修复files-btn事件绑定</li>
     </ul>
+
+    <!-- v2.3.5: ICCO命令集成 -->
+    <h3>v2.3.5 <span class="label new">新增</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>新增/icco命令，聊天中触发ICCO入侵动画（6秒扫描线效果）</li>
+      <li>集成game-action.override.js模块导出</li>
+    </ul>
+
+    <!-- v2.3.6: ICCO资产+街机+文件上传 -->
+    <h3>v2.3.6 <span class="label new">新增</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>新增ICCO资产模块（SVG数据URI替代base64图片）</li>
+      <li>新增打砖块街机游戏（game-arcade.override.js）</li>
+      <li>新增文件上传功能（file-upload.override.js，15MB限制）</li>
+    </ul>
+
+    <!-- v2.4.0: 游戏大厅 -->
+    <h3>v2.4.0 <span class="label new">新增</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>新增游戏厅菜单入口（更多→游戏厅）</li>
+      <li>新增games.override.js统一游戏大厅（9款游戏入口）</li>
+    </ul>
+
+    <!-- v2.4.1: 游戏模块完整实现 -->
+    <h3>v2.4.1 <span class="label new">新增</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>新增扫雷游戏（game-board.override.js，9×9网格，10雷，首击安全）</li>
+      <li>新增2048游戏（game-board.override.js，键盘方向键控制）</li>
+      <li>新增21点游戏（game-cards.override.js，完整扑克逻辑）</li>
+      <li>新增记忆翻牌游戏（game-cards.override.js，8对卡片）</li>
+      <li>新增老虎机游戏（game-simple.override.js，三连大奖5000分）</li>
+      <li>新增猜大小游戏（game-simple.override.js，骰子2-12点）</li>
+      <li>新增石头剪刀布游戏（game-simple.override.js）</li>
+      <li>新增Hacknet终端对战（hacknet-game.override.js）</li>
+    </ul>
+
+    <!-- v2.4.2: game-core -->
+    <h3>v2.4.2 <span class="label new">新增</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>新增game-core.override.js（音效API、加载状态、积分操作）</li>
+      <li>补齐所有游戏模块window.__v2_*导出</li>
+      <li>补全changelog版本记录</li>
+    </ul>

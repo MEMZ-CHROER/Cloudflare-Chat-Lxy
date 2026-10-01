@@ -186,6 +186,7 @@ export const V2_HTML = `<!DOCTYPE html>
       <div class="more-menu-item" data-action="changelog"><span class="mm-icon">📋</span><span class="mm-label">更新日志</span></div>
       <div class="more-menu-item" data-action="archive"><span class="mm-icon">📦</span><span class="mm-label">版本存档</span></div>
       <div class="more-menu-item" data-action="export"><span class="mm-icon">📥</span><span class="mm-label">导出聊天</span></div>
+      <div class="more-menu-item" data-action="games"><span class="mm-icon">🎮</span><span class="mm-label">游戏厅</span></div>
     </div>
     <!-- Mobile bottom bar -->
     <div id="mobile-bottom-bar">
@@ -284,6 +285,13 @@ export const V2_HTML = `<!DOCTYPE html>
     import { exportChatLog } from '/static/modules/ui.override.js';
     import { initVoiceRecord } from '/static/modules/voice-record.override.js';
     import { handleMenuAction, hideUserMenu } from '/static/modules/menu.override.js';
+    import { openGames, closeGames, launchGame } from '/static/modules/games.override.js';
+    import { openMinesweeper, open2048, closeMinesweeper, close2048 } from '/static/modules/game-board.override.js';
+    import { openBlackjack, openMemory, closeBlackjack, closeMemory } from '/static/modules/game-cards.override.js';
+    import { openSlots, openDice, openRPS, closeSlots, closeDice, closeRPS } from '/static/modules/game-simple.override.js';
+    import { openArcadeGame, closeArcadeGame } from '/static/modules/game-arcade.override.js';
+    import { openHacknetGame, closeHacknetGame } from '/static/modules/hacknet-game.override.js';
+    import { showLocalMessage } from '/static/modules/quick.override.js';
     window.__v2_handleMenuAction = handleMenuAction;
     window.__v2_hideUserMenu = hideUserMenu;
     window.__v2_openSettings = openSettings;
