@@ -53,6 +53,8 @@ import V2_DOCSTORE from "./client/modules/doc-store.override.js";
 import V2_GAMES from "./client/modules/games.override.js";
 import V2_HACKNET from "./client/modules/hacknet.override.js";
 import V2_MODAL from "./client/modules/modal-manager.override.js";
+import V2_MENU from "./client/modules/menu.override.js";
+import V2_QUICK from "./client/modules/quick.override.js";
 import V2_UI from "./client/modules/ui.override.js";
 import V2_CHAT_SHELL from "./client/views/chat-shell.js";
 import V2_AUTO_DISCOVER from "./client/views/auto-discover.js";
@@ -115,6 +117,8 @@ const V2_MODULES = {
   "client/modules/hacknet.override.js": V2_HACKNET,
   "client/modules/modal-manager.override.js": V2_MODAL,
   "client/modules/ui.override.js": V2_UI,
+  "client/modules/menu.override.js": V2_MENU,
+  "client/modules/quick.override.js": V2_QUICK,
   "client/views/chat-shell.js": V2_CHAT_SHELL,
   "client/views/v2-chat.js": V2_HTML,
   "client/views/auto-discover.js": V2_AUTO_DISCOVER,
