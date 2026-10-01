@@ -175,13 +175,14 @@ function handleLegacyMessage(msg) {
   console.log("[v2] legacy-msg", msg.type, msg);
 }
 
-export function sendMessage(content) {
+export function sendMessage(content, options) {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     console.error("[v2] WS not connected");
     return false;
   }
-  // v2 envelope — server's ChatRoom.broadcast override wraps it for v2 clients
-  ws.send(JSON.stringify({ message: content }));
+  const msg = { message: content };
+  if (options?.color) msg.color = options.color;
+  ws.send(JSON.stringify(msg));
   return true;
 }
 

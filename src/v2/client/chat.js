@@ -18,7 +18,8 @@ export function handleSend() {
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
-  const sent = sendMessage(text);
+  const color = localStorage.getItem("chat_color") || "";
+  const sent = sendMessage(text, color ? { color } : undefined);
   if (sent) input.value = "";
 }
 
