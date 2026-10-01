@@ -282,6 +282,9 @@ export const V2_HTML = `<!DOCTYPE html>
     import { hideProfile } from '/static/modules/profile.override.js';
     import { exportChatLog } from '/static/modules/ui.override.js';
     import { initVoiceRecord } from '/static/modules/voice-record.override.js';
+    import { handleMenuAction, hideUserMenu } from '/static/modules/menu.override.js';
+    window.__v2_handleMenuAction = handleMenuAction;
+    window.__v2_hideUserMenu = hideUserMenu;
     window.__v2_openSettings = openSettings;
     window.__v2_closeSettings = closeSettings;
     window.__v2_toggleSearch = toggleSearch;
