@@ -23,6 +23,7 @@ import { initI18n } from "./modules/i18n.override.js";
 import { showToast, showSuccess, showError } from "./modules/toast.override.js";
 import { initVoiceRecord } from "./modules/voice-record.override.js";
 import { triggerFileUpload } from "./modules/upload.override.js";
+import { renderChatMessage } from "./renderers.override.js";
 
 // ─── Window globals for HTML inline handlers ───
 window.closeDM = closeDM;
@@ -77,6 +78,7 @@ export async function initV2App() {
     const authResult = await checkAuth();
     console.log("[v2] auth result:", authResult);
     if (authResult.ok) {
+      await checkAdminStatus();
       showRoomList();
     } else {
       setupAuthForm();
@@ -135,7 +137,7 @@ function setupAuthForm() {
       const password = document.getElementById("v2-login-pass")?.value;
       if (!username || !password) { showError("请输入用户名和密码"); return; }
       const result = await login(username, password);
-      if (result.ok) { showSuccess("登录成功"); showRoomList(); }
+      if (result.ok) { showSuccess("登录成功"); await checkAdminStatus(); showRoomList(); }
       else { showError(result.error || "登录失败"); }
     });
   }
@@ -146,13 +148,13 @@ function setupAuthForm() {
       const password = document.getElementById("v2-reg-pass")?.value;
       if (!username || !password || password.length < 6) { showError("用户名必填，密码至少6位"); return; }
       const result = await register(username, password);
-      if (result.ok) { showSuccess("注册成功"); showRoomList(); }
+      if (result.ok) { showSuccess("注册成功"); await checkAdminStatus(); showRoomList(); }
       else { showError(result.error || "注册失败"); }
     });
   }
 
   if (skipBtn) {
-    skipBtn.addEventListener("click", () => { skipAuth(); showRoomList(); });
+    skipBtn.addEventListener("click", async () => { skipAuth(); await checkAdminStatus(); showRoomList(); });
   }
 
   // Enter key support
@@ -437,14 +439,14 @@ export function showChat(roomName) {
   // Toolbar buttons
   document.getElementById("files-btn")?.addEventListener("click", () => window.__v2_openFilePanel?.());
   document.getElementById("schedule-btn")?.addEventListener("click", () => {
-    if (window.__v2_openScheduler) window.__v2_openScheduler();
-    else window.__v2_toggleSearch?.();
+    if (window.__v2_openTasks) window.__v2_openTasks();
+    else addSystemMessage("定时消息功能开发中");
   });
   document.getElementById("kw-btn")?.addEventListener("click", () => {
     if (window.__v2_openKeywords) window.__v2_openKeywords();
-    else showLocalMessage("关键词提醒功能开发中");
+    else addSystemMessage("关键词提醒功能开发中");
   });
-  document.getElementById("poll-btn")?.addEventListener("click", () => showLocalMessage("投票功能开发中"));
+  document.getElementById("poll-btn")?.addEventListener("click", () => addSystemMessage("投票功能开发中"));
 
   // Search bar
   document.getElementById("search-input")?.addEventListener("input", e => doSearch(e.target.value));
@@ -678,6 +680,31 @@ function showUserMenu(name, x, y) {
   menu.style.display = "block";
   menu.classList.add("show");
   menu.dataset.target = name;
+
+  // 根据管理员权限控制菜单项可见性
+  const isAdmin = state.adminLevel === "admin" || state.adminLevel === "super";
+  const isSuper = state.adminLevel === "super";
+  menu.querySelectorAll(".user-menu-item.danger").forEach(item => {
+    item.style.display = isAdmin ? "" : "none";
+  });
+  // 批量踢出仅 super
+  const batchKick = menu.querySelector('[data-action="batch-kick"]');
+  if (batchKick) batchKick.style.display = isSuper ? "" : "none";
+}
+
+export async function checkAdminStatus() {
+  try {
+    const r = await fetch("/api/admin/auth-check");
+    const data = await r.json();
+    if (data.level) {
+      state.adminLevel = data.level;
+      localStorage.setItem("admin_level", data.level);
+      return data.level;
+    }
+  } catch {}
+  state.adminLevel = null;
+  localStorage.removeItem("admin_level");
+  return null;
 }
 
 export function hideUserMenu() {
@@ -695,7 +722,8 @@ export async function handleMenuAction(action) {
   if (!target) return;
   hideUserMenu();
   const token = localStorage.getItem("chat_token") || "";
-  const isAdmin = document.cookie.includes("admin_logged=1");
+  const isAdmin = state.adminLevel === "admin" || state.adminLevel === "super";
+  const isSuper = state.adminLevel === "super";
   const k = localStorage.getItem("admin_key") || "";
 
   switch (action) {
@@ -889,8 +917,8 @@ export async function handleMenuAction(action) {
       break;
     }
     case "batch-kick": {
-      if (!isAdmin) {
-        showToast("请先登录管理后台", "error");
+      if (!isSuper) {
+        showToast("仅超管可批量踢出", "error");
         break;
       }
       const names = prompt("输入要批量踢出的用户名，用逗号分隔：");

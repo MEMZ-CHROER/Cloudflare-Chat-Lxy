@@ -20,6 +20,7 @@ export const state = {
   replyTarget: null,
   replyText: "",
   replyId: null,
+  adminLevel: null, // "super" | "admin" | null
 };
 
 export function subscribe(key, fn) {
