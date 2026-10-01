@@ -434,6 +434,18 @@ export function showChat(roomName) {
     document.getElementById("file-picker")?.click();
   });
 
+  // Toolbar buttons
+  document.getElementById("files-btn")?.addEventListener("click", () => window.__v2_openFilePanel?.());
+  document.getElementById("schedule-btn")?.addEventListener("click", () => {
+    if (window.__v2_openScheduler) window.__v2_openScheduler();
+    else window.__v2_toggleSearch?.();
+  });
+  document.getElementById("kw-btn")?.addEventListener("click", () => {
+    if (window.__v2_openKeywords) window.__v2_openKeywords();
+    else showLocalMessage("关键词提醒功能开发中");
+  });
+  document.getElementById("poll-btn")?.addEventListener("click", () => showLocalMessage("投票功能开发中"));
+
   // Search bar
   document.getElementById("search-input")?.addEventListener("input", e => doSearch(e.target.value));
   document.getElementById("search-prev")?.addEventListener("click", () => searchPrev());
