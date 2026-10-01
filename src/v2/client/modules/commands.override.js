@@ -46,11 +46,9 @@ export function handleCommand(text) {
   }
 }
 
+// 仅本地显示，不发送到服务端（避免被当作普通消息处理）
 function showLocalMessage(text) {
   addSystemMessage(text);
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify({ message: text, type: "command-response" }));
-  }
 }
 
 function sendCommand(type, data) {
@@ -144,7 +142,7 @@ function announce(args) {
 }
 
 function showVersion() {
-  showLocalMessage("CloudChat v2.0 — Dual Worker Architecture");
+  showLocalMessage("CloudChat v2.3.1 — Dual Worker Architecture");
 }
 
 function echo(args) {
