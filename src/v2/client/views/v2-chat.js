@@ -286,11 +286,11 @@ export const V2_HTML = `<!DOCTYPE html>
     import { initVoiceRecord } from '/static/modules/voice-record.override.js';
     import { handleMenuAction, hideUserMenu } from '/static/modules/menu.override.js';
     import { openGames, closeGames, launchGame } from '/static/modules/games.override.js';
-    import { openMinesweeper, open2048, closeMinesweeper, close2048 } from '/static/modules/game-board.override.js';
-    import { openBlackjack, openMemory, closeBlackjack, closeMemory } from '/static/modules/game-cards.override.js';
-    import { openSlots, openDice, openRPS, closeSlots, closeDice, closeRPS } from '/static/modules/game-simple.override.js';
+    import { openMinesweeper, open2048 } from '/static/modules/game-board.override.js';
+    import { openBlackjack, openMemory } from '/static/modules/game-cards.override.js';
+    import { openSlots, openDice, openRPS } from '/static/modules/game-simple.override.js';
     import { openArcadeGame, closeArcadeGame } from '/static/modules/game-arcade.override.js';
-    import { openHacknetGame, closeHacknetGame } from '/static/modules/hacknet-game.override.js';
+    import { openHacknetGame } from '/static/modules/hacknet-game.override.js';
     import { toggleQuickPanel } from '/static/modules/quick.override.js';
     import { openTasks, closeTasks } from '/static/modules/tasks.override.js';
     window.__v2_handleMenuAction = handleMenuAction;
@@ -324,6 +324,7 @@ export const V2_HTML = `<!DOCTYPE html>
     window.__v2_openDice = openDice;
     window.__v2_openRPS = openRPS;
     window.__v2_openArcadeGame = openArcadeGame;
+    window.__v2_closeArcadeGame = closeArcadeGame;
     window.__v2_openHacknetGame = openHacknetGame;
     // Show auth form immediately
     console.log("[DEBUG] IIFE running, showing auth form");
