@@ -1257,4 +1257,7 @@ function toggle(header) {
       <li>消息发送携带color字段，支持/color命令设置字体颜色</li>
       <li>工具栏按钮绑定：🗂️文件 / ⏰定时 / 🔔关键词 / 📊投票</li>
       <li>补全showUserProfile/toggleQuickPanel window导出</li>
+      <li>修复在线用户列表：/users命令在onlineUsers为空时自动fetch API，修复API返回数组格式解析</li>
+      <li>修复明暗主题切换：darkMode localStorage键与v2_theme正确联动，toggle按钮同步更新图标</li>
+      <li>管理命令完善：/kick /ban /mute 使用正确admin API端点，/pin /unpin 正确处理timestamp参数</li>
     </ul>
