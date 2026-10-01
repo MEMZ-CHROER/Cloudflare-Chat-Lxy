@@ -8,21 +8,16 @@ const COMMANDS = {
   tag: { desc: "设置标签", args: ["标签名 [颜色]"], exec: changeTag },
   color: { desc: "设置消息颜色", args: ["颜色名"], exec: changeColor },
   channels: { desc: "查看频道列表", exec: listChannels },
-  pin: { desc: "置顶当前消息", exec: pinMessage },
-  unpin: { desc: "取消置顶", exec: unpinMessage },
-  clear: { desc: "清空当前频道消息（管理员）", exec: clearChannel },
   info: { desc: "房间信息", exec: showRoomInfo },
   users: { desc: "在线用户列表", exec: listUsers },
   kick: { desc: "踢出用户（管理员）", args: ["用户名"], exec: kickUser },
   ban: { desc: "封禁用户（管理员）", args: ["用户名"], exec: banUser },
   mute: { desc: "禁言用户（管理员）", args: ["用户名 [时长]"], exec: muteUser },
-  announce: { desc: "发布公告（管理员）", args: ["公告内容"], exec: announce },
   version: { desc: "显示版本", exec: showVersion },
   echo: { desc: "回显消息（调试）", args: ["文本"], exec: echo },
   random: { desc: "随机数", args: ["min max"], exec: randomNum },
   roll: { desc: "掷骰子", args: ["[次数]d[面数]"], exec: rollDice },
   icco: { desc: "ICCO入侵警告动画", exec: triggerIcco },
-
   wiki: { desc: "搜索维基百科", args: ["关键词"], exec: wikiSearch },
 };
 
@@ -35,8 +30,8 @@ export function handleCommand(text) {
 
   const command = COMMANDS[cmd];
   if (!command) {
-    showLocalMessage("未知命令: /" + cmd + "，输入 /help 查看帮助");
-    return true;
+    // 未知命令交给服务端处理（如 /lp、/gh、/ai、/bot、/rollback 等）
+    return false;
   }
 
   try {
