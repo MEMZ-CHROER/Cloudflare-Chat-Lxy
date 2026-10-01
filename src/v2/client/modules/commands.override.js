@@ -1,5 +1,6 @@
 // v2 commands override — /command handler for v2 chat
 import { state } from "../store.js";
+import { addSystemMessage } from "../chat.js";
 
 const COMMANDS = {
   help: { desc: "显示帮助", exec: showHelp },
@@ -32,7 +33,7 @@ export function handleCommand(text) {
 
   const command = COMMANDS[cmd];
   if (!command) {
-    sendSystemMessage(`未知命令: /${cmd}，输入 /help 查看帮助`);
+    showLocalMessage("未知命令: /" + cmd + "，输入 /help 查看帮助");
     return true;
   }
 
@@ -40,132 +41,142 @@ export function handleCommand(text) {
     command.exec(args);
     return true;
   } catch (e) {
-    sendSystemMessage(`命令执行错误: ${e.message}`);
+    showLocalMessage("命令执行错误: " + e.message);
     return true;
   }
 }
 
-function sendSystemMessage(text) {
-  if (state.ws?.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify({ type: "system", content: text }));
+function showLocalMessage(text) {
+  addSystemMessage(text);
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify({ message: text, type: "command-response" }));
+  }
+}
+
+function sendCommand(type, data) {
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify(Object.assign({ type: type }, data)));
   }
 }
 
 function showHelp() {
-  const lines = Object.entries(COMMANDS).map(([cmd, info]) => {
-    const args = info.args?.length ? " " + info.args.join(" ") : "";
-    return `  /${cmd}${args} — ${info.desc}`;
+  const lines = Object.entries(COMMANDS).map(function(entry) {
+    var cmd = entry[0], info = entry[1];
+    var args = info.args ? " " + info.args.join(" ") : "";
+    return "  /" + cmd + args + " — " + info.desc;
   });
-  sendSystemMessage("可用命令:\n" + lines.join("\n"));
+  showLocalMessage("可用命令:\n" + lines.join("\n"));
 }
 
 function changeNick(args) {
-  const name = args[0]?.trim();
+  const name = args[0] ? args[0].trim() : "";
   if (!name) throw new Error("请提供新名字");
-  if (state.ws) state.ws.send(JSON.stringify({ type: "rename", name }));
+  sendCommand("rename", { name: name });
 }
 
 function changeTag(args) {
-  const tag = args[0]?.trim();
+  const tag = args[0] ? args[0].trim() : "";
   const color = args[1] || "blue";
-  if (state.ws) state.ws.send(JSON.stringify({ type: "tag", tag, tagColor: color }));
+  if (!tag) throw new Error("请提供标签名");
+  sendCommand("tag", { tag: tag, tagColor: color });
 }
 
 function changeColor(args) {
-  const color = args[0]?.trim();
+  const color = args[0] ? args[0].trim() : "";
   if (!color) throw new Error("请提供颜色名称");
-  if (state.ws) state.ws.send(JSON.stringify({ type: "color", color }));
+  sendCommand("color", { color: color });
 }
 
 function listChannels() {
-  const chs = (state.channels || []).map(c => `#${c.name} (${c.type})`).join(", ");
-  sendSystemMessage("频道: " + (chs || "无"));
+  const chs = (state.channels || []).map(function(c) { return "#" + c.name + " (" + c.type + ")"; }).join(", ");
+  showLocalMessage("频道: " + (chs || "无"));
 }
 
 function pinMessage() {
   const msgList = document.getElementById("chatlog");
-  const lastMsg = msgList?.querySelector(".v2-msg:last-child");
+  const lastMsg = msgList ? msgList.querySelector(".chat-msg") : null;
   if (!lastMsg) throw new Error("没有可置顶的消息");
   const msgId = lastMsg.dataset.msgId;
-  if (state.ws) state.ws.send(JSON.stringify({ type: "pin", msgId }));
+  sendCommand("pin", { msgId: msgId });
 }
 
 function unpinMessage() {
-  if (state.ws) state.ws.send(JSON.stringify({ type: "unpin" }));
+  sendCommand("unpin", {});
 }
 
 function clearChannel() {
-  if (state.ws) state.ws.send(JSON.stringify({ type: "clear-channel" }));
+  sendCommand("clear-channel", {});
 }
 
 function showRoomInfo() {
-  const count = state.onlineUsers?.length || 0;
-  sendSystemMessage(`房间: ${state.currentRoom} | 在线: ${count} | 频道: ${(state.channels || []).map(c => c.name).join(", ")}`);
+  const count = state.onlineUsers ? state.onlineUsers.length : 0;
+  showLocalMessage("房间: " + state.currentRoom + " | 在线: " + count + " | 频道: " + ((state.channels || []).map(function(c) { return c.name; }).join(", ")));
 }
 
 function listUsers() {
   const users = (state.onlineUsers || []).join(", ");
-  sendSystemMessage("在线用户: " + (users || "无"));
+  showLocalMessage("在线用户: " + (users || "无"));
 }
 
 function kickUser(args) {
-  const target = args[0]?.trim();
+  const target = args[0] ? args[0].trim() : "";
   if (!target) throw new Error("请提供用户名");
-  if (state.ws) state.ws.send(JSON.stringify({ type: "kick", name: target }));
+  sendCommand("kick", { target: target });
 }
 
 function banUser(args) {
-  const target = args[0]?.trim();
+  const target = args[0] ? args[0].trim() : "";
   if (!target) throw new Error("请提供用户名");
-  if (state.ws) state.ws.send(JSON.stringify({ type: "ban", name: target }));
+  sendCommand("ban", { target: target });
 }
 
 function muteUser(args) {
-  const target = args[0]?.trim();
+  const target = args[0] ? args[0].trim() : "";
   if (!target) throw new Error("请提供用户名");
   const duration = args[1] || "60";
-  if (state.ws) state.ws.send(JSON.stringify({ type: "mute", name: target, duration: parseInt(duration) || 60 }));
+  sendCommand("mute", { name: target, duration: parseInt(duration) || 60 });
 }
 
 function announce(args) {
   const text = args.join(" ");
   if (!text) throw new Error("请提供公告内容");
-  if (state.ws) state.ws.send(JSON.stringify({ type: "announce", text }));
+  sendCommand("announce", { text: text });
 }
 
 function showVersion() {
-  sendSystemMessage("CloudChat v2.0 — Dual Worker Architecture");
+  showLocalMessage("CloudChat v2.0 — Dual Worker Architecture");
 }
 
 function echo(args) {
-  sendSystemMessage("Echo: " + args.join(" "));
+  showLocalMessage("Echo: " + args.join(" "));
 }
 
 function randomNum(args) {
   const min = parseInt(args[0]) || 1;
   const max = parseInt(args[1]) || 100;
   const result = Math.floor(Math.random() * (max - min + 1)) + min;
-  sendSystemMessage(`随机数(${min}-${max}): ${result}`);
+  showLocalMessage("随机数(" + min + "-" + max + "): " + result);
 }
 
 function rollDice(args) {
   const match = (args[0] || "1d6").match(/(\d+)d(\d+)/);
   if (!match) throw new Error("用法: /roll [次数]d[面数]，如 /roll 2d6");
-  const [_, count, sides] = match;
+  const count = parseInt(match[1]);
+  const sides = parseInt(match[2]);
   let total = 0;
   const rolls = [];
-  for (let i = 0; i < parseInt(count); i++) {
-    const r = Math.floor(Math.random() * parseInt(sides)) + 1;
+  for (let i = 0; i < count; i++) {
+    const r = Math.floor(Math.random() * sides) + 1;
     rolls.push(r);
     total += r;
   }
-  sendSystemMessage(`掷骰子 ${count}d${sides}: [${rolls.join(",")}] = ${total}`);
+  showLocalMessage("掷骰子 " + count + "d" + sides + ": [" + rolls.join(",") + "] = " + total);
 }
 
 function wikiSearch(args) {
   const query = args.join(" ");
   if (!query) throw new Error("请提供搜索关键词");
-  if (state.ws) state.ws.send(JSON.stringify({ type: "wiki", query }));
+  sendCommand("wiki", { query: query });
 }
 
 window.__v2_handleCommand = handleCommand;
