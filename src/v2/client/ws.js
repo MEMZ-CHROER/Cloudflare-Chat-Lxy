@@ -29,11 +29,11 @@ export function connectWebSocket(roomName, password) {
     reconnectAttempts = 0;
     const token = localStorage.getItem("chat_token") || "";
     ws.send(JSON.stringify({ name: state.user?.name || "Guest", token }));
-    // Fetch online users after connecting
+    // Fetch online users after connecting (API returns plain array)
     fetch("/api/room/" + encodeURIComponent(roomName) + "/users")
       .then(r => r.json())
       .then(data => {
-        if (data.users) patch({ onlineUsers: data.users });
+        if (Array.isArray(data)) patch({ onlineUsers: data });
       })
       .catch(e => console.error("[v2] Failed to fetch users:", e));
 

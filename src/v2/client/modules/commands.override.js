@@ -27,25 +27,18 @@ const COMMANDS = {
   pin:        { desc: "置顶最后一条消息",         exec: pinMessage },
   unpin:      { desc: "取消置顶",                exec: unpinMessage },
   clear:      { desc: "清空房间（超管）",         exec: clearRoom },
+  kick:       { desc: "踢出用户（管理员）",        exec: kickUser,    args: ["用户名"] },
+  ban:        { desc: "封禁用户（管理员）",        exec: banUser,     args: ["用户名"] },
+  mute:       { desc: "禁言用户（管理员）",        exec: muteUser,    args: ["用户名 [时长]"] },
 };
-
-// Server-side commands (passed through to chatroom.mjs):
-// /lp, /gh, /ai, /bot, /rollback, /destroy, /kick, /ban, /mute, /announce,
-// /pin, /unpin, /clear (admin), /notice
 
 export function handleCommand(text) {
   if (!text.startsWith("/")) return false;
-
   const parts = text.slice(1).split(/\s+/);
   const cmd = parts[0].toLowerCase();
   const args = parts.slice(1);
-
   const command = COMMANDS[cmd];
-  if (!command) {
-    // 未知命令 → 交给服务端（/lp /gh /ai /bot /rollback /destroy /pin /unpin 等）
-    return false;
-  }
-
+  if (!command) return false;
   try {
     command.exec(args);
     return true;
@@ -59,28 +52,22 @@ function showLocalMessage(text) {
   addSystemMessage(text);
 }
 
+function adminKey() {
+  return localStorage.getItem("admin_key") || "";
+}
+
+function authParams() {
+  const k = adminKey();
+  return k ? "?key=" + encodeURIComponent(k) + "&auth=" + encodeURIComponent(k) : "";
+}
+
 function showHelp() {
   const lines = Object.entries(COMMANDS).map(function(entry) {
     var cmd = entry[0], info = entry[1];
     var args = info.args ? " " + info.args.join(" ") : "";
     return "  /" + cmd + args + " — " + info.desc;
   });
-  const serverCmds = [
-    "  /lp <指令> — 权限系统（需管理员）",
-    "  /gh <repo> — GitHub仓库卡片",
-    "  /ai <问题> — AI问答",
-    "  /bot <cmd> — Bot命令",
-    "  /rollback <快照名> <原因> — 回滚房间",
-    "  /destroy <原因> — 销毁房间（超管）",
-    "  /kick <用户名> — 踢出用户",
-    "  /ban <用户名> — 封禁用户",
-    "  /mute <用户名> [时长] — 禁言",
-    "  /announce <内容> — 发布公告",
-    "  /pin — 置顶最后一条消息",
-    "  /unpin — 取消置顶",
-    "  /clear — 清空房间（超管）",
-  ];
-  showLocalMessage("可用命令:\n" + lines.join("\n") + "\n\n服务器命令:\n" + serverCmds.join("\n"));
+  showLocalMessage("可用命令:\n" + lines.join("\n"));
 }
 
 function setColor(args) {
@@ -149,8 +136,22 @@ function showRoomInfo() {
 }
 
 function listUsers() {
-  const users = (state.onlineUsers || []).join(", ");
-  showLocalMessage("在线用户: " + (users || "无"));
+  // 从 WebSocket 状态显示；如果为空则尝试重新获取
+  const users = (state.onlineUsers || []);
+  if (users.length === 0) {
+    showLocalMessage("在线用户: （连接中...）");
+    fetch("/api/room/" + encodeURIComponent(state.currentRoom) + "/users")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          patch({ onlineUsers: data });
+          showLocalMessage("在线用户: " + (data.join(", ") || "无"));
+        }
+      })
+      .catch(e => showLocalMessage("获取用户列表失败: " + e.message));
+  } else {
+    showLocalMessage("在线用户: " + (users.join(", ") || "无"));
+  }
 }
 
 function listChannels() {
@@ -203,9 +204,9 @@ function wikiSearch(args) {
 function announceAdmin(args) {
   const text = args.join(" ");
   if (!text) throw new Error("请提供公告内容");
-  const k = localStorage.getItem("admin_key") || "";
+  const k = adminKey();
   if (!k) { showLocalMessage("* 请先登录管理后台才能发布公告"); return; }
-  fetch("/api/admin/announcement/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k) + "&text=" + encodeURIComponent(text))
+  fetch("/api/admin/announcement/" + encodeURIComponent(state.currentRoom) + authParams() + "&text=" + encodeURIComponent(text))
     .then(r => r.text())
     .then(t => showLocalMessage("* " + t))
     .catch(e => showLocalMessage("操作失败: " + e.message));
@@ -215,33 +216,77 @@ function pinMessage() {
   const msgList = document.getElementById("chatlog");
   const lastMsg = msgList ? msgList.querySelector(".chat-msg") : null;
   if (!lastMsg) throw new Error("没有可置顶的消息");
-  const msgId = lastMsg.dataset.msgId;
-  if (!msgId) throw new Error("无法获取消息ID");
-  const ts = lastMsg.dataset.timestamp || Date.now();
-  const k = localStorage.getItem("admin_key") || "";
+  const ts = lastMsg.dataset.timestamp;
+  if (!ts) throw new Error("无法获取消息时间戳");
+  const k = adminKey();
   if (!k) { showLocalMessage("* 请先登录管理后台才能置顶消息"); return; }
-  fetch("/api/admin/pin/set/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k) + "&timestamp=" + encodeURIComponent(ts))
+  fetch("/api/admin/pin/set/" + encodeURIComponent(state.currentRoom) + authParams() + "&timestamp=" + encodeURIComponent(ts))
     .then(r => r.text())
     .then(t => showLocalMessage("* " + t))
     .catch(e => showLocalMessage("操作失败: " + e.message));
 }
 
 function unpinMessage() {
-  const k = localStorage.getItem("admin_key") || "";
+  const k = adminKey();
   if (!k) { showLocalMessage("* 请先登录管理后台才能取消置顶"); return; }
-  fetch("/api/admin/pin/clear/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k))
+  fetch("/api/admin/pin/get/" + encodeURIComponent(state.currentRoom) + authParams())
+    .then(r => r.json())
+    .then(data => {
+      const pinned = data.pinned || {};
+      const general = pinned.general;
+      if (!general || !general.timestamp) throw new Error("当前没有置顶消息");
+      return fetch("/api/admin/pin/clear/" + encodeURIComponent(state.currentRoom) + authParams() + "&timestamp=" + encodeURIComponent(general.timestamp))
+        .then(r2 => r2.text())
+        .then(t => showLocalMessage("* " + t));
+    })
+    .catch(e => showLocalMessage(e.message || "操作失败: " + e.message));
+}
+
+function clearRoom() {
+  const k = adminKey();
+  if (!k) { showLocalMessage("* 请先登录管理后台才能清空房间"); return; }
+  if (!confirm("确定清空 " + state.currentRoom + " 的聊天记录吗？")) return;
+  fetch("/api/admin/clear-room/" + encodeURIComponent(state.currentRoom) + authParams())
+    .then(r => r.text())
+    .then(t => { showLocalMessage("* " + t + " 即将刷新聊天室..."); setTimeout(() => location.reload(), 500); })
+    .catch(e => showLocalMessage("操作失败: " + e.message));
+}
+
+function kickUser(args) {
+  const userName = args[0];
+  if (!userName) throw new Error("用法: /kick <用户名>");
+  const k = adminKey();
+  if (!k) { showLocalMessage("* 请先登录管理后台"); return; }
+  fetch("/api/admin/kick-user/" + encodeURIComponent(state.currentRoom) + authParams() + "&name=" + encodeURIComponent(userName) + "&caller=" + encodeURIComponent(state.user?.name || ""))
     .then(r => r.text())
     .then(t => showLocalMessage("* " + t))
     .catch(e => showLocalMessage("操作失败: " + e.message));
 }
 
-function clearRoom() {
-  const k = localStorage.getItem("admin_key") || "";
-  if (!k) { showLocalMessage("* 请先登录管理后台才能清空房间"); return; }
-  if (!confirm("确定清空 " + state.currentRoom + " 的聊天记录吗？")) return;
-  fetch("/api/admin/clear-room/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k))
+function banUser(args) {
+  const userName = args[0];
+  if (!userName) throw new Error("用法: /ban <用户名>");
+  const k = adminKey();
+  if (!k) { showLocalMessage("* 请先登录管理后台"); return; }
+  fetch("/api/admin/ban/add?" + authParams() + "&name=" + encodeURIComponent(userName))
     .then(r => r.text())
-    .then(t => { showLocalMessage("* " + t + " 即将刷新聊天室..."); setTimeout(() => location.reload(), 200); })
+    .then(t => showLocalMessage("* " + t))
+    .catch(e => showLocalMessage("操作失败: " + e.message));
+}
+
+function muteUser(args) {
+  const userName = args[0];
+  if (!userName) throw new Error("用法: /mute <用户名> [时长]");
+  const k = adminKey();
+  if (!k) { showLocalMessage("* 请先登录管理后台"); return; }
+  const duration = args[1] || "0";
+  fetch("/api/admin/mute?" + authParams(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: userName, duration: parseInt(duration) || 0 })
+  })
+    .then(r => r.text())
+    .then(t => showLocalMessage("* " + t))
     .catch(e => showLocalMessage("操作失败: " + e.message));
 }
 
