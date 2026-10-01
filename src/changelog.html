@@ -1239,3 +1239,22 @@ function toggle(header) {
       <li>补齐所有游戏模块window.__v2_*导出</li>
       <li>补全changelog版本记录</li>
     </ul>
+
+    <!-- v2.4.3: leetspeak减弱+命令修复 -->
+    <h3>v2.4.3 <span class="label fix">修复</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>移除敏感词permissions.mjs中复杂的leetspeak正则（sh1t/f*ck/wunw/5b等变体不再拦截）</li>
+      <li>保留基础词根精确匹配（fuck/shit/cnm/sb/傻逼/草泥马等）</li>
+      <li>命令消息（/开头）已有跳过敏感词逻辑，不受影响</li>
+      <li>同步主仓和core目录</li>
+    </ul>
+
+    <!-- v2.4.4: 命令体系完整化 -->
+    <h3>v2.4.4 <span class="label fix">修复</span> <span class="date">2026-10-01</span></h3>
+    <ul>
+      <li>未知命令（/lp /gh /ai /bot /rollback /destroy等）不再被拦截，回退服务端处理</li>
+      <li>本地命令补全：/color /bg /clean /info /users /channels /roll /random /echo /icco /wiki /version</li>
+      <li>消息发送携带color字段，支持/color命令设置字体颜色</li>
+      <li>工具栏按钮绑定：🗂️文件 / ⏰定时 / 🔔关键词 / 📊投票</li>
+      <li>补全showUserProfile/toggleQuickPanel window导出</li>
+    </ul>
