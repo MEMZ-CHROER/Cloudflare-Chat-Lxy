@@ -95,8 +95,10 @@ export function applyV2Settings() {
   const theme = localStorage.getItem("v2_theme") || "dark";
   const fontsize = localStorage.getItem("v2_fontsize") || "14";
   const showTime = localStorage.getItem("v2_showtime") !== "0";
+  const darkMode = localStorage.getItem("darkMode") === "1";
 
   document.body.style.fontSize = fontsize + "px";
+  document.body.classList.toggle("dark", darkMode || theme === "dark");
   document.body.style.background = theme === "light" ? "#f8fafc" : "#0f172a";
   document.body.style.color = theme === "light" ? "#1e293b" : "#e2e8f0";
 
