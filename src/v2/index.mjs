@@ -53,6 +53,11 @@ import V2_DOCSTORE from "./client/modules/doc-store.override.js";
 import V2_GAMES from "./client/modules/games.override.js";
 import V2_HACKNET from "./client/modules/hacknet.override.js";
 import V2_MODAL from "./client/modules/modal-manager.override.js";
+import V2_GAME_BOARD from "./client/modules/game-board.override.js";
+import V2_GAME_CARDS from "./client/modules/game-cards.override.js";
+import V2_GAME_SIMPLE from "./client/modules/game-simple.override.js";
+import V2_GAME_ARCADE from "./client/modules/game-arcade.override.js";
+import V2_HACKNET_GAME from "./client/modules/hacknet-game.override.js";
 import V2_MENU from "./client/modules/menu.override.js";
 import V2_QUICK from "./client/modules/quick.override.js";
 import V2_UI from "./client/modules/ui.override.js";
@@ -116,6 +121,11 @@ const V2_MODULES = {
   "client/modules/games.override.js": V2_GAMES,
   "client/modules/hacknet.override.js": V2_HACKNET,
   "client/modules/modal-manager.override.js": V2_MODAL,
+  "client/modules/game-board.override.js": V2_GAME_BOARD,
+  "client/modules/game-cards.override.js": V2_GAME_CARDS,
+  "client/modules/game-simple.override.js": V2_GAME_SIMPLE,
+  "client/modules/game-arcade.override.js": V2_GAME_ARCADE,
+  "client/modules/hacknet-game.override.js": V2_HACKNET_GAME,
   "client/modules/ui.override.js": V2_UI,
   "client/modules/menu.override.js": V2_MENU,
   "client/modules/quick.override.js": V2_QUICK,
