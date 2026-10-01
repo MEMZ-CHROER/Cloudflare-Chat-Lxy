@@ -23,6 +23,10 @@ const COMMANDS = {
   echo:       { desc: "回显消息（调试）",         exec: echo,        args: ["文本"] },
   icco:       { desc: "ICCO入侵警告动画",         exec: triggerIcco },
   wiki:       { desc: "搜索维基百科",             exec: wikiSearch,  args: ["关键词"] },
+  announce:   { desc: "发布公告（管理员）",        exec: announceAdmin },
+  pin:        { desc: "置顶最后一条消息",         exec: pinMessage },
+  unpin:      { desc: "取消置顶",                exec: unpinMessage },
+  clear:      { desc: "清空房间（超管）",         exec: clearRoom },
 };
 
 // Server-side commands (passed through to chatroom.mjs):
@@ -194,6 +198,51 @@ function wikiSearch(args) {
   if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "wiki", query: query }));
   }
+}
+
+function announceAdmin(args) {
+  const text = args.join(" ");
+  if (!text) throw new Error("请提供公告内容");
+  const k = localStorage.getItem("admin_key") || "";
+  if (!k) { showLocalMessage("* 请先登录管理后台才能发布公告"); return; }
+  fetch("/api/admin/announcement/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k) + "&text=" + encodeURIComponent(text))
+    .then(r => r.text())
+    .then(t => showLocalMessage("* " + t))
+    .catch(e => showLocalMessage("操作失败: " + e.message));
+}
+
+function pinMessage() {
+  const msgList = document.getElementById("chatlog");
+  const lastMsg = msgList ? msgList.querySelector(".chat-msg") : null;
+  if (!lastMsg) throw new Error("没有可置顶的消息");
+  const msgId = lastMsg.dataset.msgId;
+  if (!msgId) throw new Error("无法获取消息ID");
+  const ts = lastMsg.dataset.timestamp || Date.now();
+  const k = localStorage.getItem("admin_key") || "";
+  if (!k) { showLocalMessage("* 请先登录管理后台才能置顶消息"); return; }
+  fetch("/api/admin/pin/set/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k) + "&timestamp=" + encodeURIComponent(ts))
+    .then(r => r.text())
+    .then(t => showLocalMessage("* " + t))
+    .catch(e => showLocalMessage("操作失败: " + e.message));
+}
+
+function unpinMessage() {
+  const k = localStorage.getItem("admin_key") || "";
+  if (!k) { showLocalMessage("* 请先登录管理后台才能取消置顶"); return; }
+  fetch("/api/admin/pin/clear/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k))
+    .then(r => r.text())
+    .then(t => showLocalMessage("* " + t))
+    .catch(e => showLocalMessage("操作失败: " + e.message));
+}
+
+function clearRoom() {
+  const k = localStorage.getItem("admin_key") || "";
+  if (!k) { showLocalMessage("* 请先登录管理后台才能清空房间"); return; }
+  if (!confirm("确定清空 " + state.currentRoom + " 的聊天记录吗？")) return;
+  fetch("/api/admin/clear-room/" + encodeURIComponent(state.currentRoom) + "?key=" + encodeURIComponent(k))
+    .then(r => r.text())
+    .then(t => { showLocalMessage("* " + t + " 即将刷新聊天室..."); setTimeout(() => location.reload(), 200); })
+    .catch(e => showLocalMessage("操作失败: " + e.message));
 }
 
 window.__v2_handleCommand = handleCommand;
