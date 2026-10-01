@@ -94,6 +94,7 @@ export const V2_HTML = `<!DOCTYPE html>
       <span class="md-btn" data-wrap="[" data-suffix="](url)" style="cursor:pointer;padding:2px 6px;border-radius:4px;font-size:12px;" title="链接">🔗</span>
     </div>
     <button id="emoji-btn" type="button">😊</button>
+    <button id="quick-btn" type="button" title="快捷短语">⚡</button>
     <button id="more-toggle-btn" type="button" title="更多工具">➕</button>
     <div id="emoji-panel"></div>
     <div id="input-toolbar-expanded">

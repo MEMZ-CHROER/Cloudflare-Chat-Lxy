@@ -402,6 +402,9 @@ export function showChat(roomName) {
     if (roster) roster.classList.remove("show");
   });
 
+  // Quick phrases button
+  document.getElementById("quick-btn")?.addEventListener("click", () => window.__v2_toggleQuickPanel?.());
+
   document.getElementById("emoji-btn")?.addEventListener("click", () => window.__v2_toggleEmoji?.());
 
   // Voice button
