@@ -326,8 +326,35 @@ export const V2_HTML = `<!DOCTYPE html>
     window.__v2_openArcadeGame = openArcadeGame;
     window.__v2_openHacknetGame = openHacknetGame;
     // Show auth form immediately
-    console.log("[DEBUG] IIFE running, showing auth form");(function(){const f=document.getElementById("v2-auth-form");if(f){f.style.display="flex";f.style.alignItems="center";f.style.justifyContent="center";f.style.height="100vh";f.style.position="fixed";f.style.inset="0";f.style.zIndex="3";console.log("[DEBUG] Auth form displayed");}})();
-    initV2App();
+    console.log("[DEBUG] IIFE running, showing auth form");
+    (function(){
+      const f=document.getElementById("v2-auth-form");
+      if(f){
+        f.style.display="flex";
+        f.style.alignItems="center";
+        f.style.justifyContent="center";
+        f.style.height="100vh";
+        f.style.position="fixed";
+        f.style.inset="0";
+        f.style.zIndex="3";
+        console.log("[DEBUG] Auth form displayed");
+      } else {
+        console.error("[DEBUG] Auth form NOT FOUND!");
+      }
+      // Add debug element
+      const dbg=document.createElement("div");
+      dbg.id="v2-debug";
+      dbg.style.cssText="position:fixed;top:10px;left:10px;background:red;color:#fff;padding:10px;z-index:9999;font-size:12px;";
+      dbg.textContent="v2 debug: JS loaded";
+      document.body.appendChild(dbg);
+    })();
+    try {
+      initV2App();
+    } catch(e) {
+      console.error("[DEBUG] initV2App error:", e);
+      const dbg=document.getElementById("v2-debug");
+      if(dbg) dbg.textContent="v2 debug: ERROR - "+e.message;
+    }
   </script>
 </body>
 </html>`;
