@@ -281,7 +281,7 @@ export const V2_HTML = `<!DOCTYPE html>
     import { initKeyboardShortcuts } from '/static/modules/keyboard.override.js';
     import { initNav } from '/static/modules/nav.override.js';
     import { initMusic, closeMusic } from '/static/modules/music.override.js';
-    import { hideProfile } from '/static/modules/profile.override.js';
+    import { hideProfile, showUserProfile } from '/static/modules/profile.override.js';
     import { exportChatLog } from '/static/modules/ui.override.js';
     import { initVoiceRecord } from '/static/modules/voice-record.override.js';
     import { handleMenuAction, hideUserMenu } from '/static/modules/menu.override.js';
@@ -291,7 +291,7 @@ export const V2_HTML = `<!DOCTYPE html>
     import { openSlots, openDice, openRPS, closeSlots, closeDice, closeRPS } from '/static/modules/game-simple.override.js';
     import { openArcadeGame, closeArcadeGame } from '/static/modules/game-arcade.override.js';
     import { openHacknetGame, closeHacknetGame } from '/static/modules/hacknet-game.override.js';
-    import { showLocalMessage } from '/static/modules/quick.override.js';
+    import { toggleQuickPanel } from '/static/modules/quick.override.js';
     window.__v2_handleMenuAction = handleMenuAction;
     window.__v2_hideUserMenu = hideUserMenu;
     window.__v2_openSettings = openSettings;
@@ -310,6 +310,8 @@ export const V2_HTML = `<!DOCTYPE html>
     window.__v2_initMusic = initMusic;
     window.__v2_closeMusic = closeMusic;
     window.__v2_hideProfile = hideProfile;
+    window.__v2_showUserProfile = showUserProfile;
+    window.__v2_toggleQuickPanel = toggleQuickPanel;
     window.__v2_exportChatLog = exportChatLog;
     window.__v2_initVoiceRecord = initVoiceRecord;
 window.__v2_openMinesweeper = openMinesweeper;    window.__v2_open2048 = open2048;    window.__v2_openBlackjack = openBlackjack;    window.__v2_openMemory = openMemory;    window.__v2_openSlots = openSlots;    window.__v2_openDice = openDice;    window.__v2_openRPS = openRPS;    window.__v2_openArcadeGame = openArcadeGame;    window.__v2_openHacknetGame = openHacknetGame;
