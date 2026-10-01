@@ -132,6 +132,7 @@ export function renderChatMessage(msg, isSelf) {
 
   const text = msg.content || msg.message || "";
   const bubble = renderMarkdownBubble(text, msg.type || "msg");
+  if (msg.color) bubble.style.color = msg.color;
   wrapper.appendChild(bubble);
 
   appendMsgTime(wrapper, msg.timestamp);
